@@ -1,0 +1,196 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  User_Id       String         @id @default(cuid())
+  email         String         @unique
+  password      String
+  firstName     String?
+  lastName      String?
+  phone         String?
+  address       String?
+  postalCode    String?        @db.VarChar(5)
+  city          String?
+  isKooker      Boolean        @default(false)
+  isVerified    Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  bookings      Booking[]
+  kookerProfile KookerProfile?
+  reviews       Review[]
+
+  @@map("users")
+}
+
+model KookerProfile {
+  id                   String               @id @default(cuid())
+  User_Id              String               @unique
+  bio                  String?              @db.Text
+  experience           String?              @db.Text
+  profileImage         String?              @db.LongText
+  coverImage           String?              @db.LongText
+  serviceArea          Int                  @default(20)
+  pricePerHour         Int                  @default(35)
+  minimumDuration      Int                  @default(2)
+  maxGuests            Int                  @default(8)
+  specialties          Json                 @default("[]")
+  certificates         Json                 @default("[]")
+  rating               Float                @default(0)
+  reviewCount          Int                  @default(0)
+  isActive             Boolean              @default(true)
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  bookings             Booking[]
+  dailyAvailabilities  DailyAvailability[]
+  user                 User                 @relation(fields: [User_Id], references: [User_Id], onDelete: Cascade)
+  mealAvailabilities   MealAvailability[]
+  reviews              Review[]
+  specialtyCards       SpecialtyCard[]
+  weeklyAvailabilities WeeklyAvailability[]
+
+  @@map("kooker_profiles")
+}
+
+model SpecialtyCard {
+  id                String        @id @default(cuid())
+  Kooker_Id         String
+  name              String
+  serviceArea       String
+  pricePerPerson    Int
+  additionalInfo    String?       @db.Text
+  requiredEquipment String?       @db.Text
+  photos            Json          @default("[]")
+  isActive          Boolean       @default(true)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  bookings          Booking[]
+  kooker            KookerProfile @relation(fields: [Kooker_Id], references: [id], onDelete: Cascade)
+
+  @@index([Kooker_Id], map: "specialty_cards_Kooker_Id_fkey")
+  @@map("specialty_cards")
+}
+
+model Booking {
+  id              String         @id @default(cuid())
+  User_Id         String
+  Kooker_Id       String
+  specialtyCardId String?
+  date            DateTime
+  time            String
+  mealType        MealType       @default(LUNCH)
+  guestCount      Int
+  totalPrice      Int
+  status          BookingStatus  @default(PENDING_KOOKER_VALIDATION)
+  notes           String?        @db.Text
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  kooker          KookerProfile  @relation(fields: [Kooker_Id], references: [id])
+  user            User           @relation(fields: [User_Id], references: [User_Id])
+  specialtyCard   SpecialtyCard? @relation(fields: [specialtyCardId], references: [id])
+  review          Review?
+
+  @@index([Kooker_Id], map: "bookings_Kooker_Id_fkey")
+  @@index([User_Id], map: "bookings_User_Id_fkey")
+  @@index([specialtyCardId], map: "bookings_specialtyCardId_fkey")
+  @@map("bookings")
+}
+
+model Review {
+  id        String        @id @default(cuid())
+  bookingId String        @unique
+  User_Id   String
+  Kooker_Id String
+  rating    Int
+  comment   String?       @db.Text
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  kooker    KookerProfile @relation(fields: [Kooker_Id], references: [id])
+  user      User          @relation(fields: [User_Id], references: [User_Id])
+  booking   Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([Kooker_Id], map: "reviews_Kooker_Id_fkey")
+  @@index([User_Id], map: "reviews_User_Id_fkey")
+  @@map("reviews")
+}
+
+model WeeklyAvailability {
+  id        String        @id @default(cuid())
+  Kooker_Id String
+  dayOfWeek Int
+  startTime String
+  endTime   String
+  isActive  Boolean       @default(true)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  kooker    KookerProfile @relation(fields: [Kooker_Id], references: [id], onDelete: Cascade)
+
+  @@unique([Kooker_Id, dayOfWeek])
+  @@map("weekly_availabilities")
+}
+
+model DailyAvailability {
+  id          String                  @id @default(cuid())
+  Kooker_Id   String
+  date        DateTime                @db.Date
+  startTime   String?
+  endTime     String?
+  isAvailable Boolean                 @default(true)
+  status      DailyAvailabilityStatus @default(AVAILABLE)
+  notes       String?                 @db.Text
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+  kooker      KookerProfile           @relation(fields: [Kooker_Id], references: [id], onDelete: Cascade)
+
+  @@unique([Kooker_Id, date])
+  @@map("daily_availabilities")
+}
+
+model MealAvailability {
+  id          String        @id @default(cuid())
+  Kooker_Id   String
+  date        DateTime      @db.Date
+  mealType    MealType
+  isAvailable Boolean       @default(true)
+  status      MealStatus    @default(AVAILABLE)
+  notes       String?       @db.Text
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  kooker      KookerProfile @relation(fields: [Kooker_Id], references: [id], onDelete: Cascade)
+
+  @@unique([Kooker_Id, date, mealType])
+  @@map("meal_availabilities")
+}
+
+enum BookingStatus {
+  PENDING_KOOKER_VALIDATION
+  PENDING_PAYMENT
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum DailyAvailabilityStatus {
+  AVAILABLE
+  PARTIALLY_BOOKED
+  FULLY_BOOKED
+  UNAVAILABLE
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  SNACK
+  DINNER
+}
+
+enum MealStatus {
+  AVAILABLE
+  BOOKED
+  BLOCKED
+}

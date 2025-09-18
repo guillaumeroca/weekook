@@ -1,0 +1,128 @@
+// Configuration Prisma pour MariaDB
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"  // MariaDB utilise le provider MySQL
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  password    String
+  firstName   String?
+  lastName    String?
+  phone       String?
+  address     String?
+  postalCode  String?  @db.VarChar(5)  // Code postal français (5 chiffres)
+  city        String?
+  isKooker    Boolean  @default(false)
+  isVerified  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  kookerProfile KookerProfile?
+  bookings      Booking[]
+  reviews       Review[]
+
+  @@map("users")
+}
+
+model KookerProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  bio             String?  @db.Text
+  experience      String?  @db.Text
+  profileImage    String?  @db.LongText
+  coverImage      String?  @db.LongText
+  serviceArea     Int      @default(20)
+  pricePerHour    Int      @default(35)
+  minimumDuration Int      @default(2)
+  maxGuests       Int      @default(8)
+  specialties     Json     @default("[]")
+  certificates    Json     @default("[]")
+  rating          Float    @default(0)
+  reviewCount     Int      @default(0)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  specialtyCards SpecialtyCard[]
+  bookings       Booking[]
+  reviews        Review[]
+
+  @@map("kooker_profiles")
+}
+
+model SpecialtyCard {
+  id                String   @id @default(cuid())
+  kookerId          String
+  name              String
+  serviceArea       String
+  pricePerPerson    Int
+  additionalInfo    String?  @db.Text
+  requiredEquipment String?  @db.Text
+  photos            Json     @default("[]")
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  kooker   KookerProfile @relation(fields: [kookerId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  @@map("specialty_cards")
+}
+
+model Booking {
+  id              String        @id @default(cuid())
+  userId          String
+  kookerId        String
+  specialtyCardId String?
+  date            DateTime
+  time            String
+  guestCount      Int
+  totalPrice      Int
+  status          BookingStatus @default(PENDING)
+  notes           String?       @db.Text
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  user          User           @relation(fields: [userId], references: [id])
+  kooker        KookerProfile  @relation(fields: [kookerId], references: [id])
+  specialtyCard SpecialtyCard? @relation(fields: [specialtyCardId], references: [id])
+  review        Review?
+
+  @@map("bookings")
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  bookingId String   @unique
+  userId    String
+  kookerId  String
+  rating    Int
+  comment   String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  booking Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  user    User          @relation(fields: [userId], references: [id])
+  kooker  KookerProfile @relation(fields: [kookerId], references: [id])
+
+  @@map("reviews")
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}

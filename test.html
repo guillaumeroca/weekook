@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test</title>
+</head>
+<body>
+    <div id="root"></div>
+    <script>
+        console.log("Test starting...");
+        const root = document.getElementById("root");
+        if(root) {
+            root.innerHTML = "<h1>TEST MARCHE</h1>";
+            console.log("Root found");
+        } else {
+            console.error("Root not found");
+        }
+    </script>
+</body>
+</html>

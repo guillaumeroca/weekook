@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test React</title>
+</head>
+<body>
+    <div id="root"></div>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script>
+        console.log("React test starting...");
+        const { createElement } = React;
+        const { createRoot } = ReactDOM;
+        
+        try {
+            const root = createRoot(document.getElementById('root'));
+            root.render(createElement('h1', null, 'REACT MARCHE !'));
+            console.log("React rendered successfully");
+        } catch (error) {
+            console.error("React error:", error);
+            document.getElementById('root').innerHTML = "<h1>ERREUR: " + error.message + "</h1>";
+        }
+    </script>
+</body>
+</html>

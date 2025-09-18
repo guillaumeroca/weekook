@@ -1,0 +1,131 @@
+{
+  "name": "weekook-val",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "WEEKOOK - Plateforme de réservation de services culinaires - Environnement de validation",
+  "author": "Guillaume Roca",
+  "license": "PRIVATE",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "scripts": {
+    "start": "npm run serve",
+    "dev": "vite --host 0.0.0.0 --port 3000",
+    "build": "npm run clean && npx vite build",
+    "build:val": "NODE_ENV=validation npm run build",
+    "serve": "npx serve dist -l 3000",
+    "serve:simple": "cd dist && python3 -m http.server 3000",
+    "preview": "npx vite preview",
+    "clean": "rm -rf dist",
+    "lint": "eslint . --fix",
+    "lint:check": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate deploy",
+    "db:studio": "prisma studio --port 5556",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:reset": "prisma migrate reset --force",
+    
+    "deploy": "npm run deploy:val",
+    "deploy:val": "node scripts/deploy.cjs validation",
+    "deploy:check": "npm run lint:check && npm run typecheck && npm run test",
+    "deploy:full": "npm run deploy:check && npm run deploy:val",
+    
+    "config:show": "node -e \"console.log(require('./config/config.cjs').current)\"",
+    "config:val": "node scripts/deploy.cjs validation --config-only",
+    
+    "server:start": "cd server && npm start",
+    "server:dev": "cd server && npm run dev",
+    "server:logs": "pm2 logs weekook-api || tail -f server/server.log",
+    
+    "infomaniak:deploy": "npm run build:val && npm run infomaniak:upload",
+    "infomaniak:upload": "rsync -avz --delete dist/ weekook@ssh-weekook.alwaysdata.net:~/www/",
+    "infomaniak:backup": "mysqldump -u $DATABASE_USER -p$DATABASE_PASSWORD -h $DATABASE_HOST $DATABASE_NAME > backup-$(date +%Y%m%d-%H%M%S).sql",
+    
+    "pm2:start": "pm2 start ecosystem.config.js --env validation",
+    "pm2:stop": "pm2 stop ecosystem.config.js",
+    "pm2:restart": "pm2 restart ecosystem.config.js",
+    "pm2:logs": "pm2 logs",
+    "pm2:monit": "pm2 monit",
+    
+    "health:check": "curl -f http://localhost:3001/api/health || exit 1",
+    "ssl:check": "curl -I https://val.weekook.com",
+    
+    "maintenance:on": "touch maintenance.html",
+    "maintenance:off": "rm -f maintenance.html"
+  },
+  "dependencies": {
+    "@internationalized/date": "^3.5.2",
+    "@prisma/client": "^5.22.0",
+    "bcryptjs": "^2.4.3",
+    "date-fns": "^3.3.1",
+    "framer-motion": "^10.16.4",
+    "lucide-react": "^0.344.0",
+    "mysql2": "^3.14.2",
+    "react": "^18.3.1",
+    "react-day-picker": "^8.10.0",
+    "react-dom": "^18.3.1",
+    "react-hook-form": "^7.49.2",
+    "react-router-dom": "^6.21.1",
+    "serve": "^14.2.1",
+    "sonner": "^1.4.0",
+    "tsx": "^4.20.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.9.1",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "@types/react-router-dom": "^5.3.3",
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.18",
+    "eslint": "^9.9.1",
+    "eslint-plugin-react-hooks": "^5.1.0-rc.0",
+    "eslint-plugin-react-refresh": "^0.4.11",
+    "express": "^5.1.0",
+    "globals": "^15.9.0",
+    "jsdom": "^26.1.0",
+    "postcss": "^8.4.35",
+    "prisma": "^5.7.1",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.5.3",
+    "typescript-eslint": "^8.3.0",
+    "vite": "^7.0.5",
+    "vitest": "^3.2.4"
+  },
+  "optionalDependencies": {
+    "pm2": "^5.3.0"
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "private"
+  },
+  "keywords": [
+    "weekook",
+    "cuisine",
+    "reservation",
+    "react",
+    "vite",
+    "validation"
+  ],
+  "homepage": "https://val.weekook.com",
+  "bugs": {
+    "url": "mailto:dev@weekook.com"
+  }
+}

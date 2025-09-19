@@ -8,7 +8,7 @@ set -e  # Exit on error
 # Configuration
 REPO_URL="https://github.com/guillaumeroca/weekook.git"
 BRANCH="deploy/val-v0.1"
-DEPLOY_DIR="/home/ubuntu/weekook-val"
+DEPLOY_DIR="/home/weekook/weekook-val"
 ENV_FILE=".env.val"
 DB_NAME="weekook_VAL"
 DB_USER="weekook_val_user"
@@ -98,7 +98,7 @@ module.exports = {
     {
       name: 'weekook-val-backend',
       script: './server/app.js',
-      cwd: '/home/ubuntu/weekook-val',
+      cwd: '/home/weekook/weekook-val',
       instances: 1,
       autorestart: true,
       watch: false,
@@ -113,7 +113,7 @@ module.exports = {
       name: 'weekook-val-frontend',
       script: 'npm',
       args: 'run preview',
-      cwd: '/home/ubuntu/weekook-val',
+      cwd: '/home/weekook/weekook-val',
       instances: 1,
       autorestart: true,
       watch: false,
@@ -143,7 +143,7 @@ pm2 start ecosystem.config.js
 
 # Sauvegarder la configuration PM2
 pm2 save
-pm2 startup systemd -u ubuntu --hp /home/ubuntu 2>/dev/null || true
+pm2 startup systemd -u weekook --hp /home/weekook 2>/dev/null || true
 
 echo -e "\n${YELLOW}📊 Étape 8: Vérification du déploiement${NC}"
 sleep 3

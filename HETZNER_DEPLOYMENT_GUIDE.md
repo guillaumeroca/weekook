@@ -43,8 +43,8 @@ sudo apt install git -y
 ### 3. Déploiement initial
 
 ```bash
-# Se positionner dans le home
-cd /home/ubuntu
+# Se positionner dans le home de l'utilisateur weekook
+cd /home/weekook
 
 # Cloner le repository sur la branche VAL
 git clone -b deploy/val-v0.1 https://github.com/guillaumeroca/weekook.git weekook-val
@@ -160,7 +160,7 @@ pm2 save
 Pour déployer une nouvelle version :
 
 ```bash
-cd /home/ubuntu/weekook-val
+cd /home/weekook/weekook-val
 
 # Récupérer les dernières modifications
 git pull origin deploy/val-v0.1
@@ -191,14 +191,14 @@ Créer un script de sauvegarde automatique :
 
 ```bash
 # Créer le script
-nano /home/ubuntu/backup-weekook-val.sh
+nano /home/weekook/backup-weekook-val.sh
 ```
 
 Contenu :
 ```bash
 #!/bin/bash
 DATE=$(date +%Y%m%d_%H%M%S)
-BACKUP_DIR="/home/ubuntu/backups"
+BACKUP_DIR="/home/weekook/backups"
 mkdir -p $BACKUP_DIR
 
 # Sauvegarde de la base de données
@@ -213,12 +213,12 @@ echo "Sauvegarde terminée: $BACKUP_DIR/weekook_val_$DATE.sql.gz"
 
 Rendre exécutable et ajouter au crontab :
 ```bash
-chmod +x /home/ubuntu/backup-weekook-val.sh
+chmod +x /home/weekook/backup-weekook-val.sh
 
 # Ajouter au crontab (sauvegarde quotidienne à 3h du matin)
 crontab -e
 # Ajouter la ligne :
-0 3 * * * /home/ubuntu/backup-weekook-val.sh
+0 3 * * * /home/weekook/backup-weekook-val.sh
 ```
 
 ## Troubleshooting
@@ -248,7 +248,7 @@ kill -9 <PID>
 
 ```bash
 # Donner les bonnes permissions
-sudo chown -R ubuntu:ubuntu /home/ubuntu/weekook-val
+sudo chown -R ubuntu:ubuntu /home/weekook/weekook-val
 ```
 
 ### Logs d'erreur

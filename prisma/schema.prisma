@@ -8,22 +8,27 @@ datasource db {
 }
 
 model User {
-  User_Id       String         @id @default(cuid())
-  email         String         @unique
-  password      String
-  firstName     String?
-  lastName      String?
-  phone         String?
-  address       String?
-  postalCode    String?        @db.VarChar(5)
-  city          String?
-  isKooker      Boolean        @default(false)
-  isVerified    Boolean        @default(false)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  bookings      Booking[]
-  kookerProfile KookerProfile?
-  reviews       Review[]
+  User_Id              String                @id @default(cuid())
+  email                String                @unique
+  password             String
+  firstName            String?
+  lastName             String?
+  phone                String?
+  address              String?
+  postalCode           String?               @db.VarChar(5)
+  city                 String?
+  isKooker             Boolean               @default(false)
+  isVerified           Boolean               @default(false)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  bookings             Booking[]
+  kookerProfile        KookerProfile?
+  reviews              Review[]
+  sentMessages         Message[]             @relation("MessageSender")
+  conversationsAsUser  Conversation[]        @relation("ConversationUser")
+  conversationsAsKooker Conversation[]       @relation("ConversationKooker")
+  participantAsUser    ConversationParticipant[] @relation("ParticipantUser")
+  participantAsKooker  ConversationParticipant[] @relation("ParticipantKooker")
 
   @@map("users")
 }
@@ -193,4 +198,51 @@ enum MealStatus {
   AVAILABLE
   BOOKED
   BLOCKED
+}
+
+model Conversation {
+  id            String                    @id @default(cuid())
+  userId        String
+  kookerId      String
+  lastMessageAt DateTime                  @default(now())
+  isActiveUser  Boolean                   @default(true)
+  isActiveKooker Boolean                  @default(true)
+  createdAt     DateTime                  @default(now())
+  updatedAt     DateTime                  @updatedAt
+  messages      Message[]
+  participants  ConversationParticipant[]
+  user          User                      @relation("ConversationUser", fields: [userId], references: [User_Id])
+  kooker        User                      @relation("ConversationKooker", fields: [kookerId], references: [User_Id])
+
+  @@unique([userId, kookerId])
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id             String       @id @default(cuid())
+  conversationId String
+  userId         String
+  kookerId       String
+  lastReadAt     DateTime?
+  isUser         Boolean
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User         @relation("ParticipantUser", fields: [userId], references: [User_Id])
+  kooker         User         @relation("ParticipantKooker", fields: [kookerId], references: [User_Id])
+
+  @@unique([conversationId, userId, isUser])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  senderId       String
+  content        String       @db.Text
+  isRead         Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User         @relation("MessageSender", fields: [senderId], references: [User_Id])
+
+  @@map("messages")
 }

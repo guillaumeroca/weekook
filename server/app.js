@@ -1714,6 +1714,497 @@ app.get('/api/kooker/weekly-settings/:userId', async (req, res) => {
   }
 });
 
+// ========================
+// Routes de messagerie
+// ========================
+
+// Récupérer toutes les conversations d'un utilisateur
+app.get('/api/messages/conversations/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Récupérer toutes les conversations de l'utilisateur
+    const conversations = await prisma.conversation.findMany({
+      where: {
+        OR: [
+          { userId: userId },
+          { kookerId: userId }
+        ]
+      },
+      include: {
+        messages: {
+          orderBy: { createdAt: 'desc' },
+          take: 1
+        },
+        participants: true
+      },
+      orderBy: {
+        lastMessageAt: 'desc'
+      }
+    });
+
+    // Formater les conversations avec les infos des participants
+    const formattedConversations = await Promise.all(
+      conversations.map(async (conv) => {
+        const userInfo = await prisma.user.findUnique({
+          where: { User_Id: conv.userId },
+          select: { firstName: true, lastName: true, email: true }
+        });
+
+        const kookerInfo = await prisma.user.findUnique({
+          where: { User_Id: conv.kookerId },
+          select: { firstName: true, lastName: true, email: true }
+        });
+
+        // Compter les messages non lus
+        const unreadCount = await prisma.message.count({
+          where: {
+            conversationId: conv.id,
+            isRead: false,
+            senderId: { not: userId }
+          }
+        });
+
+        return {
+          id: conv.id,
+          userId: conv.userId,
+          kookerId: conv.kookerId,
+          lastMessageAt: conv.lastMessageAt,
+          isActiveUser: conv.isActiveUser,
+          isActiveKooker: conv.isActiveKooker,
+          userInfo,
+          kookerInfo,
+          lastMessage: conv.messages[0] || null,
+          unreadCount
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      conversations: formattedConversations
+    });
+  } catch (error) {
+    console.error('Get conversations error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la récupération des conversations'
+    });
+  }
+});
+
+// Récupérer une conversation spécifique
+app.get('/api/messages/conversation/:conversationId', async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: conversationId },
+      include: {
+        messages: {
+          orderBy: { createdAt: 'desc' },
+          take: 1
+        }
+      }
+    });
+
+    if (!conversation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Conversation non trouvée'
+      });
+    }
+
+    const userInfo = await prisma.user.findUnique({
+      where: { User_Id: conversation.userId },
+      select: { firstName: true, lastName: true, email: true }
+    });
+
+    const kookerInfo = await prisma.user.findUnique({
+      where: { User_Id: conversation.kookerId },
+      select: { firstName: true, lastName: true, email: true }
+    });
+
+    res.json({
+      success: true,
+      conversation: {
+        ...conversation,
+        userInfo,
+        kookerInfo,
+        lastMessage: conversation.messages[0] || null
+      }
+    });
+  } catch (error) {
+    console.error('Get conversation error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la récupération de la conversation'
+    });
+  }
+});
+
+// Récupérer les messages d'une conversation
+app.get('/api/messages/:conversationId', async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const { page = 1, limit = 50 } = req.query;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const messages = await prisma.message.findMany({
+      where: { conversationId },
+      include: {
+        sender: {
+          select: { firstName: true, lastName: true, email: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: parseInt(limit)
+    });
+
+    const totalMessages = await prisma.message.count({
+      where: { conversationId }
+    });
+
+    const hasMore = skip + messages.length < totalMessages;
+
+    res.json({
+      success: true,
+      messages: messages.map(msg => ({
+        id: msg.id,
+        conversationId: msg.conversationId,
+        senderId: msg.senderId,
+        content: msg.content,
+        isRead: msg.isRead,
+        createdAt: msg.createdAt,
+        senderInfo: msg.sender
+      })),
+      hasMore
+    });
+  } catch (error) {
+    console.error('Get messages error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la récupération des messages'
+    });
+  }
+});
+
+// Envoyer un message
+app.post('/api/messages/send', async (req, res) => {
+  try {
+    const { conversationId, recipientId, content } = req.body;
+
+    // Si pas de conversationId, on doit créer une nouvelle conversation
+    let convId = conversationId;
+
+    if (!convId) {
+      // Déterminer qui est l'utilisateur et qui est le kooker
+      // Pour simplifier, on suppose que le sender est toujours dans le body
+      // À améliorer selon votre logique d'authentification
+      const senderId = req.body.senderId || req.body.userId;
+
+      if (!senderId) {
+        return res.status(400).json({
+          success: false,
+          error: 'Sender ID manquant'
+        });
+      }
+
+      // Vérifier si une conversation existe déjà
+      const existingConversation = await prisma.conversation.findFirst({
+        where: {
+          OR: [
+            { userId: senderId, kookerId: recipientId },
+            { userId: recipientId, kookerId: senderId }
+          ]
+        }
+      });
+
+      if (existingConversation) {
+        convId = existingConversation.id;
+      } else {
+        // Créer une nouvelle conversation
+        const newConversation = await prisma.conversation.create({
+          data: {
+            userId: senderId,
+            kookerId: recipientId
+          }
+        });
+        convId = newConversation.id;
+      }
+    }
+
+    // Créer le message
+    const message = await prisma.message.create({
+      data: {
+        conversationId: convId,
+        senderId: req.body.senderId || req.body.userId,
+        content,
+        isRead: false
+      },
+      include: {
+        sender: {
+          select: { firstName: true, lastName: true, email: true }
+        }
+      }
+    });
+
+    // Mettre à jour lastMessageAt de la conversation
+    await prisma.conversation.update({
+      where: { id: convId },
+      data: { lastMessageAt: new Date() }
+    });
+
+    res.json({
+      success: true,
+      message: {
+        id: message.id,
+        conversationId: message.conversationId,
+        senderId: message.senderId,
+        content: message.content,
+        isRead: message.isRead,
+        createdAt: message.createdAt,
+        senderInfo: message.sender
+      }
+    });
+  } catch (error) {
+    console.error('Send message error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erreur lors de l\'envoi du message'
+    });
+  }
+});
+
+// Marquer les messages comme lus
+app.post('/api/messages/mark-read', async (req, res) => {
+  try {
+    const { conversationId, userId } = req.body;
+
+    await prisma.message.updateMany({
+      where: {
+        conversationId,
+        senderId: { not: userId },
+        isRead: false
+      },
+      data: { isRead: true }
+    });
+
+    res.json({
+      success: true,
+      message: 'Messages marqués comme lus'
+    });
+  } catch (error) {
+    console.error('Mark as read error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors du marquage comme lu'
+    });
+  }
+});
+
+// Créer une conversation
+app.post('/api/messages/conversation', async (req, res) => {
+  try {
+    const { userId, kookerId } = req.body;
+    console.log('📝 Création conversation - userId:', userId, 'kookerId:', kookerId);
+
+    // Vérifier si kookerId est un ID de profil ou d'utilisateur
+    let actualKookerId = kookerId;
+
+    // Essayer de trouver un profil de kooker avec cet ID
+    const kookerProfile = await prisma.kookerProfile.findUnique({
+      where: { id: kookerId },
+      include: { user: true }
+    });
+
+    if (kookerProfile) {
+      if (kookerProfile.User_Id) {
+        actualKookerId = kookerProfile.User_Id;
+        console.log('🔄 Conversion profil ID vers User_Id:', kookerId, '->', actualKookerId);
+      } else {
+        console.error('❌ Profil kooker trouvé mais User_Id est null:', kookerId);
+        return res.status(400).json({
+          success: false,
+          message: 'Profil kooker invalide (User_Id manquant)'
+        });
+      }
+    } else {
+      console.log('🔍 Aucun profil kooker trouvé pour l\'ID:', kookerId, '- assume que c\'est déjà un User_Id');
+    }
+
+    // Vérifier que les utilisateurs existent
+    const user = await prisma.user.findUnique({ where: { User_Id: userId } });
+    const kooker = await prisma.user.findUnique({ where: { User_Id: actualKookerId } });
+
+    console.log('👤 User trouvé:', !!user, 'Kooker trouvé:', !!kooker);
+    console.log('🔍 userId final:', userId, 'actualKookerId final:', actualKookerId);
+
+    if (user) console.log('✅ User details:', user.User_Id, user.email);
+    if (kooker) console.log('✅ Kooker details:', kooker.User_Id, kooker.email);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Utilisateur non trouvé'
+      });
+    }
+
+    if (!kooker) {
+      return res.status(404).json({
+        success: false,
+        message: 'Kooker non trouvé'
+      });
+    }
+
+    // Vérifier si une conversation existe déjà
+    const existingConversation = await prisma.conversation.findFirst({
+      where: {
+        OR: [
+          { userId: userId, kookerId: actualKookerId },
+          { userId: actualKookerId, kookerId: userId }
+        ]
+      }
+    });
+
+    if (existingConversation) {
+      const userInfo = await prisma.user.findUnique({
+        where: { User_Id: existingConversation.userId },
+        select: { firstName: true, lastName: true, email: true }
+      });
+
+      const kookerInfo = await prisma.user.findUnique({
+        where: { User_Id: existingConversation.kookerId },
+        select: { firstName: true, lastName: true, email: true }
+      });
+
+      return res.json({
+        success: true,
+        conversation: {
+          ...existingConversation,
+          userInfo,
+          kookerInfo
+        }
+      });
+    }
+
+    // Créer une nouvelle conversation
+    const conversation = await prisma.conversation.create({
+      data: {
+        userId,
+        kookerId: actualKookerId,
+        participants: {
+          create: [
+            { userId, kookerId: actualKookerId, isUser: true },
+            { userId, kookerId: actualKookerId, isUser: false }
+          ]
+        }
+      }
+    });
+
+    const userInfo = await prisma.user.findUnique({
+      where: { User_Id: userId },
+      select: { firstName: true, lastName: true, email: true }
+    });
+
+    const kookerInfo = await prisma.user.findUnique({
+      where: { User_Id: actualKookerId },
+      select: { firstName: true, lastName: true, email: true }
+    });
+
+    res.json({
+      success: true,
+      conversation: {
+        ...conversation,
+        userInfo,
+        kookerInfo
+      }
+    });
+  } catch (error) {
+    console.error('Create conversation error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la création de la conversation'
+    });
+  }
+});
+
+// Supprimer une conversation (soft delete)
+app.delete('/api/messages/conversation/:conversationId', async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const { userId } = req.body;
+
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: conversationId }
+    });
+
+    if (!conversation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Conversation non trouvée'
+      });
+    }
+
+    // Soft delete selon le rôle de l'utilisateur
+    const updateData = {};
+    if (userId === conversation.userId) {
+      updateData.isActiveUser = false;
+    } else if (userId === conversation.kookerId) {
+      updateData.isActiveKooker = false;
+    }
+
+    await prisma.conversation.update({
+      where: { id: conversationId },
+      data: updateData
+    });
+
+    res.json({
+      success: true,
+      message: 'Conversation supprimée'
+    });
+  } catch (error) {
+    console.error('Delete conversation error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la suppression de la conversation'
+    });
+  }
+});
+
+// Compter les messages non lus
+app.get('/api/messages/unread-count/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const count = await prisma.message.count({
+      where: {
+        conversation: {
+          OR: [
+            { userId: userId },
+            { kookerId: userId }
+          ]
+        },
+        senderId: { not: userId },
+        isRead: false
+      }
+    });
+
+    res.json({
+      success: true,
+      count
+    });
+  } catch (error) {
+    console.error('Get unread count error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la récupération du nombre de messages non lus'
+    });
+  }
+});
+
 // Démarrage du serveur
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {

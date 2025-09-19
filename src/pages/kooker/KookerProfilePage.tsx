@@ -10,6 +10,7 @@ import { bookingsAPI } from '../../api/bookings';
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'sonner';
 import { formatDateToString } from '../../utils/dateUtils';
+import ChatButton from '../../components/chat/ChatButton';
 import 'react-day-picker/dist/style.css';
 
 // Types for specialty card
@@ -113,6 +114,7 @@ const KookerProfilePage: React.FC = () => {
         // Adapter les données pour correspondre à la structure attendue
         const adaptedKooker = {
           id: kookerData.id,
+          userId: kookerData.User_Id || kookerData.user?.User_Id, // Ajouter l'ID utilisateur
           firstName: kookerData.user.firstName || 'Kooker',
           lastName: kookerData.user.lastName || '',
           city: kookerData.user.city || 'Non spécifié',
@@ -628,6 +630,14 @@ const KookerProfilePage: React.FC = () => {
                   <Calendar size={16} />
                   <span>Disponible cette semaine</span>
                 </div>
+              </div>
+
+              {/* Chat Button */}
+              <div className="mt-6 pt-6 border-t border-gray-100">
+                <ChatButton
+                  kookerId={id!}
+                  kookerName={`${kooker.firstName} ${kooker.lastName}`}
+                />
               </div>
             </div>
           </div>

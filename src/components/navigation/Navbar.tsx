@@ -1,12 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChefHat, Menu, X, Settings, ChefHat as KookerIcon } from 'lucide-react';
+import { ChefHat, Menu, X, Settings, ChefHat as KookerIcon, MessageCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { messagesAPI } from '../../api/messages';
 
 const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user?.id) {
+      loadUnreadCount();
+    }
+  }, [user]);
+
+  const loadUnreadCount = async () => {
+    if (!user?.id) return;
+
+    try {
+      const response = await messagesAPI.getUnreadCount(user.id);
+      if (response.success && response.count !== undefined) {
+        setUnreadCount(response.count);
+      }
+    } catch (error) {
+      console.error('Error loading unread count:', error);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -29,6 +50,15 @@ const Navbar: React.FC = () => {
           <div className="hidden md:flex md:items-center md:space-x-4">
             {user ? (
               <>
+                <Link to="/messages" className="text-gray-700 hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 relative">
+                  <MessageCircle size={18} />
+                  Messages
+                  {unreadCount > 0 && (
+                    <span className="bg-primary text-white text-xs px-2 py-1 rounded-full absolute -top-1 -right-1">
+                      {unreadCount}
+                    </span>
+                  )}
+                </Link>
                 <Link to="/settings" className="text-gray-700 hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2">
                   <Settings size={18} />
                   Mon profil
@@ -39,7 +69,7 @@ const Navbar: React.FC = () => {
                     Profil Kooker
                   </Link>
                 )}
-                <button 
+                <button
                   onClick={handleLogout}
                   className="text-gray-700 hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors"
                 >
@@ -76,8 +106,21 @@ const Navbar: React.FC = () => {
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white shadow-lg">
             {user ? (
               <>
-                <Link 
-                  to="/settings" 
+                <Link
+                  to="/messages"
+                  className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary transition-colors relative"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <MessageCircle size={18} />
+                  Messages
+                  {unreadCount > 0 && (
+                    <span className="bg-primary text-white text-xs px-2 py-1 rounded-full ml-auto">
+                      {unreadCount}
+                    </span>
+                  )}
+                </Link>
+                <Link
+                  to="/settings"
                   className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
@@ -85,8 +128,8 @@ const Navbar: React.FC = () => {
                   Mon profil
                 </Link>
                 {user.isKooker && (
-                  <Link 
-                    to="/kooker-settings" 
+                  <Link
+                    to="/kooker-settings"
                     className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary transition-colors"
                     onClick={() => setIsMenuOpen(false)}
                   >
@@ -94,7 +137,7 @@ const Navbar: React.FC = () => {
                     Profil Kooker
                   </Link>
                 )}
-                <button 
+                <button
                   onClick={handleLogout}
                   className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary transition-colors"
                 >

@@ -23,6 +23,7 @@ const KookerProfilePage = lazy(() => import('./pages/kooker/KookerProfilePage'))
 const KookerBookingsPage = lazy(() => import('./pages/kooker/KookerBookingsPage'));
 const KookerCalendarPage = lazy(() => import('./pages/kooker/KookerCalendarPage'));
 const KookerMealAvailabilityPage = lazy(() => import('./pages/kooker/KookerMealAvailabilityPage'));
+const MessagesPage = lazy(() => import('./pages/MessagesPage'));
 const FAQPage = lazy(() => import('./pages/FAQPage'));
 const TermsPage = lazy(() => import('./pages/TermsPage'));
 const ContactPage = lazy(() => import('./pages/ContactPage'));
@@ -123,6 +124,14 @@ function App() {
                 element={
                   <PrivateRoute>
                     <KookerMealAvailabilityPage />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/messages"
+                element={
+                  <PrivateRoute>
+                    <MessagesPage />
                   </PrivateRoute>
                 }
               />

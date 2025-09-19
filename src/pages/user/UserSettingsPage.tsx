@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useForm } from 'react-hook-form';
-import { ChefHat, Settings, History, Star, Save } from 'lucide-react';
+import { ChefHat, Settings, History, Star, Save, MessageCircle } from 'lucide-react';
+import { messagesAPI } from '../../api/messages';
 
 interface ProfileFormData {
   firstName: string;
@@ -32,6 +33,7 @@ const UserSettingsPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [userData, setUserData] = useState<ExtendedUser | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const { register, handleSubmit, formState: { errors }, reset } = useForm<ProfileFormData>({
     defaultValues: {
@@ -44,15 +46,15 @@ const UserSettingsPage: React.FC = () => {
     }
   });
 
-  // Récupérer les données complètes de l'utilisateur
+  // Récupérer les données complètes de l'utilisateur et le nombre de messages non lus
   useEffect(() => {
     const fetchUserData = async () => {
       if (!user?.id) return;
-      
+
       try {
         const response = await fetch(`/api/user/${user.id}`);
         const result = await response.json();
-        
+
         if (result.success) {
           setUserData(result.user);
           // Mettre à jour le formulaire avec les données de la BDD
@@ -72,7 +74,21 @@ const UserSettingsPage: React.FC = () => {
       }
     };
 
+    const fetchUnreadCount = async () => {
+      if (!user?.id) return;
+
+      try {
+        const response = await messagesAPI.getUnreadCount(user.id);
+        if (response.success && response.count !== undefined) {
+          setUnreadCount(response.count);
+        }
+      } catch (error) {
+        console.error('Erreur lors de la récupération du nombre de messages non lus:', error);
+      }
+    };
+
     fetchUserData();
+    fetchUnreadCount();
   }, [user?.id, reset]);
 
   const handleBecomeKooker = async () => {
@@ -199,17 +215,29 @@ const UserSettingsPage: React.FC = () => {
                 <History size={18} />
                 <span>Historique</span>
               </button>
-              <button 
+              <button
                 onClick={() => setActiveTab('reviews')}
                 className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm font-medium rounded-md ${
-                  activeTab === 'reviews' 
-                    ? 'bg-primary/10 text-primary' 
+                  activeTab === 'reviews'
+                    ? 'bg-primary/10 text-primary'
                     : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
                 <Star size={18} />
                 <span>Avis</span>
               </button>
+              <Link
+                to="/messages"
+                className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm font-medium rounded-md text-gray-700 hover:bg-gray-100 relative"
+              >
+                <MessageCircle size={18} />
+                <span>Messages</span>
+                {unreadCount > 0 && (
+                  <span className="bg-primary text-white text-xs px-2 py-1 rounded-full ml-auto">
+                    {unreadCount}
+                  </span>
+                )}
+              </Link>
             </nav>
           </div>
           

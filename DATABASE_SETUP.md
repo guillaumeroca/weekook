@@ -1,52 +1,217 @@
-# Configuration Base de Données MariaDB Infomaniak
+# Configuration Base de Données - Environnement VAL (Hetzner)
 
-## Problème de connexion actuel
-L'adresse `6501ew.myd.infomaniak.com` ne semble pas accessible. Voici les étapes pour résoudre le problème :
+## Base de données VAL existante
 
-## Solutions possibles
+La base de données de validation est déjà configurée sur le serveur avec les informations suivantes :
+- **Database** : weekook_VAL
+- **User** : weekook_val_user
+- **Password** : ValPassword123!
+- **Host** : localhost (même serveur que DEV)
 
-### 1. Vérifier les informations de connexion
-Connectez-vous à votre panel Infomaniak et vérifiez :
-- L'adresse exacte du serveur MySQL
-- Le nom d'utilisateur et mot de passe
-- Le nom de la base de données
-- Le port (généralement 3306)
+## Configuration de l'application
 
-### 2. Adresses communes Infomaniak
-Les serveurs MySQL Infomaniak utilisent généralement :
-- `mysql.infomaniak.com` (essayé, sans succès)
-- `mysql[X].infomaniak.com` où X est un numéro
-- `[compte].myd.infomaniak.com` (format actuel, non accessible)
-
-### 3. Configuration SSL
-Infomaniak peut nécessiter SSL. Essayez :
+### 1. Fichier .env pour VAL
+Créer ou modifier le fichier `.env.val` :
 ```env
-DATABASE_URL="mysql://username:password@host:3306/database?ssl=true"
+# Database VAL
+DATABASE_URL="mysql://weekook_val_user:ValPassword123!@localhost:3306/weekook_VAL"
+
+# Environment
+NODE_ENV=validation
+PORT=5173
+
+# JWT Secret (à générer)
+JWT_SECRET=your_jwt_secret_key_for_val
+
+# App URL
+APP_URL=http://your-hetzner-server-ip:5174
 ```
 
-### 4. Accès depuis l'extérieur
-Vérifiez que :
-- L'accès externe est autorisé sur votre base de données
-- Votre IP est dans la liste blanche si nécessaire
-
-### 5. Alternative : Base de données locale
-Pour le développement, vous pouvez utiliser :
+### 2. Initialiser la base de données avec Prisma
 ```bash
-# Installer MariaDB localement
-brew install mariadb
-brew services start mariadb
+# Se positionner dans le répertoire du projet
+cd /home/ubuntu/weekook-val
 
-# Créer une base de données locale
-mysql -u root -p -e "CREATE DATABASE weekook_dev;"
+# Installer les dépendances
+npm install
+
+# Générer le client Prisma
+npx prisma generate
+
+# Appliquer les migrations sur la base VAL
+DATABASE_URL="mysql://weekook_val_user:ValPassword123!@localhost:3306/weekook_VAL" npx prisma migrate deploy
+
+# (Optionnel) Seed la base de données avec des données de test
+DATABASE_URL="mysql://weekook_val_user:ValPassword123!@localhost:3306/weekook_VAL" npx prisma db seed
 ```
 
-Puis modifier le `.env` :
-```env
-DATABASE_URL="mysql://root:password@localhost:3306/weekook_dev"
+## Déploiement sur Ubuntu (Hetzner)
+
+### 1. Structure des répertoires
+```bash
+/home/ubuntu/
+├── weekook-dev/     # Environnement DEV
+├── weekook-val/     # Environnement VAL (notre déploiement)
+└── backups/         # Sauvegardes
 ```
 
-## Prochaines étapes recommandées
-1. Vérifiez les informations dans votre panel Infomaniak
-2. Testez la connexion manuellement avec un client MySQL
-3. Contactez le support Infomaniak si nécessaire
-4. Ou utilisez une base locale pour le développement
+### 2. Installation des prérequis
+```bash
+# Node.js et npm (si pas déjà installés)
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# PM2 pour la gestion des processus
+sudo npm install -g pm2
+
+# Nginx pour le reverse proxy
+sudo apt install nginx -y
+```
+
+### 3. Configuration PM2 pour VAL
+Créer le fichier `ecosystem.config.js` :
+```javascript
+module.exports = {
+  apps: [
+    {
+      name: 'weekook-val-backend',
+      script: './server/app.js',
+      cwd: '/home/ubuntu/weekook-val',
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      env: {
+        NODE_ENV: 'validation',
+        PORT: 5173,
+        DATABASE_URL: 'mysql://weekook_val_user:ValPassword123!@localhost:3306/weekook_VAL'
+      }
+    },
+    {
+      name: 'weekook-val-frontend',
+      script: 'npm',
+      args: 'run preview',
+      cwd: '/home/ubuntu/weekook-val',
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      env: {
+        NODE_ENV: 'validation',
+        PORT: 5174
+      }
+    }
+  ]
+};
+```
+
+### 4. Configuration Nginx
+Créer `/etc/nginx/sites-available/weekook-val` :
+```nginx
+server {
+    listen 80;
+    server_name val.weekook.com;  # Remplacer par votre domaine ou IP
+
+    # Frontend
+    location / {
+        proxy_pass http://localhost:5174;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # Backend API
+    location /api {
+        proxy_pass http://localhost:5173;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+
+## Script de déploiement
+
+Créer `deploy-val.sh` :
+```bash
+#!/bin/bash
+
+# Variables
+REPO_URL="https://github.com/guillaumeroca/weekook.git"
+BRANCH="deploy/val-v0.1"
+DEPLOY_DIR="/home/ubuntu/weekook-val"
+
+echo "🚀 Déploiement Weekook VAL..."
+
+# Cloner ou mettre à jour le code
+if [ -d "$DEPLOY_DIR" ]; then
+    cd $DEPLOY_DIR
+    git pull origin $BRANCH
+else
+    git clone -b $BRANCH $REPO_URL $DEPLOY_DIR
+    cd $DEPLOY_DIR
+fi
+
+# Installer les dépendances
+echo "📦 Installation des dépendances..."
+npm install
+cd server && npm install && cd ..
+
+# Build du frontend
+echo "🔨 Build du frontend..."
+npm run build
+
+# Migrations Prisma
+echo "🗄️ Mise à jour de la base de données..."
+npx prisma generate
+DATABASE_URL="mysql://weekook_val_user:ValPassword123!@localhost:3306/weekook_VAL" npx prisma migrate deploy
+
+# Redémarrer les services PM2
+echo "♻️ Redémarrage des services..."
+pm2 restart ecosystem.config.js
+
+echo "✅ Déploiement terminé!"
+```
+
+## Commandes utiles
+
+### Monitoring
+```bash
+# Voir les logs PM2
+pm2 logs weekook-val-backend
+pm2 logs weekook-val-frontend
+
+# Statut des services
+pm2 status
+
+# Monitoring en temps réel
+pm2 monit
+```
+
+### Base de données
+```bash
+# Connexion à la base VAL
+mysql -u weekook_val_user -pValPassword123! weekook_VAL
+
+# Vérifier les tables
+mysql -u weekook_val_user -pValPassword123! weekook_VAL -e "SHOW TABLES;"
+
+# Compter les enregistrements
+mysql -u weekook_val_user -pValPassword123! weekook_VAL -e "SELECT COUNT(*) FROM users;"
+```
+
+### Sauvegarde
+```bash
+# Sauvegarde manuelle de la base VAL
+mysqldump -u weekook_val_user -pValPassword123! weekook_VAL > backup_val_$(date +%Y%m%d).sql
+```
+
+## Sécurité
+
+⚠️ **Important** :
+- Ne jamais commiter les mots de passe dans Git
+- Utiliser des variables d'environnement ou des fichiers .env
+- Configurer le firewall pour limiter l'accès aux ports
+- Utiliser HTTPS en production avec Let's Encrypt

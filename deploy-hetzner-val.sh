@@ -91,8 +91,8 @@ echo -e "\n${YELLOW}🔨 Étape 5: Build du frontend${NC}"
 npm run build || error_exit "Erreur lors du build"
 
 echo -e "\n${YELLOW}🚀 Étape 6: Configuration PM2${NC}"
-# Créer le fichier ecosystem pour PM2
-cat > ecosystem.config.js << 'EOF'
+# Créer le fichier ecosystem pour PM2 (format .cjs pour compatibilité ES modules)
+cat > ecosystem.config.cjs << 'EOF'
 module.exports = {
   apps: [
     {
@@ -132,6 +132,9 @@ echo -e "\n${YELLOW}♻️ Étape 7: Démarrage/Redémarrage des services${NC}"
 if ! command -v pm2 &> /dev/null; then
     echo "Installation de PM2..."
     sudo npm install -g pm2
+else
+    echo "Mise à jour de PM2..."
+    pm2 update
 fi
 
 # Arrêter les anciennes instances si elles existent
@@ -139,7 +142,7 @@ pm2 delete weekook-val-backend 2>/dev/null || true
 pm2 delete weekook-val-frontend 2>/dev/null || true
 
 # Démarrer les nouvelles instances
-pm2 start ecosystem.config.js
+pm2 start ecosystem.config.cjs
 
 # Sauvegarder la configuration PM2
 pm2 save

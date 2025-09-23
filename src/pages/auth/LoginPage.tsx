@@ -20,8 +20,14 @@ const LoginPage: React.FC = () => {
     setIsLoading(true);
 
     try {
-      await login(data.email, data.password);
-      navigate('/settings');
+      const user = await login(data.email, data.password);
+
+      // Redirection selon le statut de l'utilisateur
+      if (user && user.isKooker) {
+        navigate('/kooker-dashboard');
+      } else {
+        navigate('/user-dashboard');
+      }
     } catch {
       setError('Email ou mot de passe incorrect.');
     } finally {

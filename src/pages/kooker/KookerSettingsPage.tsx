@@ -119,28 +119,28 @@ const initialFormData: KookerFormData = {
 const steps = [
   {
     id: 'personal',
-    title: 'Informations personnelles',
-    description: 'Vos informations de base'
+    title: '👤 Profil Personnel',
+    description: 'Vos informations de base et contact'
   },
   {
     id: 'experience',
-    title: 'Expérience culinaire',
-    description: 'Votre parcours et spécialités'
+    title: '👨‍🍳 Expertise Culinaire',
+    description: 'Votre parcours et spécialités gastronomiques'
   },
   {
     id: 'services',
-    title: 'Services & tarifs',
-    description: 'Définissez vos prestations'
+    title: '💰 Prestations & Tarifs',
+    description: 'Configurez vos services et prix'
   },
   {
     id: 'specialties',
-    title: 'Fiches spécialités',
-    description: 'Créez vos offres détaillées'
+    title: '🍽️ Cartes de Spécialités',
+    description: 'Créez vos offres culinaires détaillées'
   },
   {
     id: 'availability',
-    title: 'Disponibilités par repas',
-    description: 'Gestion hebdomadaire et mensuelle'
+    title: '📅 Planning des Repas',
+    description: 'Gérez vos créneaux par type de repas'
   }
 ];
 
@@ -201,6 +201,79 @@ const KookerSettingsPage: React.FC = () => {
   const [isMealModalOpen, setIsMealModalOpen] = useState(false);
   const [modalData, setModalData] = useState<ModalData | null>(null);
 
+  // Fonction pour calculer le pourcentage de completion
+  const calculateCompletionPercentage = React.useCallback((data: KookerFormData) => {
+    let completed = 0;
+    const fieldsToCheck = [
+      'firstName', 'lastName', 'phone', 'address', 'city',
+      'bio', 'experience', 'specialties', 'serviceArea',
+      'pricePerHour', 'minimumDuration', 'maxGuests'
+    ];
+
+    console.log('=== DEBUG CALCUL POURCENTAGE ===');
+    console.log('FormData reçu:', data);
+    console.log('SpecialtyCards:', specialtyCards);
+    console.log('ExistingProfileImage:', existingProfileImage);
+
+    fieldsToCheck.forEach(field => {
+      const value = data[field as keyof KookerFormData];
+      let isCompleted = false;
+
+      if (Array.isArray(value) && value.length > 0) {
+        isCompleted = true;
+      } else if (typeof value === 'object' && value !== null) {
+        if (Object.values(value).every(v => v !== '')) isCompleted = true;
+      } else if (value && value !== '' && value !== 0) {
+        isCompleted = true;
+      }
+
+      console.log(`${field}: ${JSON.stringify(value)} -> ${isCompleted ? 'COMPLÉTÉ' : 'VIDE'}`);
+      if (isCompleted) completed++;
+    });
+
+    // Ajouter les specialty cards et l'image de profil
+    if (specialtyCards.length > 0) {
+      completed++;
+      console.log('SpecialtyCards: COMPLÉTÉ');
+    } else {
+      console.log('SpecialtyCards: VIDE');
+    }
+
+    if (existingProfileImage || data.profileImage) {
+      completed++;
+      console.log('Image de profil: COMPLÉTÉ');
+    } else {
+      console.log('Image de profil: VIDE');
+    }
+
+    const total = fieldsToCheck.length + 2; // +2 pour specialty cards et image
+    const percentage = Math.round((completed / total) * 100);
+
+    console.log(`RÉSULTAT: ${completed}/${total} = ${percentage}%`);
+    console.log('=== FIN DEBUG ===');
+
+    setCompletionPercentage(percentage);
+    return percentage;
+  }, [specialtyCards, existingProfileImage]);
+
+  // Fonction pour vérifier si une étape est complète
+  const isStepComplete = React.useCallback((stepIndex: number) => {
+    switch (stepIndex) {
+      case 0: // Profil Personnel
+        return formData.firstName && formData.lastName && formData.phone && formData.address && formData.city && (existingProfileImage || formData.profileImage);
+      case 1: // Expertise Culinaire
+        return formData.bio && formData.experience && formData.specialties.length > 0;
+      case 2: // Prestations & Tarifs
+        return formData.serviceArea && formData.pricePerHour && formData.minimumDuration && formData.maxGuests;
+      case 3: // Cartes de Spécialités
+        return specialtyCards.length > 0;
+      case 4: // Planning des Repas
+        return weeklyMealSettings && Object.keys(weeklyMealSettings).length > 0;
+      default:
+        return false;
+    }
+  }, [formData, specialtyCards, existingProfileImage, weeklyMealSettings]);
+
   // Charger les données du profil Kooker
   useEffect(() => {
     let isMounted = true;
@@ -250,9 +323,7 @@ const KookerSettingsPage: React.FC = () => {
           console.log('FormData mis à jour:', newFormData.specialties);
           console.log('Specialty cards chargées depuis la BDD:', profile.specialtyCards);
 
-          setFormData(newFormData);
-
-          // Charger les specialty cards depuis la BDD
+          // Charger les specialty cards d'abord
           if (profile.specialtyCards) {
             setSpecialtyCards(profile.specialtyCards);
           }
@@ -261,6 +332,13 @@ const KookerSettingsPage: React.FC = () => {
           if (profile.profileImage) {
             setExistingProfileImage(profile.profileImage);
           }
+
+          setFormData(newFormData);
+
+          // Calculer le pourcentage après avoir défini tous les états
+          setTimeout(() => {
+            calculateCompletionPercentage(newFormData);
+          }, 100);
 
           dataLoadedRef.current = true;
         } else {
@@ -280,7 +358,7 @@ const KookerSettingsPage: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [user?.id, user?.isKooker]);
+  }, [user?.id, user?.isKooker, calculateCompletionPercentage]);
 
   // Charger les disponibilités
   useEffect(() => {
@@ -510,25 +588,11 @@ const KookerSettingsPage: React.FC = () => {
     }
   };
 
+
   const updateFormData = (field: keyof KookerFormData, value: unknown) => {
     setFormData(prev => {
       const newData = { ...prev, [field]: value };
-
-      // Calculate completion percentage
-      let completed = 0;
-      const total = Object.keys(initialFormData).length;
-
-      Object.entries(newData).forEach(([_, value]) => {
-        if (Array.isArray(value) && value.length > 0) completed++;
-        else if (typeof value === 'object' && value !== null) {
-          if (Object.values(value).every(v => v !== '')) completed++;
-        }
-        else if (value) completed++;
-      });
-
-      const percentage = Math.round((completed / total) * 100);
-      setCompletionPercentage(percentage);
-
+      calculateCompletionPercentage(newData);
       return newData;
     });
   };
@@ -616,6 +680,8 @@ const KookerSettingsPage: React.FC = () => {
 
         if (result.success) {
           setSpecialtyCards(prev => [...prev, result.specialtyCard]);
+          // Recalculer le pourcentage après ajout d'une specialty card
+          calculateCompletionPercentage(formData);
           toast.success('Fiche spécialité créée avec succès !');
         } else {
           toast.error(result.message || 'Erreur lors de la création');
@@ -644,6 +710,8 @@ const KookerSettingsPage: React.FC = () => {
 
       if (result.success) {
         setSpecialtyCards(prev => prev.filter(card => card.id !== id));
+        // Recalculer le pourcentage après suppression d'une specialty card
+        calculateCompletionPercentage(formData);
         toast.success('Fiche spécialité supprimée avec succès !');
       } else {
         toast.error(result.message || 'Erreur lors de la suppression');
@@ -1772,33 +1840,57 @@ const KookerSettingsPage: React.FC = () => {
       {/* Steps Navigation */}
       <div className="mb-8">
         <nav aria-label="Progress">
-          <ol className="flex items-center">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {steps.map((step, index) => (
-              <li key={step.id} className={`relative ${index !== steps.length - 1 ? 'pr-8 sm:pr-20' : ''}`}>
-                <div className="flex items-center">
+              <button
+                key={step.id}
+                onClick={() => setCurrentStep(index)}
+                className={`relative p-4 rounded-xl border-2 transition-all duration-200 hover:shadow-lg group ${
+                  index === currentStep
+                    ? 'bg-primary border-primary text-white shadow-lg'
+                    : isStepComplete(index)
+                    ? 'bg-green-50 border-green-300 text-green-800 hover:bg-green-100'
+                    : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center mb-2">
                   <div
-                    className={`relative flex items-center justify-center w-8 h-8 rounded-full ${
-                      index <= currentStep
-                        ? 'bg-primary text-white'
+                    className={`flex items-center justify-center w-8 h-8 rounded-full mr-3 ${
+                      index === currentStep
+                        ? 'bg-white text-primary'
+                        : index < currentStep
+                        ? 'bg-green-500 text-white'
                         : 'bg-gray-300 text-gray-500'
                     }`}
                   >
                     {index < currentStep ? (
-                      <CheckCircle2 size={20} />
+                      <CheckCircle2 size={16} />
                     ) : (
-                      <span className="text-sm font-medium">{index + 1}</span>
+                      <span className="text-sm font-bold">{index + 1}</span>
                     )}
                   </div>
-                  <span className="ml-4 text-sm font-medium text-gray-900 hidden sm:block">
-                    {step.title}
-                  </span>
+                  {index < currentStep && (
+                    <div className={`w-2 h-2 rounded-full ${
+                      index === currentStep ? 'bg-white' : 'bg-green-500'
+                    }`} />
+                  )}
                 </div>
-                {index !== steps.length - 1 && (
-                  <div className="absolute top-4 left-4 -ml-px h-0.5 w-full bg-gray-300" />
+                <h3 className={`font-semibold text-sm mb-1 ${
+                  index === currentStep ? 'text-white' : ''
+                }`}>
+                  {step.title}
+                </h3>
+                <p className={`text-xs opacity-80 ${
+                  index === currentStep ? 'text-white' : ''
+                }`}>
+                  {step.description}
+                </p>
+                {index === currentStep && (
+                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary to-purple-600 opacity-10" />
                 )}
-              </li>
+              </button>
             ))}
-          </ol>
+          </div>
         </nav>
       </div>
 

@@ -204,7 +204,7 @@ const KookerProfilePage: React.FC = () => {
     try {
       const bookingData = {
         userId: user.id,
-        kookerId: id,
+        kookerId: kooker.id,
         specialtyCardId: selectedSpecialty.id,
         date: format(selectedDate, 'yyyy-MM-dd'),
         time: '12:00', // On peut ajuster selon le type de repas si nécessaire
@@ -509,7 +509,7 @@ const KookerProfilePage: React.FC = () => {
                 </p>
                 <div className="flex items-center gap-4 text-xs mb-2">
                   <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-green-500 rounded"></div>
+                    <div className="w-4 h-4 rounded" style={{ backgroundColor: '#00ff41' }}></div>
                     <span>Disponible</span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -548,10 +548,13 @@ const KookerProfilePage: React.FC = () => {
                   position: relative !important;
                 }
 
+                .rdp-day_available .rdp-button {
+                  cursor: pointer !important;
+                }
+
                 .rdp-day_available:hover {
                   background-color: #10b981 !important;
                   color: white !important;
-                  cursor: pointer !important;
                 }
 
                 /* Dates sélectionnées */
@@ -560,16 +563,31 @@ const KookerProfilePage: React.FC = () => {
                   color: white !important;
                 }
 
+                .rdp-day_selected .rdp-button {
+                  cursor: pointer !important;
+                }
+
                 /* Dates non disponibles */
-                .rdp-day:not(.rdp-day_available):not(.rdp-day_outside) {
+                .rdp-day:not(.rdp-day_available):not(.rdp-day_outside):not(.rdp-day_selected) {
                   opacity: 0.3;
-                  cursor: not-allowed;
+                }
+
+                .rdp-day:not(.rdp-day_available):not(.rdp-day_selected) .rdp-button {
+                  cursor: not-allowed !important;
                 }
 
                 /* Dates passées */
                 .rdp-day_disabled {
                   opacity: 0.2;
-                  cursor: not-allowed;
+                }
+
+                .rdp-day_disabled .rdp-button {
+                  cursor: not-allowed !important;
+                }
+
+                /* Dates hors du mois */
+                .rdp-day_outside .rdp-button {
+                  cursor: not-allowed !important;
                 }
 
                 /* Masquer le focus ring par défaut */
@@ -582,11 +600,11 @@ const KookerProfilePage: React.FC = () => {
                   border: none;
                   background: transparent;
                   font-size: inherit;
-                  cursor: pointer;
                   padding: 8px;
                   width: 100%;
                   height: 100%;
                   border-radius: 6px;
+                  cursor: default;
                 }
               `}</style>
 
@@ -618,6 +636,15 @@ const KookerProfilePage: React.FC = () => {
                 ]}
                 fromDate={new Date()}
                 className="border border-gray-200 rounded-lg p-4"
+                modifiersStyles={{
+                  available: {
+                    backgroundColor: '#00ff41',
+                    color: 'black',
+                    fontWeight: '700',
+                    border: '2px solid #00d435',
+                    opacity: 1
+                  }
+                }}
                 showOutsideDays={false}
               />
 

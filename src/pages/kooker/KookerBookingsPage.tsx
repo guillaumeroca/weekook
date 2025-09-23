@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Users, MapPin, CheckCircle2, XCircle, AlertCircle, Euro, Phone, Mail } from 'lucide-react';
+import { Calendar, Clock, Users, MapPin, CheckCircle2, XCircle, AlertCircle, Euro, Phone, Mail, MessageCircle, Eye, X } from 'lucide-react';
 import { bookingsAPI, Booking } from '../../api/bookings';
 import { useAuth } from '../../contexts/AuthContext';
+import { authAPI } from '../../api/auth';
+import { Link } from 'react-router-dom';
 
 const KookerBookingsPage: React.FC = () => {
   const { user } = useAuth();
@@ -9,9 +11,32 @@ const KookerBookingsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updatingBooking, setUpdatingBooking] = useState<string | null>(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancellingBooking, setCancellingBooking] = useState<Booking | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [kookerId, setKookerId] = useState<string | null>(null);
 
-  // Récupérer l'ID du profil Kooker (à adapter selon votre structure)
-  const kookerId = user?.isKooker ? user.id : null;
+  useEffect(() => {
+    const loadKookerProfile = async () => {
+      if (!user?.isKooker || !user.id) return;
+
+      try {
+        const response = await authAPI.getKookerProfile(user.id);
+        if (response.success && response.profile) {
+          setKookerId(response.profile.id);
+        } else {
+          setError('Erreur lors du chargement du profil Kooker');
+        }
+      } catch (err) {
+        console.error('Erreur lors du chargement du profil Kooker:', err);
+        setError('Erreur lors du chargement du profil Kooker');
+      }
+    };
+
+    loadKookerProfile();
+  }, [user]);
 
   useEffect(() => {
     const loadKookerBookings = async () => {
@@ -37,10 +62,11 @@ const KookerBookingsPage: React.FC = () => {
     loadKookerBookings();
   }, [kookerId]);
 
-  const handleStatusUpdate = async (bookingId: string, newStatus: string) => {
+  const handleStatusUpdate = async (bookingId: string, newStatus: string, message?: string) => {
     try {
       setUpdatingBooking(bookingId);
-      const response = await bookingsAPI.updateBookingStatus(bookingId, newStatus);
+      // Utiliser l'endpoint avec message qui enverra automatiquement un message dans la messagerie interne
+      const response = await bookingsAPI.updateBookingStatusWithMessage(bookingId, newStatus, message);
 
       if (response.success) {
         setBookings(prev =>
@@ -59,6 +85,35 @@ const KookerBookingsPage: React.FC = () => {
     } finally {
       setUpdatingBooking(null);
     }
+  };
+
+  const handleAcceptBooking = (booking: Booking) => {
+    const acceptMessage = `Bonjour ${booking.user?.firstName || ''},\n\nBonne nouvelle ! J'ai accepté votre réservation pour le ${formatDate(booking.date)} à ${booking.time}.\n\nVous allez recevoir un email pour procéder au paiement et confirmer définitivement votre réservation.\n\nJ'ai hâte de cuisiner pour vous !\n\nCordialement,\n${user?.firstName || 'Votre Kooker'}`;
+    handleStatusUpdate(booking.id, 'PENDING_PAYMENT', acceptMessage);
+  };
+
+  const handleCancelBooking = () => {
+    if (!cancellingBooking || !cancelReason.trim()) {
+      alert('Veuillez saisir une raison d\'annulation');
+      return;
+    }
+
+    const cancelMessage = `Bonjour ${cancellingBooking.user?.firstName || ''},\n\nJe suis désolé(e) de vous informer que je dois annuler votre réservation du ${formatDate(cancellingBooking.date)} à ${cancellingBooking.time}.\n\nRaison: ${cancelReason}\n\nToutes mes excuses pour ce désagrément. N'hésitez pas à me recontacter pour reprogrammer ou si vous avez des questions.\n\nCordialement,\n${user?.firstName || 'Votre Kooker'}`;
+
+    handleStatusUpdate(cancellingBooking.id, 'CANCELLED', cancelMessage);
+    setShowCancelModal(false);
+    setCancellingBooking(null);
+    setCancelReason('');
+  };
+
+  const openCancelModal = (booking: Booking) => {
+    setCancellingBooking(booking);
+    setShowCancelModal(true);
+  };
+
+  const openBookingModal = (booking: Booking) => {
+    setSelectedBooking(booking);
+    setShowBookingModal(true);
   };
 
   const getStatusBadge = (status: string) => {
@@ -235,35 +290,59 @@ const KookerBookingsPage: React.FC = () => {
                 {booking.status === 'PENDING_KOOKER_VALIDATION' && (
                   <div className="mt-4 flex gap-3">
                     <button
-                      onClick={() => handleStatusUpdate(booking.id, 'PENDING_PAYMENT')}
+                      onClick={() => handleAcceptBooking(booking)}
                       disabled={updatingBooking === booking.id}
                       className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-4 py-2 rounded text-sm transition-colors"
                     >
                       {updatingBooking === booking.id ? 'Validation...' : 'Accepter'}
                     </button>
                     <button
-                      onClick={() => handleStatusUpdate(booking.id, 'CANCELLED')}
+                      onClick={() => openCancelModal(booking)}
                       disabled={updatingBooking === booking.id}
                       className="bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white px-4 py-2 rounded text-sm transition-colors"
                     >
-                      {updatingBooking === booking.id ? 'Annulation...' : 'Refuser'}
+                      Refuser
                     </button>
                   </div>
                 )}
 
-                {booking.status === 'CONFIRMED' && (
-                  <div className="mt-4">
+                <div className="mt-4 flex justify-between items-center">
+                  <div className="flex gap-3">
+                    {booking.status === 'CONFIRMED' && (
+                      <button
+                        onClick={() => {
+                          const completeMessage = `Bonjour ${booking.user?.firstName || ''},\n\nJ'espère que vous avez apprécié notre moment culinaire ! Votre réservation du ${formatDate(booking.date)} est maintenant terminée.\n\nN'hésitez pas à laisser un avis sur votre expérience et à me recontacter pour de nouvelles aventures culinaires !\n\nÀ bientôt,\n${user?.firstName || 'Votre Kooker'}`;
+                          handleStatusUpdate(booking.id, 'COMPLETED', completeMessage);
+                        }}
+                        disabled={updatingBooking === booking.id}
+                        className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded text-sm transition-colors"
+                      >
+                        {updatingBooking === booking.id ? 'Finalisation...' : 'Marquer comme terminée'}
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2">
                     <button
-                      onClick={() => handleStatusUpdate(booking.id, 'COMPLETED')}
-                      disabled={updatingBooking === booking.id}
-                      className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded text-sm transition-colors"
+                      onClick={() => openBookingModal(booking)}
+                      className="flex items-center gap-2 px-3 py-1 text-primary hover:bg-primary/10 rounded-md transition-colors text-sm"
                     >
-                      {updatingBooking === booking.id ? 'Finalisation...' : 'Marquer comme terminée'}
+                      <Eye className="w-4 h-4" />
+                      Détails
                     </button>
+                    {booking.user && (
+                      <Link
+                        to={`/messages?userId=${booking.user.id}`}
+                        className="flex items-center gap-2 px-3 py-1 text-blue-600 hover:bg-blue-50 rounded-md transition-colors text-sm"
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                        Contacter
+                      </Link>
+                    )}
                   </div>
-                )}
+                </div>
 
-                <div className="mt-4 text-xs text-gray-500">
+                <div className="mt-2 text-xs text-gray-500">
                   Réservation du {new Date(booking.createdAt).toLocaleDateString('fr-FR')}
                 </div>
               </div>
@@ -271,6 +350,209 @@ const KookerBookingsPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Modal d'annulation avec message obligatoire */}
+      {showCancelModal && cancellingBooking && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-md">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-red-600">Annuler la réservation</h3>
+                <button
+                  onClick={() => {
+                    setShowCancelModal(false);
+                    setCancellingBooking(null);
+                    setCancelReason('');
+                  }}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <p className="text-gray-700 mb-2">
+                  Vous êtes sur le point d'annuler la réservation de{' '}
+                  <strong>{cancellingBooking.user?.firstName} {cancellingBooking.user?.lastName}</strong>
+                </p>
+                <p className="text-sm text-gray-600">
+                  {formatDate(cancellingBooking.date)} à {cancellingBooking.time}
+                </p>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Raison de l'annulation (obligatoire) *
+                </label>
+                <textarea
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  rows={4}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  placeholder="Expliquez la raison de l'annulation au client..."
+                />
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setShowCancelModal(false);
+                    setCancellingBooking(null);
+                    setCancelReason('');
+                  }}
+                  className="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleCancelBooking}
+                  disabled={!cancelReason.trim() || updatingBooking === cancellingBooking.id}
+                  className="bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white px-4 py-2 rounded transition-colors"
+                >
+                  Confirmer l'annulation
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de détail de la réservation */}
+      {showBookingModal && selectedBooking && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-semibold">Détails de la réservation</h3>
+                <button
+                  onClick={() => setShowBookingModal(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {/* Informations sur le client */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 mb-2">Client</h4>
+                  <div className="space-y-2">
+                    <p className="text-gray-700">
+                      <strong>Nom :</strong> {selectedBooking.user ?
+                        `${selectedBooking.user.firstName} ${selectedBooking.user.lastName}` :
+                        'Information non disponible'
+                      }
+                    </p>
+                    {selectedBooking.user?.phone && (
+                      <p className="text-gray-700">
+                        <strong>Téléphone :</strong> {selectedBooking.user.phone}
+                      </p>
+                    )}
+                    {selectedBooking.user?.email && (
+                      <p className="text-gray-700">
+                        <strong>Email :</strong> {selectedBooking.user.email}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Informations sur la spécialité */}
+                {selectedBooking.specialtyCard && (
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h4 className="font-semibold text-gray-900 mb-2">Spécialité</h4>
+                    <div className="space-y-2">
+                      <p className="text-gray-700">
+                        <strong>Nom :</strong> {selectedBooking.specialtyCard.name}
+                      </p>
+                      <p className="text-gray-700">
+                        <strong>Prix par personne :</strong> {selectedBooking.specialtyCard.pricePerPerson}€
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Détails de la réservation */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 mb-3">Détails de la réservation</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-center gap-3">
+                      <Calendar className="w-5 h-5 text-primary" />
+                      <div>
+                        <p className="text-sm text-gray-600">Date</p>
+                        <p className="font-medium">{formatDate(selectedBooking.date)}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Clock className="w-5 h-5 text-primary" />
+                      <div>
+                        <p className="text-sm text-gray-600">Heure</p>
+                        <p className="font-medium">{selectedBooking.time}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Users className="w-5 h-5 text-primary" />
+                      <div>
+                        <p className="text-sm text-gray-600">Invités</p>
+                        <p className="font-medium">{selectedBooking.guestCount} personne{selectedBooking.guestCount > 1 ? 's' : ''}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Euro className="w-5 h-5 text-primary" />
+                      <div>
+                        <p className="text-sm text-gray-600">Prix total</p>
+                        <p className="font-medium text-lg">{selectedBooking.totalPrice}€</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Statut de la réservation */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 mb-3">Statut</h4>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      {getStatusBadge(selectedBooking.status)}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      Créée le {new Date(selectedBooking.createdAt).toLocaleDateString('fr-FR', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Notes */}
+                {selectedBooking.notes && (
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h4 className="font-semibold text-gray-900 mb-2">Notes du client</h4>
+                    <p className="text-gray-700">{selectedBooking.notes}</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-between pt-6">
+                {selectedBooking.user && (
+                  <Link
+                    to={`/messages?userId=${selectedBooking.user.id}`}
+                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    Contacter le client
+                  </Link>
+                )}
+                <button
+                  onClick={() => setShowBookingModal(false)}
+                  className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition-colors"
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

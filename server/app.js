@@ -1041,6 +1041,16 @@ app.post('/api/bookings', async (req, res) => {
       }
     });
 
+    console.log('🔍 Vérification disponibilité:', {
+      kookerId,
+      date: bookingDate.toISOString().split('T')[0],
+      mealType,
+      mealAvailability: mealAvailability ? {
+        isAvailable: mealAvailability.isAvailable,
+        status: mealAvailability.status
+      } : 'Non trouvée'
+    });
+
     // Si pas de disponibilité configurée ou pas disponible, refuser la réservation
     if (!mealAvailability || !mealAvailability.isAvailable || mealAvailability.status !== 'AVAILABLE') {
       return res.status(400).json({
@@ -1138,7 +1148,7 @@ app.get('/api/bookings/kooker/:kookerId', async (req, res) => {
       where: { Kooker_Id: kookerId },
       include: {
         user: {
-          select: { id: true, firstName: true, lastName: true, email: true, phone: true }
+          select: { User_Id: true, firstName: true, lastName: true, email: true, phone: true }
         },
         specialtyCard: {
           select: { id: true, name: true, pricePerPerson: true }
@@ -2210,6 +2220,282 @@ const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`🚀 Serveur API démarré sur le port ${PORT}`);
   console.log(`📡 Health check: http://localhost:${PORT}/api/health`);
+});
+
+// Supprimer une réservation utilisateur (seulement si PENDING_KOOKER_VALIDATION)
+app.delete('/api/bookings/:bookingId/user/:userId', async (req, res) => {
+  try {
+    const { bookingId, userId } = req.params;
+
+    console.log(`🗑️ Tentative de suppression de la réservation ${bookingId} par l'utilisateur ${userId}`);
+
+    // Vérifier que la réservation existe et appartient à l'utilisateur
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        user: {
+          select: {
+            User_Id: true,
+            firstName: true,
+            lastName: true
+          }
+        },
+        kooker: {
+          include: {
+            user: {
+              select: {
+                firstName: true,
+                lastName: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!booking) {
+      console.log(`❌ Réservation ${bookingId} non trouvée`);
+      return res.status(404).json({
+        success: false,
+        message: 'Réservation non trouvée'
+      });
+    }
+
+    // Vérifier que la réservation appartient à l'utilisateur
+    if (booking.User_Id !== userId) {
+      console.log(`❌ Utilisateur ${userId} n'est pas propriétaire de la réservation ${bookingId}`);
+      return res.status(403).json({
+        success: false,
+        message: 'Vous ne pouvez pas supprimer cette réservation'
+      });
+    }
+
+    // Vérifier que la réservation est encore en attente de validation
+    if (booking.status !== 'PENDING_KOOKER_VALIDATION') {
+      console.log(`❌ Réservation ${bookingId} ne peut pas être supprimée (statut: ${booking.status})`);
+      return res.status(400).json({
+        success: false,
+        message: 'Cette réservation ne peut plus être supprimée car elle a déjà été traitée par le kooker'
+      });
+    }
+
+    // Supprimer la réservation
+    await prisma.booking.delete({
+      where: { id: bookingId }
+    });
+
+    console.log(`✅ Réservation ${bookingId} supprimée avec succès par l'utilisateur ${booking.user?.firstName} ${booking.user?.lastName}`);
+
+    res.json({
+      success: true,
+      message: 'Réservation supprimée avec succès',
+      deletedBooking: {
+        id: booking.id,
+        date: booking.date,
+        time: booking.time,
+        kookerName: `${booking.kooker?.user?.firstName} ${booking.kooker?.user?.lastName}`
+      }
+    });
+  } catch (error) {
+    console.error('❌ Erreur lors de la suppression de la réservation:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la suppression de la réservation',
+      error: error.message
+    });
+  }
+});
+
+// Mettre à jour le statut d'une réservation
+app.patch('/api/bookings/:bookingId/status', async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const { status } = req.body;
+
+    console.log('🔄 Mise à jour du statut de la réservation:', bookingId, 'vers:', status);
+
+    // Vérifier que la réservation existe
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId }
+    });
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Réservation non trouvée'
+      });
+    }
+
+    // Mettre à jour le statut
+    const updatedBooking = await prisma.booking.update({
+      where: { id: bookingId },
+      data: { status }
+    });
+
+    console.log('✅ Statut mis à jour avec succès');
+
+    res.json({
+      success: true,
+      booking: updatedBooking
+    });
+  } catch (error) {
+    console.error('❌ Erreur lors de la mise à jour du statut:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la mise à jour du statut'
+    });
+  }
+});
+
+// Mettre à jour le statut d'une réservation avec envoi de message dans la messagerie interne
+app.patch('/api/bookings/:bookingId/status-with-message', async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const { status, message } = req.body;
+
+    console.log('🔄 Mise à jour du statut avec message - Booking:', bookingId, 'Status:', status);
+
+    // Récupérer la réservation avec les infos utilisateur et kooker
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        user: true,
+        kookerProfile: {
+          include: {
+            user: true
+          }
+        },
+        specialtyCard: true
+      }
+    });
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Réservation non trouvée'
+      });
+    }
+
+    // Mettre à jour le statut
+    const updatedBooking = await prisma.booking.update({
+      where: { id: bookingId },
+      data: { status }
+    });
+
+    // Créer ou récupérer la conversation entre l'utilisateur et le kooker
+    let conversation = await prisma.conversation.findFirst({
+      where: {
+        OR: [
+          { userId: booking.userId, kookerId: booking.kookerProfile.user.User_Id },
+          { userId: booking.kookerProfile.user.User_Id, kookerId: booking.userId }
+        ]
+      }
+    });
+
+    if (!conversation) {
+      conversation = await prisma.conversation.create({
+        data: {
+          userId: booking.userId,
+          kookerId: booking.kookerProfile.user.User_Id,
+          lastMessageAt: new Date()
+        }
+      });
+      console.log('✅ Nouvelle conversation créée:', conversation.id);
+    }
+
+    // Créer le message automatique
+    let messageContent = message || '';
+
+    // Si pas de message personnalisé, créer un message automatique selon le statut
+    if (!messageContent) {
+      const bookingDate = new Date(booking.date).toLocaleDateString('fr-FR');
+      const bookingTime = booking.time;
+      const specialtyName = booking.specialtyCard?.name || 'Prestation';
+
+      switch (status) {
+        case 'CONFIRMED':
+          messageContent = `🎉 Bonne nouvelle ! Votre réservation du ${bookingDate} à ${bookingTime} pour "${specialtyName}" a été confirmée.\n\n` +
+            `Détails de la réservation :\n` +
+            `📅 Date : ${bookingDate}\n` +
+            `🕐 Heure : ${bookingTime}\n` +
+            `👥 Nombre de personnes : ${booking.guestCount}\n` +
+            `💶 Prix total : ${booking.totalPrice}€\n\n` +
+            `J'ai hâte de vous recevoir !`;
+          break;
+        case 'CANCELLED':
+          messageContent = `❌ Votre réservation du ${bookingDate} à ${bookingTime} a été annulée.\n\n` +
+            `Si vous avez des questions, n'hésitez pas à me contacter.`;
+          break;
+        case 'PENDING_PAYMENT':
+          messageContent = `💳 Votre réservation du ${bookingDate} à ${bookingTime} est en attente de paiement.\n\n` +
+            `Merci de procéder au paiement pour confirmer définitivement votre réservation.`;
+          break;
+        case 'COMPLETED':
+          messageContent = `✅ Votre réservation du ${bookingDate} est maintenant terminée.\n\n` +
+            `J'espère que vous avez passé un excellent moment ! N'hésitez pas à laisser un avis.`;
+          break;
+        default:
+          messageContent = `Votre réservation du ${bookingDate} a été mise à jour. Nouveau statut : ${status}`;
+      }
+    }
+
+    // Déterminer l'expéditeur (le kooker envoie le message au client)
+    const senderId = booking.kookerProfile.user.User_Id;
+
+    // Créer le message
+    const newMessage = await prisma.message.create({
+      data: {
+        conversationId: conversation.id,
+        senderId: senderId,
+        content: messageContent,
+        isRead: false
+      }
+    });
+
+    // Mettre à jour la date du dernier message
+    await prisma.conversation.update({
+      where: { id: conversation.id },
+      data: { lastMessageAt: new Date() }
+    });
+
+    console.log('✅ Message envoyé dans la conversation:', conversation.id);
+
+    res.json({
+      success: true,
+      booking: updatedBooking,
+      message: 'Statut mis à jour et message envoyé'
+    });
+  } catch (error) {
+    console.error('❌ Erreur lors de la mise à jour avec message:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la mise à jour du statut'
+    });
+  }
+});
+
+// Endpoint temporaire pour supprimer toutes les réservations (développement uniquement)
+app.delete('/api/bookings/all', async (req, res) => {
+  try {
+    console.log('🗑️ Suppression de toutes les réservations...');
+
+    const deletedBookings = await prisma.booking.deleteMany({});
+
+    console.log(`✅ ${deletedBookings.count} réservations supprimées`);
+
+    res.json({
+      success: true,
+      message: `${deletedBookings.count} réservations supprimées avec succès`,
+      deletedCount: deletedBookings.count
+    });
+  } catch (error) {
+    console.error('❌ Erreur lors de la suppression des réservations:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la suppression des réservations',
+      error: error.message
+    });
+  }
 });
 
 // Gestion propre de la fermeture

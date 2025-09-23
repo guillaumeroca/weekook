@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Users, MapPin, CheckCircle2, XCircle, AlertCircle, Euro } from 'lucide-react';
+import { Calendar, Clock, Users, MapPin, CheckCircle2, XCircle, AlertCircle, Euro, Trash2 } from 'lucide-react';
 import { bookingsAPI, Booking } from '../../api/bookings';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -8,6 +8,9 @@ const UserBookingsPage: React.FC = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deletingBooking, setDeletingBooking] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [bookingToDelete, setBookingToDelete] = useState<Booking | null>(null);
 
   useEffect(() => {
     const loadUserBookings = async () => {
@@ -86,6 +89,34 @@ const UserBookingsPage: React.FC = () => {
       month: 'long',
       day: 'numeric'
     });
+  };
+
+  const handleDeleteBooking = async () => {
+    if (!bookingToDelete || !user?.id) return;
+
+    try {
+      setDeletingBooking(bookingToDelete.id);
+      const response = await bookingsAPI.deleteUserBooking(bookingToDelete.id, user.id);
+
+      if (response.success) {
+        // Retirer la réservation de la liste
+        setBookings(prev => prev.filter(booking => booking.id !== bookingToDelete.id));
+        setShowDeleteModal(false);
+        setBookingToDelete(null);
+      } else {
+        alert(response.message || 'Erreur lors de la suppression de la réservation');
+      }
+    } catch (error) {
+      console.error('Erreur lors de la suppression:', error);
+      alert('Erreur lors de la suppression de la réservation');
+    } finally {
+      setDeletingBooking(null);
+    }
+  };
+
+  const openDeleteModal = (booking: Booking) => {
+    setBookingToDelete(booking);
+    setShowDeleteModal(true);
   };
 
   if (loading) {
@@ -190,6 +221,16 @@ const UserBookingsPage: React.FC = () => {
                       Votre réservation est en attente de validation par le Kooker.
                       Vous recevrez une notification dès qu'elle sera confirmée.
                     </p>
+                    <div className="mt-3 flex justify-end">
+                      <button
+                        onClick={() => openDeleteModal(booking)}
+                        disabled={deletingBooking === booking.id}
+                        className="flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white px-3 py-2 rounded text-sm transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        {deletingBooking === booking.id ? 'Suppression...' : 'Annuler la réservation'}
+                      </button>
+                    </div>
                   </div>
                 )}
 
@@ -208,6 +249,70 @@ const UserBookingsPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Modale de confirmation de suppression */}
+      {showDeleteModal && bookingToDelete && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-md">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-red-600">Annuler la réservation</h3>
+                <button
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setBookingToDelete(null);
+                  }}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <XCircle size={20} />
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <p className="text-gray-700 mb-2">
+                  Êtes-vous sûr de vouloir annuler cette réservation ?
+                </p>
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-sm font-medium text-gray-900">
+                    {bookingToDelete.kooker ?
+                      `${bookingToDelete.kooker.user.firstName} ${bookingToDelete.kooker.user.lastName}` :
+                      'Kooker'
+                    }
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    {formatDate(bookingToDelete.date)} à {bookingToDelete.time}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    {bookingToDelete.guestCount} invité{bookingToDelete.guestCount > 1 ? 's' : ''} - {bookingToDelete.totalPrice}€
+                  </p>
+                </div>
+                <p className="text-sm text-gray-600 mt-2">
+                  Cette action est irréversible.
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setBookingToDelete(null);
+                  }}
+                  className="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+                >
+                  Garder la réservation
+                </button>
+                <button
+                  onClick={handleDeleteBooking}
+                  disabled={deletingBooking === bookingToDelete.id}
+                  className="bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white px-4 py-2 rounded transition-colors"
+                >
+                  {deletingBooking === bookingToDelete.id ? 'Suppression...' : 'Oui, annuler'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

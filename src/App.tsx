@@ -17,8 +17,10 @@ const SignupPage = lazy(() => import('./pages/auth/SignupPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPasswordPage'));
 const VerifyEmailPage = lazy(() => import('./pages/auth/VerifyEmailPage'));
 const UserSettingsPage = lazy(() => import('./pages/user/UserSettingsPage'));
+const UserDashboard = lazy(() => import('./pages/user/UserDashboard'));
 const UserBookingsPage = lazy(() => import('./pages/user/UserBookingsPage'));
 const KookerSettingsPage = lazy(() => import('./pages/kooker/KookerSettingsPage'));
+const KookerDashboard = lazy(() => import('./pages/kooker/KookerDashboard'));
 const KookerProfilePage = lazy(() => import('./pages/kooker/KookerProfilePage'));
 const KookerBookingsPage = lazy(() => import('./pages/kooker/KookerBookingsPage'));
 const KookerCalendarPage = lazy(() => import('./pages/kooker/KookerCalendarPage'));
@@ -80,10 +82,26 @@ function App() {
             {/* Private routes */}
             <Route element={<MainLayout />}>
               <Route
+                path="/user-dashboard"
+                element={
+                  <PrivateRoute>
+                    <UserDashboard />
+                  </PrivateRoute>
+                }
+              />
+              <Route
                 path="/settings"
                 element={
                   <PrivateRoute>
                     <UserSettingsPage />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/kooker-dashboard"
+                element={
+                  <PrivateRoute>
+                    <KookerDashboard />
                   </PrivateRoute>
                 }
               />

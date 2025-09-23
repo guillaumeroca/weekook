@@ -5,7 +5,7 @@ import { authAPI, AuthUser } from '../api/auth';
 interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<AuthUser>;
   signup: (email: string, password: string, acceptedTerms: boolean) => Promise<void>;
   logout: () => void;
   becomeKooker: () => Promise<void>;
@@ -74,6 +74,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(result.user);
       localStorage.setItem('weekook_user', JSON.stringify(result.user));
       toast.success('Connexion réussie !');
+      return result.user;
     } catch (error: unknown) {
       toast.error((error as Error).message || 'Erreur de connexion');
       throw error;

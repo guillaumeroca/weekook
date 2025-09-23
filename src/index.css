@@ -19,9 +19,39 @@
   margin: 1em;
 }
 
-.rdp-day_selected, 
-.rdp-day_selected:focus-visible, 
+.rdp-day_selected,
+.rdp-day_selected:focus-visible,
 .rdp-day_selected:hover {
   background-color: var(--rdp-accent-color);
   color: white;
+}
+
+/* Styles pour les jours disponibles dans le calendrier du kooker */
+.rdp-day[aria-selected="false"]:not([aria-disabled="true"]).available {
+  background-color: #00ff41 !important; /* vert très vif */
+  color: black !important; /* texte noir pour meilleure lisibilité */
+  font-weight: 700;
+  border: 2px solid #00d435 !important;
+  opacity: 1 !important;
+}
+
+.rdp-day[aria-selected="false"]:not([aria-disabled="true"]).available:hover {
+  background-color: #00e63a !important; /* vert encore plus vif au survol */
+  color: black !important;
+  transform: scale(1.05);
+  transition: all 0.2s ease;
+}
+
+.rdp-day[aria-selected="true"].available {
+  background-color: #00ff41 !important; /* garder le même vert quand sélectionné */
+  color: black !important; /* texte noir même quand sélectionné */
+  font-weight: 700;
+  border: 3px solid #00d435 !important; /* bordure plus épaisse pour montrer la sélection */
+  opacity: 1 !important;
+}
+
+/* Surcharger les styles par défaut de react-day-picker pour les jours sélectionnés */
+.rdp-day_selected:not(.rdp-day_outside) {
+  background-color: #00ff41 !important;
+  color: black !important;
 }

@@ -148,5 +148,48 @@ export const bookingsAPI = {
         message: 'Erreur lors de la mise à jour du statut'
       };
     }
+  },
+
+  // Mettre à jour le statut d'une réservation avec message automatique
+  async updateBookingStatusWithMessage(bookingId: string, status: string, message?: string): Promise<BookingResponse> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/bookings/${bookingId}/status-with-message`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status, message }),
+      });
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error updating booking status with message:', error);
+      return {
+        success: false,
+        message: 'Erreur lors de la mise à jour du statut'
+      };
+    }
+  },
+
+  // Supprimer une réservation utilisateur (seulement si PENDING_KOOKER_VALIDATION)
+  async deleteUserBooking(bookingId: string, userId: string): Promise<{ success: boolean; message: string; deletedBooking?: any }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/bookings/${bookingId}/user/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error deleting user booking:', error);
+      return {
+        success: false,
+        message: 'Erreur lors de la suppression de la réservation'
+      };
+    }
   }
 };

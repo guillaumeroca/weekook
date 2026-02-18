@@ -1,0 +1,749 @@
+import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { api } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
+
+// ─── Types ──────────────────────────────────────────────────────────────────────
+interface ServiceDetail {
+  id: number;
+  title: string;
+  description: string;
+  priceInCents: number;
+  durationMinutes: number;
+  maxGuests: number;
+  type: string;
+  specialties: string[];
+}
+
+interface Availability {
+  date: string;      // YYYY-MM-DD
+  startTime: string; // HH:MM
+  endTime: string;   // HH:MM
+  isAvailable: boolean;
+}
+
+interface CreatedBooking {
+  id: number;
+  date: string;
+  startTime: string;
+  guests: number;
+  totalPriceInCents: number;
+  status: string;
+  service: {
+    title: string;
+  };
+  kookerProfile: {
+    user: {
+      firstName: string;
+      lastName: string;
+    };
+  };
+}
+
+// ─── Helpers ────────────────────────────────────────────────────────────────────
+function safeJsonParse<T>(value: unknown, fallback: T): T {
+  if (Array.isArray(value)) return value as unknown as T;
+  if (typeof value !== 'string') return fallback;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+}
+
+function formatDuration(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h === 0) return `${m}min`;
+  if (m === 0) return `${h}h`;
+  return `${h}h${m.toString().padStart(2, '0')}`;
+}
+
+function formatPrice(cents: number): string {
+  return (cents / 100).toFixed(2).replace('.', ',');
+}
+
+function formatDateFr(dateStr: string): string {
+  const date = new Date(dateStr + 'T00:00:00');
+  return date.toLocaleDateString('fr-FR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
+function getDaysInMonth(year: number, month: number): number {
+  return new Date(year, month + 1, 0).getDate();
+}
+
+function getFirstDayOfMonth(year: number, month: number): number {
+  const day = new Date(year, month, 1).getDay();
+  return day === 0 ? 6 : day - 1;
+}
+
+const MONTH_NAMES = [
+  'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
+];
+const DAY_NAMES = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+
+// ─── Component ──────────────────────────────────────────────────────────────────
+export default function BookingPage() {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const serviceId = searchParams.get('service');
+  const kookerId = searchParams.get('kooker');
+
+  // Data state
+  const [service, setService] = useState<ServiceDetail | null>(null);
+  const [availabilities, setAvailabilities] = useState<Availability[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+
+  // Selection state
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [guests, setGuests] = useState(1);
+  const [notes, setNotes] = useState('');
+
+  // Submission state
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [createdBooking, setCreatedBooking] = useState<CreatedBooking | null>(null);
+
+  // Calendar state
+  const now = new Date();
+  const [calendarYear, setCalendarYear] = useState(now.getFullYear());
+  const [calendarMonth, setCalendarMonth] = useState(now.getMonth());
+
+  // ─── Load service + availability ────────────────────────────────────────────
+  useEffect(() => {
+    if (!serviceId || !kookerId) {
+      setLoadError(true);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    setLoadError(false);
+
+    Promise.all([
+      api.get<any>(`/services/${serviceId}`),
+      api.get<Availability[]>(`/availability/kooker/${kookerId}`),
+    ])
+      .then(([serviceRes, availRes]) => {
+        if (serviceRes.success && serviceRes.data) {
+          const s = serviceRes.data;
+          setService({
+            id: s.id,
+            title: s.title || '',
+            description: s.description || '',
+            priceInCents: s.priceInCents || 0,
+            durationMinutes: s.durationMinutes || 0,
+            maxGuests: s.maxGuests || 1,
+            type: safeJsonParse<string[]>(s.type, []).join(', '),
+            specialties: safeJsonParse<string[]>(s.specialties, []),
+          });
+        } else {
+          setLoadError(true);
+        }
+
+        if (availRes.success && availRes.data) {
+          setAvailabilities(
+            (availRes.data as Availability[]).filter((a) => a.isAvailable)
+          );
+        }
+      })
+      .catch(() => {
+        setLoadError(true);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, [serviceId, kookerId]);
+
+  // ─── Available dates map ────────────────────────────────────────────────────
+  const availableDatesMap = useMemo(() => {
+    const map = new Map<string, Availability[]>();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    for (const av of availabilities) {
+      // Only future dates
+      if (av.date < todayStr) continue;
+      const existing = map.get(av.date) || [];
+      existing.push(av);
+      map.set(av.date, existing);
+    }
+    return map;
+  }, [availabilities]);
+
+  // ─── Time slots for selected date ───────────────────────────────────────────
+  const timeSlotsForDate = useMemo(() => {
+    if (!selectedDate) return [];
+    return availableDatesMap.get(selectedDate) || [];
+  }, [selectedDate, availableDatesMap]);
+
+  // ─── Reset downstream selections when parent changes ────────────────────────
+  useEffect(() => {
+    setSelectedTime(null);
+  }, [selectedDate]);
+
+  // ─── Calendar navigation ───────────────────────────────────────────────────
+  const goToPrevMonth = () => {
+    if (calendarMonth === 0) {
+      setCalendarMonth(11);
+      setCalendarYear(calendarYear - 1);
+    } else {
+      setCalendarMonth(calendarMonth - 1);
+    }
+  };
+
+  const goToNextMonth = () => {
+    if (calendarMonth === 11) {
+      setCalendarMonth(0);
+      setCalendarYear(calendarYear + 1);
+    } else {
+      setCalendarMonth(calendarMonth + 1);
+    }
+  };
+
+  // ─── Calendar rendering data ──────────────────────────────────────────────
+  const daysInMonth = getDaysInMonth(calendarYear, calendarMonth);
+  const firstDay = getFirstDayOfMonth(calendarYear, calendarMonth);
+  const calendarDays: (number | null)[] = [];
+  for (let i = 0; i < firstDay; i++) calendarDays.push(null);
+  for (let d = 1; d <= daysInMonth; d++) calendarDays.push(d);
+  while (calendarDays.length % 7 !== 0) calendarDays.push(null);
+
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+  // ─── Submit booking ────────────────────────────────────────────────────────
+  const handleSubmit = async () => {
+    if (!selectedDate || !selectedTime || !service) return;
+
+    setIsSubmitting(true);
+    try {
+      const res = await api.post<CreatedBooking>('/bookings', {
+        serviceId: service.id,
+        date: selectedDate,
+        startTime: selectedTime,
+        guests,
+        notes: notes.trim() || undefined,
+      });
+
+      if (res.success && res.data) {
+        setCreatedBooking(res.data);
+        toast.success('Reservation confirmee !');
+      } else {
+        toast.error(res.error || 'Une erreur est survenue.');
+      }
+    } catch (err: any) {
+      toast.error(err?.error || 'Une erreur est survenue.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // ─── Derived values ────────────────────────────────────────────────────────
+  const totalPriceCents = service ? service.priceInCents * guests : 0;
+  const canConfirm = !!selectedDate && !!selectedTime && guests >= 1 && !!service;
+
+  // ─── Error state ──────────────────────────────────────────────────────────
+  if (!isLoading && loadError) {
+    return (
+      <div className="min-h-screen bg-[#f2f4fc] flex flex-col items-center justify-center px-4">
+        <div className="text-center">
+          <h1 className="text-[48px] font-bold text-[#c1a0fd]">Oups</h1>
+          <p className="mt-2 text-[18px] font-semibold text-[#111125]">
+            Service introuvable
+          </p>
+          <p className="mt-1 text-[15px] text-[#6b7280]">
+            Ce service n'existe pas ou les parametres sont invalides.
+          </p>
+          <button
+            onClick={() => navigate('/recherche')}
+            className="mt-6 px-6 py-2.5 bg-[#c1a0fd] text-white font-semibold rounded-[12px] hover:bg-[#b090ed] transition-all"
+          >
+            Rechercher un kooker
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Loading state ────────────────────────────────────────────────────────
+  if (isLoading || !service) {
+    return (
+      <div className="min-h-screen bg-[#f2f4fc] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-[#c1a0fd] border-t-transparent rounded-full animate-spin" />
+          <p className="text-[#5c5c6f] font-medium">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Success state ────────────────────────────────────────────────────────
+  if (createdBooking) {
+    return (
+      <div className="min-h-screen bg-[#f2f4fc] py-10 md:py-16">
+        <div className="px-4 md:px-8 lg:px-[96px] max-w-[640px] mx-auto">
+          <div className="bg-white rounded-[20px] shadow-sm border border-[#e5e7eb]/50 p-6 md:p-8 text-center">
+            {/* Success icon */}
+            <div className="w-16 h-16 mx-auto mb-5 rounded-full bg-[#dcfce7] flex items-center justify-center">
+              <svg className="w-8 h-8 text-[#16a34a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+
+            <h1 className="text-[24px] md:text-[28px] font-bold text-[#111125]">
+              Reservation confirmee !
+            </h1>
+            <p className="mt-2 text-[15px] text-[#6b7280]">
+              Votre demande de reservation a bien ete envoyee.
+            </p>
+
+            {/* Booking details */}
+            <div className="mt-6 bg-[#f2f4fc] rounded-[16px] p-5 text-left space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-[14px] text-[#6b7280]">Service</span>
+                <span className="text-[14px] font-semibold text-[#111125]">
+                  {createdBooking.service?.title || service.title}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-[14px] text-[#6b7280]">Date</span>
+                <span className="text-[14px] font-semibold text-[#111125]">
+                  {formatDateFr(createdBooking.date)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-[14px] text-[#6b7280]">Heure</span>
+                <span className="text-[14px] font-semibold text-[#111125]">
+                  {createdBooking.startTime}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-[14px] text-[#6b7280]">Convives</span>
+                <span className="text-[14px] font-semibold text-[#111125]">
+                  {createdBooking.guests} personne{createdBooking.guests > 1 ? 's' : ''}
+                </span>
+              </div>
+              <div className="border-t border-[#e5e7eb] pt-3 flex justify-between items-center">
+                <span className="text-[15px] font-semibold text-[#111125]">Total</span>
+                <span className="text-[18px] font-bold text-[#c1a0fd]">
+                  {formatPrice(createdBooking.totalPriceInCents)}&euro;
+                </span>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
+              <button
+                onClick={() => navigate('/tableau-de-bord')}
+                className="px-6 py-3 bg-[#c1a0fd] text-white font-semibold rounded-[12px] hover:bg-[#b090ed] transition-all text-[15px]"
+              >
+                Voir mes reservations
+              </button>
+              <button
+                onClick={() => navigate(`/kooker/${kookerId}`)}
+                className="px-6 py-3 bg-white border border-[#e5e7eb] text-[#111125] font-medium rounded-[12px] hover:border-[#c1a0fd] hover:text-[#c1a0fd] transition-all text-[15px]"
+              >
+                Retour au profil
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Main booking form ────────────────────────────────────────────────────
+  return (
+    <div className="min-h-screen bg-[#f2f4fc] py-8 md:py-12">
+      <div className="px-4 md:px-8 lg:px-[96px] max-w-[780px] mx-auto">
+        {/* Back button */}
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 mb-6 text-[14px] font-medium text-[#6b7280] hover:text-[#111125] transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Retour
+        </button>
+
+        <h1 className="text-[24px] md:text-[32px] font-bold text-[#111125] mb-8">
+          Reserver
+        </h1>
+
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        {/* STEP 1 - Service Summary                                       */}
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        <section className="bg-white rounded-[20px] shadow-sm border border-[#e5e7eb]/50 p-5 md:p-6 mb-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-8 h-8 rounded-full bg-[#c1a0fd] flex items-center justify-center text-white font-bold text-[14px]">
+              1
+            </div>
+            <h2 className="text-[18px] font-semibold text-[#111125]">
+              Service selectionne
+            </h2>
+          </div>
+
+          <div className="bg-[#f2f4fc] rounded-[16px] p-4 md:p-5">
+            <div className="flex items-start justify-between flex-wrap gap-3">
+              <div>
+                <h3 className="text-[16px] md:text-[18px] font-semibold text-[#111125]">
+                  {service.title}
+                </h3>
+                {service.type && (
+                  <span className="inline-block mt-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wide bg-[#ede7fb] text-[#7c5cbf]">
+                    {service.type}
+                  </span>
+                )}
+              </div>
+              <div className="text-right">
+                <span className="text-[20px] font-bold text-[#c1a0fd]">
+                  {formatPrice(service.priceInCents)}&euro;
+                </span>
+                <span className="text-[13px] text-[#6b7280] ml-1">/pers.</span>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-4 mt-3 text-[13px] text-[#6b7280]">
+              <span className="flex items-center gap-1.5">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {formatDuration(service.durationMinutes)}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                {service.maxGuests} personne{service.maxGuests > 1 ? 's' : ''} max
+              </span>
+            </div>
+
+            {service.description && (
+              <p className="mt-3 text-[14px] text-[#4b5563] leading-relaxed">
+                {service.description}
+              </p>
+            )}
+          </div>
+        </section>
+
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        {/* STEP 2 - Select Date                                           */}
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        <section className="bg-white rounded-[20px] shadow-sm border border-[#e5e7eb]/50 p-5 md:p-6 mb-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-8 h-8 rounded-full bg-[#c1a0fd] flex items-center justify-center text-white font-bold text-[14px]">
+              2
+            </div>
+            <h2 className="text-[18px] font-semibold text-[#111125]">
+              Choisir une date
+            </h2>
+          </div>
+
+          {availableDatesMap.size === 0 ? (
+            <div className="py-8 text-center">
+              <p className="text-[15px] text-[#6b7280]">
+                Aucune disponibilite future pour ce kooker.
+              </p>
+            </div>
+          ) : (
+            <div className="max-w-[420px]">
+              {/* Month Navigation */}
+              <div className="flex items-center justify-between mb-4">
+                <button
+                  onClick={goToPrevMonth}
+                  className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#f3f4f6] transition-colors"
+                >
+                  <svg className="w-5 h-5 text-[#6b7280]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <h3 className="text-[15px] font-semibold text-[#111125]">
+                  {MONTH_NAMES[calendarMonth]} {calendarYear}
+                </h3>
+                <button
+                  onClick={goToNextMonth}
+                  className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#f3f4f6] transition-colors"
+                >
+                  <svg className="w-5 h-5 text-[#6b7280]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Day Headers */}
+              <div className="grid grid-cols-7 mb-2">
+                {DAY_NAMES.map((day) => (
+                  <div
+                    key={day}
+                    className="text-center text-[12px] font-medium text-[#9ca3af] py-1"
+                  >
+                    {day}
+                  </div>
+                ))}
+              </div>
+
+              {/* Calendar Grid */}
+              <div className="grid grid-cols-7">
+                {calendarDays.map((day, idx) => {
+                  if (day === null) {
+                    return <div key={`empty-${idx}`} className="h-10" />;
+                  }
+
+                  const dateStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                  const isToday = dateStr === todayStr;
+                  const isAvailable = availableDatesMap.has(dateStr);
+                  const isPast = dateStr < todayStr;
+                  const isSelected = dateStr === selectedDate;
+
+                  return (
+                    <div
+                      key={dateStr}
+                      className="relative flex items-center justify-center h-10"
+                    >
+                      <button
+                        disabled={!isAvailable}
+                        onClick={() => isAvailable ? setSelectedDate(dateStr) : undefined}
+                        className={`w-8 h-8 flex items-center justify-center rounded-full text-[13px] transition-colors ${
+                          isSelected
+                            ? 'bg-[#111125] text-white font-bold ring-2 ring-[#c1a0fd]'
+                            : isAvailable
+                              ? 'bg-[#c1a0fd] text-white font-semibold cursor-pointer hover:bg-[#b090ed]'
+                              : isToday
+                                ? 'bg-[#f3f4f6] text-[#111125] font-semibold ring-2 ring-[#c1a0fd]'
+                                : isPast
+                                  ? 'text-[#d1d5db] cursor-default'
+                                  : 'text-[#6b7280] cursor-default'
+                        }`}
+                      >
+                        {day}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Legend */}
+              <div className="flex items-center gap-4 mt-4 pt-4 border-t border-[#f0f0f0]">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-[#c1a0fd]" />
+                  <span className="text-[12px] text-[#6b7280]">Disponible</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-[#111125] ring-2 ring-[#c1a0fd]" />
+                  <span className="text-[12px] text-[#6b7280]">Selectionne</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        {/* STEP 3 - Select Time Slot                                      */}
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        <section className={`bg-white rounded-[20px] shadow-sm border border-[#e5e7eb]/50 p-5 md:p-6 mb-6 transition-opacity ${selectedDate ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}>
+          <div className="flex items-center gap-3 mb-4">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-[14px] ${selectedDate ? 'bg-[#c1a0fd] text-white' : 'bg-[#e5e7eb] text-[#9ca3af]'}`}>
+              3
+            </div>
+            <h2 className="text-[18px] font-semibold text-[#111125]">
+              Choisir un creneau
+            </h2>
+          </div>
+
+          {selectedDate && timeSlotsForDate.length > 0 ? (
+            <div className="flex flex-wrap gap-3">
+              {timeSlotsForDate.map((slot, idx) => {
+                const isSelected = selectedTime === slot.startTime;
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedTime(slot.startTime)}
+                    className={`px-5 py-3 rounded-[12px] text-[14px] font-medium transition-all border ${
+                      isSelected
+                        ? 'bg-[#c1a0fd] text-white border-[#c1a0fd] shadow-sm'
+                        : 'bg-white text-[#111125] border-[#e5e7eb] hover:border-[#c1a0fd] hover:text-[#c1a0fd]'
+                    }`}
+                  >
+                    {slot.startTime} - {slot.endTime}
+                  </button>
+                );
+              })}
+            </div>
+          ) : selectedDate ? (
+            <p className="text-[14px] text-[#6b7280]">
+              Aucun creneau disponible pour cette date.
+            </p>
+          ) : (
+            <p className="text-[14px] text-[#9ca3af]">
+              Selectionnez d'abord une date.
+            </p>
+          )}
+        </section>
+
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        {/* STEP 4 - Guests & Notes                                        */}
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        <section className={`bg-white rounded-[20px] shadow-sm border border-[#e5e7eb]/50 p-5 md:p-6 mb-6 transition-opacity ${selectedTime ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}>
+          <div className="flex items-center gap-3 mb-4">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-[14px] ${selectedTime ? 'bg-[#c1a0fd] text-white' : 'bg-[#e5e7eb] text-[#9ca3af]'}`}>
+              4
+            </div>
+            <h2 className="text-[18px] font-semibold text-[#111125]">
+              Convives et notes
+            </h2>
+          </div>
+
+          <div className="space-y-5">
+            {/* Guests */}
+            <div>
+              <label htmlFor="guests" className="block text-[14px] font-medium text-[#111125] mb-1.5">
+                Nombre de convives
+              </label>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setGuests((g) => Math.max(1, g - 1))}
+                  disabled={guests <= 1}
+                  className="w-10 h-10 flex items-center justify-center rounded-[12px] border border-[#e5e7eb] text-[#111125] hover:border-[#c1a0fd] hover:text-[#c1a0fd] transition-all disabled:opacity-40 disabled:cursor-default disabled:hover:border-[#e5e7eb] disabled:hover:text-[#111125]"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                  </svg>
+                </button>
+                <input
+                  id="guests"
+                  type="number"
+                  min={1}
+                  max={service.maxGuests}
+                  value={guests}
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value, 10);
+                    if (!isNaN(v) && v >= 1 && v <= service.maxGuests) setGuests(v);
+                  }}
+                  className="w-16 h-10 text-center rounded-[12px] border border-[#e5e7eb] text-[16px] font-semibold text-[#111125] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd] focus:border-transparent"
+                />
+                <button
+                  onClick={() => setGuests((g) => Math.min(service.maxGuests, g + 1))}
+                  disabled={guests >= service.maxGuests}
+                  className="w-10 h-10 flex items-center justify-center rounded-[12px] border border-[#e5e7eb] text-[#111125] hover:border-[#c1a0fd] hover:text-[#c1a0fd] transition-all disabled:opacity-40 disabled:cursor-default disabled:hover:border-[#e5e7eb] disabled:hover:text-[#111125]"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                </button>
+                <span className="text-[13px] text-[#6b7280]">
+                  / {service.maxGuests} max
+                </span>
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label htmlFor="notes" className="block text-[14px] font-medium text-[#111125] mb-1.5">
+                Notes <span className="text-[#9ca3af] font-normal">(optionnel)</span>
+              </label>
+              <textarea
+                id="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Allergies, preferences, informations utiles..."
+                rows={3}
+                className="w-full rounded-[12px] border border-[#e5e7eb] px-4 py-3 text-[14px] text-[#111125] placeholder-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd] focus:border-transparent resize-none"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        {/* STEP 5 - Summary & Confirm                                     */}
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        <section className={`bg-white rounded-[20px] shadow-sm border border-[#e5e7eb]/50 p-5 md:p-6 mb-6 transition-opacity ${canConfirm ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}>
+          <div className="flex items-center gap-3 mb-4">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-[14px] ${canConfirm ? 'bg-[#c1a0fd] text-white' : 'bg-[#e5e7eb] text-[#9ca3af]'}`}>
+              5
+            </div>
+            <h2 className="text-[18px] font-semibold text-[#111125]">
+              Recapitulatif
+            </h2>
+          </div>
+
+          {canConfirm && (
+            <>
+              <div className="bg-[#f2f4fc] rounded-[16px] p-4 md:p-5 space-y-3 mb-5">
+                <div className="flex justify-between items-center">
+                  <span className="text-[14px] text-[#6b7280]">Service</span>
+                  <span className="text-[14px] font-semibold text-[#111125]">
+                    {service.title}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[14px] text-[#6b7280]">Date</span>
+                  <span className="text-[14px] font-semibold text-[#111125]">
+                    {formatDateFr(selectedDate!)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[14px] text-[#6b7280]">Creneau</span>
+                  <span className="text-[14px] font-semibold text-[#111125]">
+                    {selectedTime}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[14px] text-[#6b7280]">Convives</span>
+                  <span className="text-[14px] font-semibold text-[#111125]">
+                    {guests} personne{guests > 1 ? 's' : ''}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[14px] text-[#6b7280]">Prix unitaire</span>
+                  <span className="text-[14px] font-semibold text-[#111125]">
+                    {formatPrice(service.priceInCents)}&euro; x {guests}
+                  </span>
+                </div>
+                {notes.trim() && (
+                  <div className="flex justify-between items-start">
+                    <span className="text-[14px] text-[#6b7280]">Notes</span>
+                    <span className="text-[14px] text-[#111125] max-w-[60%] text-right">
+                      {notes.trim()}
+                    </span>
+                  </div>
+                )}
+                <div className="border-t border-[#e5e7eb] pt-3 flex justify-between items-center">
+                  <span className="text-[16px] font-bold text-[#111125]">Total</span>
+                  <span className="text-[22px] font-bold text-[#c1a0fd]">
+                    {formatPrice(totalPriceCents)}&euro;
+                  </span>
+                </div>
+              </div>
+
+              <button
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+                className="w-full py-3.5 bg-[#c1a0fd] text-white font-semibold rounded-[12px] hover:bg-[#b090ed] transition-all text-[16px] shadow-sm disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Reservation en cours...
+                  </>
+                ) : (
+                  <>
+                    Confirmer la reservation - {formatPrice(totalPriceCents)}&euro;
+                  </>
+                )}
+              </button>
+            </>
+          )}
+        </section>
+      </div>
+    </div>
+  );
+}

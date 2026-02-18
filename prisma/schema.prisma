@@ -1,0 +1,207 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              Int       @id @default(autoincrement())
+  email           String    @unique
+  password        String
+  firstName       String    @map("first_name")
+  lastName        String    @map("last_name")
+  phone           String?
+  avatar          String?
+  role            String    @default("user")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  kookerProfile   KookerProfile?
+  bookings        Booking[]       @relation("UserBookings")
+  reviews         Review[]
+  favorites       Favorite[]
+  sentMessages    Message[]       @relation("SentMessages")
+  receivedMessages Message[]      @relation("ReceivedMessages")
+
+  @@map("users")
+}
+
+model KookerProfile {
+  id              Int       @id @default(autoincrement())
+  userId          Int       @unique @map("user_id")
+  bio             String?   @db.Text
+  specialties     Json?
+  type            Json?
+  city            String?
+  address         String?
+  experience      String?
+  rating          Float     @default(0)
+  reviewCount     Int       @default(0) @map("review_count")
+  featured        Boolean   @default(false)
+  active          Boolean   @default(true)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  user            User      @relation(fields: [userId], references: [id])
+  services        Service[]
+  availabilities  Availability[]
+  bookingsReceived Booking[] @relation("KookerBookings")
+  reviewsReceived Review[]  @relation("KookerReviews")
+  favoritedBy     Favorite[]
+  testimonials    Testimonial[]
+
+  @@map("kooker_profiles")
+}
+
+model KookerSpecialty {
+  id              Int       @id @default(autoincrement())
+  name            String    @unique
+  icon            String?
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@map("kooker_specialties")
+}
+
+model Service {
+  id              Int       @id @default(autoincrement())
+  kookerProfileId Int       @map("kooker_profile_id")
+  title           String
+  description     String?   @db.Text
+  type            Json
+  priceInCents    Int       @map("price_in_cents")
+  durationMinutes Int       @map("duration_minutes")
+  maxGuests       Int       @default(1) @map("max_guests")
+  active          Boolean   @default(true)
+  allergens       Json?
+  constraints     Json?
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  kookerProfile   KookerProfile @relation(fields: [kookerProfileId], references: [id])
+  images          ServiceImage[]
+  menuItems       MenuItem[]
+  bookings        Booking[]
+
+  @@map("services")
+}
+
+model ServiceImage {
+  id              Int       @id @default(autoincrement())
+  serviceId       Int       @map("service_id")
+  url             String
+  alt             String?
+  sortOrder       Int       @default(0) @map("sort_order")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  service         Service   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@map("service_images")
+}
+
+model MenuItem {
+  id              Int       @id @default(autoincrement())
+  serviceId       Int       @map("service_id")
+  category        String
+  name            String
+  description     String?
+  sortOrder       Int       @default(0) @map("sort_order")
+
+  service         Service   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@map("menu_items")
+}
+
+model Booking {
+  id              Int       @id @default(autoincrement())
+  userId          Int       @map("user_id")
+  kookerProfileId Int       @map("kooker_profile_id")
+  serviceId       Int       @map("service_id")
+  date            DateTime
+  startTime       String    @map("start_time")
+  endTime         String?   @map("end_time")
+  guests          Int       @default(1)
+  totalPriceInCents Int     @map("total_price_in_cents")
+  status          String    @default("pending")
+  notes           String?   @db.Text
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  user            User      @relation("UserBookings", fields: [userId], references: [id])
+  kookerProfile   KookerProfile @relation("KookerBookings", fields: [kookerProfileId], references: [id])
+  service         Service   @relation(fields: [serviceId], references: [id])
+
+  @@map("bookings")
+}
+
+model Review {
+  id              Int       @id @default(autoincrement())
+  userId          Int       @map("user_id")
+  kookerProfileId Int       @map("kooker_profile_id")
+  rating          Int
+  comment         String?   @db.Text
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  user            User      @relation(fields: [userId], references: [id])
+  kookerProfile   KookerProfile @relation("KookerReviews", fields: [kookerProfileId], references: [id])
+
+  @@map("reviews")
+}
+
+model Favorite {
+  id              Int       @id @default(autoincrement())
+  userId          Int       @map("user_id")
+  kookerProfileId Int       @map("kooker_profile_id")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  user            User      @relation(fields: [userId], references: [id])
+  kookerProfile   KookerProfile @relation(fields: [kookerProfileId], references: [id])
+
+  @@unique([userId, kookerProfileId])
+  @@map("favorites")
+}
+
+model Availability {
+  id              Int       @id @default(autoincrement())
+  kookerProfileId Int       @map("kooker_profile_id")
+  date            DateTime
+  startTime       String    @map("start_time")
+  endTime         String    @map("end_time")
+  isAvailable     Boolean   @default(true) @map("is_available")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  kookerProfile   KookerProfile @relation(fields: [kookerProfileId], references: [id])
+
+  @@map("availabilities")
+}
+
+model Message {
+  id              Int       @id @default(autoincrement())
+  senderId        Int       @map("sender_id")
+  receiverId      Int       @map("receiver_id")
+  content         String    @db.Text
+  read            Boolean   @default(false)
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  sender          User      @relation("SentMessages", fields: [senderId], references: [id])
+  receiver        User      @relation("ReceivedMessages", fields: [receiverId], references: [id])
+
+  @@map("messages")
+}
+
+model Testimonial {
+  id              Int       @id @default(autoincrement())
+  kookerProfileId Int?      @map("kooker_profile_id")
+  authorName      String    @map("author_name")
+  authorRole      String?   @map("author_role")
+  content         String    @db.Text
+  rating          Int       @default(5)
+  featured        Boolean   @default(false)
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  kookerProfile   KookerProfile? @relation(fields: [kookerProfileId], references: [id])
+
+  @@map("testimonials")
+}

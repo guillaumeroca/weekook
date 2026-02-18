@@ -1,0 +1,1310 @@
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { api } from '@/lib/api';
+import { toast } from 'sonner';
+
+// ────────────────────────── Types ──────────────────────────
+
+interface DashboardStats {
+  totalBookings: number;
+  upcomingBookings: number;
+  totalRevenue: number;
+  activeServices: number;
+  averageRating: number;
+  totalReviews: number;
+}
+
+interface KookerBooking {
+  id: number;
+  date: string;
+  startTime: string;
+  guests: number;
+  totalPriceInCents: number;
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  user: { firstName: string; lastName: string; email: string };
+  service: { title: string };
+  message?: string;
+}
+
+interface Service {
+  id: number;
+  title: string;
+  description?: string;
+  type: string;
+  priceInCents: number;
+  durationMinutes: number;
+  maxGuests: number;
+  active: boolean;
+  images?: { url: string }[];
+}
+
+interface Availability {
+  id: number;
+  date: string;
+  startTime: string;
+  endTime: string;
+  isBooked: boolean;
+}
+
+interface KookerProfile {
+  bio: string;
+  specialties: string[];
+  city: string;
+  type: string;
+  experience: string;
+  maxGuests: number;
+  phone: string;
+  address: string;
+}
+
+interface KookerApiProfile {
+  id: number;
+  bio: string;
+  specialties: string;
+  city: string;
+  type: string;
+  experience: string;
+  maxGuests: number;
+  phone: string;
+  address: string;
+  user: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    avatar?: string;
+  };
+  [key: string]: unknown;
+}
+
+const allSpecialties = [
+  'Méditerranéen', 'Provençal', 'Italien', 'Français', 'Japonais', 'Thaïlandais',
+  'Indien', 'Mexicain', 'Végétarien', 'Vegan', 'Sans gluten', 'Bio',
+  'Pâtisserie', 'Brunch', 'Apéritif', 'Gastronomique',
+];
+
+// ────────────────────────── Helper Functions ──────────────────────────
+
+const formatDate = (dateStr: string) => {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long' });
+};
+
+const formatDateLong = (dateStr: string) => {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+};
+
+const formatPrice = (cents: number) => {
+  return (cents / 100).toFixed(2).replace('.', ',') + ' EUR';
+};
+
+const formatPriceShort = (cents: number) => {
+  return (cents / 100).toFixed(0) + ' EUR';
+};
+
+const safeParseJson = (val: string | string[] | unknown): string[] => {
+  if (Array.isArray(val)) return val;
+  if (typeof val === 'string') {
+    try {
+      const parsed = JSON.parse(val);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
+// ────────────────────────── Status Badge ──────────────────────────
+
+const StatusBadge = ({ status }: { status: KookerBooking['status'] }) => {
+  const config = {
+    confirmed: { label: 'Confirmée', bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-500' },
+    pending: { label: 'En attente', bg: 'bg-yellow-50', text: 'text-yellow-700', dot: 'bg-yellow-500' },
+    cancelled: { label: 'Annulée', bg: 'bg-red-50', text: 'text-red-700', dot: 'bg-red-500' },
+    completed: { label: 'Terminée', bg: 'bg-blue-50', text: 'text-blue-700', dot: 'bg-blue-500' },
+  };
+  const s = config[status];
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-medium ${s.bg} ${s.text}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+      {s.label}
+    </span>
+  );
+};
+
+// ────────────────────────── Stat Card ──────────────────────────
+
+const StatCard = ({ icon, label, value, subtitle, color }: { icon: React.ReactNode; label: string; value: string; subtitle?: string; color: string }) => (
+  <div className="bg-white rounded-[20px] border border-[#e0e2ef] p-5 md:p-6">
+    <div className="flex items-start justify-between mb-3">
+      <div className={`w-10 h-10 rounded-[12px] flex items-center justify-center ${color}`}>
+        {icon}
+      </div>
+    </div>
+    <p className="text-[24px] md:text-[28px] font-bold text-[#111125]">{value}</p>
+    <p className="text-[13px] text-[#111125]/50 mt-1">{label}</p>
+    {subtitle && <p className="text-[12px] text-[#111125]/35 mt-0.5">{subtitle}</p>}
+  </div>
+);
+
+// ────────────────────────── Loading Spinner ──────────────────────────
+
+const SectionSpinner = ({ text }: { text?: string }) => (
+  <div className="flex flex-col items-center justify-center py-16">
+    <svg className="animate-spin h-8 w-8 text-[#c1a0fd]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    </svg>
+    {text && <p className="text-[13px] text-[#111125]/50 mt-3">{text}</p>}
+  </div>
+);
+
+// ────────────────────────── Calendar Component ──────────────────────────
+
+const CalendarView = ({ availabilities }: { availabilities: Availability[] }) => {
+  const [currentMonth, setCurrentMonth] = useState(new Date(2026, 1, 1)); // Feb 2026
+
+  const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
+  const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
+  const adjustedFirstDay = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1; // Monday start
+
+  const monthName = currentMonth.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+
+  const prevMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+  };
+
+  const nextMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+  };
+
+  const getAvailabilityForDay = (day: number) => {
+    const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return availabilities.filter(a => a.date === dateStr);
+  };
+
+  const today = new Date();
+  const isToday = (day: number) =>
+    today.getDate() === day &&
+    today.getMonth() === currentMonth.getMonth() &&
+    today.getFullYear() === currentMonth.getFullYear();
+
+  const isPast = (day: number) => {
+    const cellDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+    const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    return cellDate < todayMidnight;
+  };
+
+  return (
+    <div className="bg-white rounded-[20px] border border-[#e0e2ef] overflow-hidden">
+      {/* Calendar Header */}
+      <div className="flex items-center justify-between p-5 border-b border-[#e0e2ef]">
+        <button
+          onClick={prevMonth}
+          className="w-9 h-9 flex items-center justify-center rounded-[10px] hover:bg-[#f2f4fc] transition-colors"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M10 12L6 8L10 4" stroke="#111125" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+        <h4 className="text-[15px] font-semibold text-[#111125] capitalize">{monthName}</h4>
+        <button
+          onClick={nextMonth}
+          className="w-9 h-9 flex items-center justify-center rounded-[10px] hover:bg-[#f2f4fc] transition-colors"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M6 4L10 8L6 12" stroke="#111125" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+      </div>
+
+      {/* Day Names */}
+      <div className="grid grid-cols-7 border-b border-[#e0e2ef]">
+        {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map(day => (
+          <div key={day} className="py-3 text-center text-[12px] font-medium text-[#111125]/40 uppercase tracking-wider">
+            {day}
+          </div>
+        ))}
+      </div>
+
+      {/* Calendar Grid */}
+      <div className="grid grid-cols-7">
+        {/* Empty cells before first day */}
+        {Array.from({ length: adjustedFirstDay }, (_, i) => (
+          <div key={`empty-${i}`} className="h-[80px] md:h-[100px] border-b border-r border-[#e0e2ef]/50" />
+        ))}
+
+        {/* Day cells */}
+        {Array.from({ length: daysInMonth }, (_, i) => {
+          const day = i + 1;
+          const dayAvailabilities = getAvailabilityForDay(day);
+          const hasBooked = dayAvailabilities.some(a => a.isBooked);
+          const hasFree = dayAvailabilities.some(a => !a.isBooked);
+          const past = isPast(day);
+
+          return (
+            <div
+              key={day}
+              className={`h-[80px] md:h-[100px] border-b border-r border-[#e0e2ef]/50 p-1.5 md:p-2 relative ${
+                past ? 'bg-[#f8f8fc]' : ''
+              } ${isToday(day) ? 'bg-[#c1a0fd]/5' : ''}`}
+            >
+              <span className={`text-[13px] font-medium ${
+                isToday(day)
+                  ? 'w-6 h-6 bg-[#c1a0fd] text-white rounded-full flex items-center justify-center'
+                  : past
+                    ? 'text-[#111125]/25'
+                    : 'text-[#111125]'
+              }`}>
+                {day}
+              </span>
+
+              {dayAvailabilities.length > 0 && (
+                <div className="mt-1 space-y-0.5">
+                  {dayAvailabilities.map((avail) => (
+                    <div
+                      key={avail.id}
+                      className={`text-[10px] md:text-[11px] px-1.5 py-0.5 rounded-[4px] truncate ${
+                        avail.isBooked
+                          ? 'bg-[#c1a0fd]/15 text-[#c1a0fd] font-medium'
+                          : 'bg-green-50 text-green-600'
+                      }`}
+                    >
+                      {avail.startTime}-{avail.endTime}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {!past && dayAvailabilities.length === 0 && (
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                  <button className="w-7 h-7 bg-[#c1a0fd]/10 hover:bg-[#c1a0fd]/20 rounded-full flex items-center justify-center transition-colors">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M6 2.5V9.5" stroke="#c1a0fd" strokeWidth="1.5" strokeLinecap="round"/>
+                      <path d="M2.5 6H9.5" stroke="#c1a0fd" strokeWidth="1.5" strokeLinecap="round"/>
+                    </svg>
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Legend */}
+      <div className="flex items-center gap-6 p-4 border-t border-[#e0e2ef]">
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-[3px] bg-[#c1a0fd]/15 border border-[#c1a0fd]/30" />
+          <span className="text-[12px] text-[#111125]/50">Réservé</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-[3px] bg-green-50 border border-green-200" />
+          <span className="text-[12px] text-[#111125]/50">Disponible</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-[3px] bg-[#f8f8fc] border border-[#e0e2ef]" />
+          <span className="text-[12px] text-[#111125]/50">Passé</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ────────────────────────── Main Page ──────────────────────────
+
+const KookerDashboardPage = () => {
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const [activeTab, setActiveTab] = useState<'bookings' | 'planning' | 'services' | 'profile'>('bookings');
+  const [bookingFilter, setBookingFilter] = useState<'all' | 'pending' | 'confirmed' | 'completed' | 'cancelled'>('all');
+
+  // Data states
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [bookings, setBookings] = useState<KookerBooking[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [availabilities, setAvailabilities] = useState<Availability[]>([]);
+  const [profile, setProfile] = useState<KookerProfile>({
+    bio: '',
+    specialties: [],
+    city: '',
+    type: '',
+    experience: '',
+    maxGuests: 0,
+    phone: '',
+    address: '',
+  });
+  const [originalProfile, setOriginalProfile] = useState<KookerProfile | null>(null);
+
+  // Loading states
+  const [loading, setLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [bookingsLoading, setBookingsLoading] = useState(true);
+  const [servicesLoading, setServicesLoading] = useState(true);
+  const [availabilitiesLoading, setAvailabilitiesLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileSaving, setProfileSaving] = useState(false);
+
+  const kookerProfileId = user?.kookerProfileId;
+
+  // ── Fetch Stats ──
+  const fetchStats = useCallback(async () => {
+    setStatsLoading(true);
+    try {
+      const res = await api.get<DashboardStats>('/kookers/dashboard/stats');
+      if (res.success && res.data) {
+        setStats(res.data);
+      }
+    } catch (err) {
+      console.error('Failed to load stats:', err);
+    } finally {
+      setStatsLoading(false);
+    }
+  }, []);
+
+  // ── Fetch Bookings ──
+  const fetchBookings = useCallback(async () => {
+    setBookingsLoading(true);
+    try {
+      const res = await api.get<KookerBooking[]>('/bookings/kooker');
+      if (res.success && res.data) {
+        setBookings(res.data);
+      }
+    } catch (err) {
+      console.error('Failed to load bookings:', err);
+    } finally {
+      setBookingsLoading(false);
+    }
+  }, []);
+
+  // ── Fetch Services ──
+  const fetchServices = useCallback(async () => {
+    if (!kookerProfileId) return;
+    setServicesLoading(true);
+    try {
+      const res = await api.get<Service[]>(`/services/kooker/${kookerProfileId}`);
+      if (res.success && res.data) {
+        setServices(res.data);
+      }
+    } catch (err) {
+      console.error('Failed to load services:', err);
+    } finally {
+      setServicesLoading(false);
+    }
+  }, [kookerProfileId]);
+
+  // ── Fetch Availabilities ──
+  const fetchAvailabilities = useCallback(async () => {
+    if (!kookerProfileId) return;
+    setAvailabilitiesLoading(true);
+    try {
+      const res = await api.get<Availability[]>(`/availability/kooker/${kookerProfileId}`);
+      if (res.success && res.data) {
+        setAvailabilities(res.data);
+      }
+    } catch (err) {
+      console.error('Failed to load availabilities:', err);
+    } finally {
+      setAvailabilitiesLoading(false);
+    }
+  }, [kookerProfileId]);
+
+  // ── Fetch Profile ──
+  const fetchProfile = useCallback(async () => {
+    if (!kookerProfileId) return;
+    setProfileLoading(true);
+    try {
+      const res = await api.get<KookerApiProfile>(`/kookers/${kookerProfileId}`);
+      if (res.success && res.data) {
+        const p = res.data;
+        const parsed: KookerProfile = {
+          bio: p.bio || '',
+          specialties: safeParseJson(p.specialties),
+          city: p.city || '',
+          type: typeof p.type === 'string' ? (safeParseJson(p.type)[0] || p.type) : '',
+          experience: p.experience || '',
+          maxGuests: p.maxGuests || 0,
+          phone: p.phone || '',
+          address: p.address || '',
+        };
+        setProfile(parsed);
+        setOriginalProfile(parsed);
+      }
+    } catch (err) {
+      console.error('Failed to load profile:', err);
+    } finally {
+      setProfileLoading(false);
+    }
+  }, [kookerProfileId]);
+
+  // ── Initial Load ──
+  useEffect(() => {
+    document.title = 'Espace Kooker - Weekook';
+    const loadAll = async () => {
+      await Promise.all([fetchStats(), fetchBookings()]);
+      setLoading(false);
+    };
+    loadAll();
+  }, [fetchStats, fetchBookings]);
+
+  // ── Tab-based lazy loading ──
+  useEffect(() => {
+    if (activeTab === 'services' && servicesLoading && services.length === 0) {
+      fetchServices();
+    }
+    if (activeTab === 'planning' && availabilitiesLoading && availabilities.length === 0) {
+      fetchAvailabilities();
+    }
+    if (activeTab === 'profile' && profileLoading && !originalProfile) {
+      fetchProfile();
+    }
+  }, [activeTab, fetchServices, fetchAvailabilities, fetchProfile, servicesLoading, availabilitiesLoading, profileLoading, services.length, availabilities.length, originalProfile]);
+
+  // ── Actions ──
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/');
+    } catch {
+      navigate('/');
+    }
+  };
+
+  const handleUpdateBookingStatus = async (bookingId: number, status: 'confirmed' | 'cancelled') => {
+    try {
+      await api.put(`/bookings/${bookingId}/status`, { status });
+      toast.success(status === 'confirmed' ? 'Réservation confirmée' : 'Réservation refusée');
+      fetchBookings();
+      fetchStats();
+    } catch (err: any) {
+      toast.error(err?.error || 'Erreur lors de la mise à jour');
+    }
+  };
+
+  const handleToggleService = async (id: number) => {
+    const service = services.find(s => s.id === id);
+    if (!service) return;
+    try {
+      await api.put(`/services/${id}`, { active: !service.active });
+      setServices(prev => prev.map(s => s.id === id ? { ...s, active: !s.active } : s));
+      toast.success(service.active ? 'Offre désactivée' : 'Offre activée');
+      fetchStats();
+    } catch (err: any) {
+      toast.error(err?.error || 'Erreur lors de la mise à jour');
+    }
+  };
+
+  const handleDeleteService = async (id: number) => {
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer cette offre ?')) return;
+    try {
+      await api.delete(`/services/${id}`);
+      setServices(prev => prev.filter(s => s.id !== id));
+      toast.success('Offre supprimée');
+      fetchStats();
+    } catch (err: any) {
+      toast.error(err?.error || 'Erreur lors de la suppression');
+    }
+  };
+
+  const handleProfileSave = async () => {
+    setProfileSaving(true);
+    try {
+      await api.put('/kookers/profile', {
+        bio: profile.bio,
+        specialties: profile.specialties,
+        city: profile.city,
+        type: profile.type,
+        experience: profile.experience,
+        maxGuests: profile.maxGuests,
+      });
+      await api.put('/users/profile', {
+        phone: profile.phone,
+      });
+      setOriginalProfile({ ...profile });
+      toast.success('Profil mis à jour avec succès !');
+    } catch (err: any) {
+      toast.error(err?.error || 'Erreur lors de la sauvegarde');
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
+  const handleProfileCancel = () => {
+    if (originalProfile) {
+      setProfile(originalProfile);
+    }
+  };
+
+  const toggleSpecialty = (specialty: string) => {
+    setProfile(prev => ({
+      ...prev,
+      specialties: prev.specialties.includes(specialty)
+        ? prev.specialties.filter(s => s !== specialty)
+        : [...prev.specialties, specialty],
+    }));
+  };
+
+  const filteredBookings = useMemo(() => {
+    if (bookingFilter === 'all') return bookings;
+    return bookings.filter(b => b.status === bookingFilter);
+  }, [bookingFilter, bookings]);
+
+  const tabs = [
+    {
+      key: 'bookings' as const,
+      label: 'Réservations',
+      shortLabel: 'Résa.',
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="2.66663" width="12" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
+          <path d="M2 6.66663H14" stroke="currentColor" strokeWidth="1.2"/>
+          <path d="M5.33333 1.33337V4.00004" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+          <path d="M10.6667 1.33337V4.00004" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+        </svg>
+      ),
+    },
+    {
+      key: 'planning' as const,
+      label: 'Planning',
+      shortLabel: 'Plan.',
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.2"/>
+          <path d="M8 4.66663V7.99996L10 9.99996" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+        </svg>
+      ),
+    },
+    {
+      key: 'services' as const,
+      label: 'Mes Offres',
+      shortLabel: 'Offres',
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M2 4.66663H14" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+          <path d="M2 8H14" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+          <path d="M2 11.3334H10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+        </svg>
+      ),
+    },
+    {
+      key: 'profile' as const,
+      label: 'Mon Profil',
+      shortLabel: 'Profil',
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="8" cy="5.33337" r="2.66667" stroke="currentColor" strokeWidth="1.2"/>
+          <path d="M2.66667 13.3334C2.66667 11.1242 4.45753 9.33337 6.66667 9.33337H9.33333C11.5425 9.33337 13.3333 11.1242 13.3333 13.3334" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+        </svg>
+      ),
+    },
+  ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#f2f4fc] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <svg className="animate-spin h-10 w-10 text-[#c1a0fd]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <p className="text-[14px] text-[#111125]/50">Chargement de votre espace kooker...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#f2f4fc]">
+      {/* Header */}
+      <div className="bg-white border-b border-[#e0e2ef]">
+        <div className="px-4 md:px-8 lg:px-[96px] py-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-[24px] md:text-[28px] font-bold text-[#111125]">Espace Kooker</h1>
+              <p className="text-[14px] text-[#111125]/50 mt-1">
+                Bienvenue, {user?.firstName} ! Gérez vos réservations et vos offres.
+              </p>
+            </div>
+            <div className="flex items-center gap-3 flex-wrap">
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="flex items-center gap-2 px-4 py-2.5 bg-[#c1a0fd]/10 text-[#c1a0fd] hover:bg-[#c1a0fd]/20 rounded-[12px] text-[13px] font-semibold transition-all"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M10 14L6 8L10 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Mon Espace
+              </button>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-4 py-2.5 text-[#111125]/50 hover:text-red-600 hover:bg-red-50 rounded-[12px] text-[13px] font-medium transition-all"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M6 14H3.33333C2.97971 14 2.64057 13.8595 2.39052 13.6095C2.14048 13.3594 2 13.0203 2 12.6667V3.33333C2 2.97971 2.14048 2.64057 2.39052 2.39052C2.64057 2.14048 2.97971 2 3.33333 2H6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M10.6667 11.3333L14 7.99996L10.6667 4.66663" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M14 8H6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Déconnexion
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-4 md:px-8 lg:px-[96px] py-8">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
+          <StatCard
+            icon={
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2.5" y="3.33337" width="15" height="15" rx="2" stroke="white" strokeWidth="1.5"/>
+                <path d="M2.5 8.33337H17.5" stroke="white" strokeWidth="1.5"/>
+                <path d="M6.66667 1.66663V4.99996" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+                <path d="M13.3333 1.66663V4.99996" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            }
+            label="Total réservations"
+            value={statsLoading ? '...' : (stats?.totalBookings ?? 0).toString()}
+            subtitle="Toutes confondues"
+            color="bg-[#c1a0fd]"
+          />
+          <StatCard
+            icon={
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="10" cy="10" r="7.5" stroke="white" strokeWidth="1.5"/>
+                <path d="M10 5.83337V10L12.5 12.5" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            }
+            label="A venir"
+            value={statsLoading ? '...' : (stats?.upcomingBookings ?? 0).toString()}
+            subtitle="Prochaines réservations"
+            color="bg-yellow-500"
+          />
+          <StatCard
+            icon={
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 1.66663L12.575 6.88329L18.3333 7.72496L14.1667 11.7833L15.15 17.5166L10 14.8083L4.85 17.5166L5.83333 11.7833L1.66667 7.72496L7.425 6.88329L10 1.66663Z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            }
+            label="Note moyenne"
+            value={statsLoading ? '...' : (stats?.averageRating ?? 0).toString()}
+            subtitle={statsLoading ? '...' : `${stats?.totalReviews ?? 0} avis`}
+            color="bg-[#c1a0fd]"
+          />
+          <StatCard
+            icon={
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M17.5 10H15L12.5 17.5L7.5 2.5L5 10H2.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            }
+            label="Revenu total"
+            value={statsLoading ? '...' : formatPriceShort(stats?.totalRevenue ?? 0)}
+            subtitle="Depuis le début"
+            color="bg-green-500"
+          />
+        </div>
+
+        {/* Tabs */}
+        <div className="flex bg-white rounded-[16px] border border-[#e0e2ef] p-1.5 mb-8">
+          {tabs.map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 text-[13px] md:text-[14px] font-semibold rounded-[12px] transition-all duration-200 ${
+                activeTab === tab.key
+                  ? 'bg-[#c1a0fd] text-white shadow-sm'
+                  : 'text-[#111125]/50 hover:text-[#111125]/70'
+              }`}
+            >
+              <span className={activeTab === tab.key ? 'text-white' : 'text-[#111125]/40'}>{tab.icon}</span>
+              <span className="hidden sm:inline">{tab.label}</span>
+              <span className="sm:hidden">{tab.shortLabel}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* ────────────────────── BOOKINGS TAB ────────────────────── */}
+        {activeTab === 'bookings' && (
+          <div>
+            {/* Filter */}
+            <div className="flex flex-wrap items-center gap-2 mb-6">
+              {[
+                { key: 'all' as const, label: 'Toutes' },
+                { key: 'pending' as const, label: 'En attente' },
+                { key: 'confirmed' as const, label: 'Confirmées' },
+                { key: 'completed' as const, label: 'Terminées' },
+                { key: 'cancelled' as const, label: 'Annulées' },
+              ].map(filter => (
+                <button
+                  key={filter.key}
+                  onClick={() => setBookingFilter(filter.key)}
+                  className={`px-4 py-2 text-[13px] font-medium rounded-[10px] transition-all ${
+                    bookingFilter === filter.key
+                      ? 'bg-[#c1a0fd] text-white'
+                      : 'bg-white border border-[#e0e2ef] text-[#111125]/60 hover:border-[#c1a0fd]/30 hover:text-[#111125]'
+                  }`}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Bookings List */}
+            {bookingsLoading ? (
+              <SectionSpinner text="Chargement des réservations..." />
+            ) : (
+              <div className="space-y-4">
+                {filteredBookings.length === 0 ? (
+                  <div className="bg-white rounded-[20px] border border-[#e0e2ef] p-12 text-center">
+                    <div className="w-16 h-16 mx-auto bg-[#c1a0fd]/10 rounded-full flex items-center justify-center mb-4">
+                      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="3.5" y="4.66663" width="21" height="21" rx="3" stroke="#c1a0fd" strokeWidth="1.5"/>
+                        <path d="M3.5 11.6666H24.5" stroke="#c1a0fd" strokeWidth="1.5"/>
+                      </svg>
+                    </div>
+                    <h4 className="text-[16px] font-semibold text-[#111125] mb-2">Aucune réservation</h4>
+                    <p className="text-[13px] text-[#111125]/50">Aucune réservation ne correspond à ce filtre.</p>
+                  </div>
+                ) : (
+                  filteredBookings.map(booking => {
+                    const clientName = `${booking.user.firstName} ${booking.user.lastName}`;
+                    return (
+                      <div
+                        key={booking.id}
+                        className={`bg-white rounded-[20px] border p-5 md:p-6 transition-shadow hover:shadow-md ${
+                          booking.status === 'pending' ? 'border-yellow-200' : 'border-[#e0e2ef]'
+                        }`}
+                      >
+                        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                          <div className="flex gap-4 flex-1 min-w-0">
+                            {/* Client Avatar */}
+                            <div className="w-12 h-12 rounded-full bg-[#c1a0fd]/20 flex items-center justify-center flex-shrink-0">
+                              <span className="text-[#c1a0fd] font-bold text-[14px]">
+                                {booking.user.firstName?.[0]}{booking.user.lastName?.[0]}
+                              </span>
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2 mb-1">
+                                <h4 className="text-[15px] font-semibold text-[#111125]">{clientName}</h4>
+                                <StatusBadge status={booking.status} />
+                              </div>
+                              <p className="text-[13px] text-[#c1a0fd] font-medium mb-2">{booking.service.title}</p>
+
+                              <div className="flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-[#111125]/60">
+                                <span className="flex items-center gap-1.5">
+                                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <rect x="1.75" y="2.33337" width="10.5" height="10.5" rx="1.5" stroke="currentColor" strokeWidth="1.1"/>
+                                    <path d="M1.75 5.83337H12.25" stroke="currentColor" strokeWidth="1.1"/>
+                                    <path d="M4.66667 1.16663V3.49996" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+                                    <path d="M9.33333 1.16663V3.49996" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+                                  </svg>
+                                  {formatDate(booking.date)}
+                                </span>
+                                <span className="flex items-center gap-1.5">
+                                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="7" cy="7" r="5.25" stroke="currentColor" strokeWidth="1.1"/>
+                                    <path d="M7 4.08337V7.00004L8.75 8.75004" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+                                  </svg>
+                                  {booking.startTime}
+                                </span>
+                                <span className="flex items-center gap-1.5">
+                                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M9.91667 12.25V11.0833C9.91667 10.4645 9.67083 9.871 9.23325 9.43342C8.79567 8.99583 8.20217 8.75 7.58333 8.75H3.5C2.88116 8.75 2.28767 8.99583 1.85008 9.43342C1.4125 9.871 1.16667 10.4645 1.16667 11.0833V12.25" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+                                    <circle cx="5.54167" cy="4.08333" r="2.33333" stroke="currentColor" strokeWidth="1.1"/>
+                                  </svg>
+                                  {booking.guests} convive{booking.guests > 1 ? 's' : ''}
+                                </span>
+                              </div>
+
+                              {booking.message && (
+                                <div className="mt-3 p-3 bg-[#f2f4fc] rounded-[10px]">
+                                  <p className="text-[12px] text-[#111125]/40 mb-1 font-medium">Message du client :</p>
+                                  <p className="text-[13px] text-[#111125]/70 leading-relaxed">{booking.message}</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-start gap-3 md:gap-4 md:ml-4">
+                            <p className="text-[18px] font-bold text-[#111125]">{formatPrice(booking.totalPriceInCents)}</p>
+
+                            {booking.status === 'pending' && (
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleUpdateBookingStatus(booking.id, 'confirmed')}
+                                  className="px-4 py-2 text-[13px] font-semibold text-white bg-green-500 hover:bg-green-600 rounded-[10px] transition-all flex items-center gap-1.5"
+                                >
+                                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M11.6667 3.5L5.25 9.91667L2.33333 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                  </svg>
+                                  Accepter
+                                </button>
+                                <button
+                                  onClick={() => handleUpdateBookingStatus(booking.id, 'cancelled')}
+                                  className="px-4 py-2 text-[13px] font-semibold text-red-600 bg-red-50 hover:bg-red-100 rounded-[10px] transition-all flex items-center gap-1.5"
+                                >
+                                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M10.5 3.5L3.5 10.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                                    <path d="M3.5 3.5L10.5 10.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                                  </svg>
+                                  Refuser
+                                </button>
+                              </div>
+                            )}
+
+                            {booking.status === 'confirmed' && (
+                              <button className="px-4 py-2 text-[13px] font-medium text-[#111125]/50 bg-[#f2f4fc] hover:bg-[#e8eaf5] rounded-[10px] transition-all">
+                                Contacter
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ────────────────────── PLANNING TAB ────────────────────── */}
+        {activeTab === 'planning' && (
+          <div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <h3 className="text-[16px] font-bold text-[#111125]">Mon Planning</h3>
+                <p className="text-[13px] text-[#111125]/50 mt-1">Gérez vos disponibilités et consultez vos réservations.</p>
+              </div>
+              <button className="flex items-center gap-2 px-4 py-2.5 bg-[#c1a0fd] hover:bg-[#b090ed] text-white text-[13px] font-semibold rounded-[12px] transition-all self-start sm:self-auto">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M8 3.33337V12.6667" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                  <path d="M3.33333 8H12.6667" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+                Ajouter un créneau
+              </button>
+            </div>
+
+            {availabilitiesLoading ? (
+              <SectionSpinner text="Chargement du planning..." />
+            ) : (
+              <>
+                <CalendarView availabilities={availabilities} />
+
+                {/* Upcoming Slots */}
+                <div className="mt-6">
+                  <h4 className="text-[15px] font-semibold text-[#111125] mb-4">Prochains créneaux</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {availabilities
+                      .filter(a => !a.isBooked)
+                      .slice(0, 6)
+                      .map(avail => (
+                        <div
+                          key={avail.id}
+                          className="bg-white rounded-[16px] border border-[#e0e2ef] p-4 flex items-center justify-between hover:shadow-sm transition-shadow"
+                        >
+                          <div>
+                            <p className="text-[14px] font-semibold text-[#111125]">{formatDateLong(avail.date)}</p>
+                            <p className="text-[13px] text-[#111125]/50 mt-0.5">
+                              {avail.startTime} - {avail.endTime}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-1 bg-green-50 text-green-600 text-[11px] font-medium rounded-[6px]">Libre</span>
+                            <button className="w-8 h-8 flex items-center justify-center rounded-[8px] hover:bg-red-50 text-[#111125]/30 hover:text-red-500 transition-all">
+                              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M1.75 3.5H12.25" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+                                <path d="M4.66667 3.5V2.33333C4.66667 1.96514 4.96514 1.66667 5.33333 1.66667H8.66667C9.03486 1.66667 9.33333 1.96514 9.33333 2.33333V3.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+                                <path d="M11.0833 3.5V11.6667C11.0833 12.0349 10.7849 12.3333 10.4167 12.3333H3.58333C3.21514 12.3333 2.91667 12.0349 2.91667 11.6667V3.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ────────────────────── SERVICES TAB ────────────────────── */}
+        {activeTab === 'services' && (
+          <div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <h3 className="text-[16px] font-bold text-[#111125]">Mes Offres</h3>
+                <p className="text-[13px] text-[#111125]/50 mt-1">{services.length} offre{services.length > 1 ? 's' : ''} au total</p>
+              </div>
+              <button
+                onClick={() => navigate('/create-menu')}
+                className="flex items-center gap-2 px-5 py-2.5 bg-[#c1a0fd] hover:bg-[#b090ed] text-white text-[13px] font-semibold rounded-[12px] transition-all self-start sm:self-auto"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M8 3.33337V12.6667" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                  <path d="M3.33333 8H12.6667" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+                Créer une offre
+              </button>
+            </div>
+
+            {servicesLoading ? (
+              <SectionSpinner text="Chargement des offres..." />
+            ) : (
+              <div className="space-y-4">
+                {services.length === 0 ? (
+                  <div className="bg-white rounded-[20px] border border-[#e0e2ef] p-12 text-center">
+                    <div className="w-16 h-16 mx-auto bg-[#c1a0fd]/10 rounded-full flex items-center justify-center mb-4">
+                      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M4.66667 9.33337H23.3333" stroke="#c1a0fd" strokeWidth="1.5" strokeLinecap="round"/>
+                        <path d="M4.66667 14H23.3333" stroke="#c1a0fd" strokeWidth="1.5" strokeLinecap="round"/>
+                        <path d="M4.66667 18.6666H16.3333" stroke="#c1a0fd" strokeWidth="1.5" strokeLinecap="round"/>
+                      </svg>
+                    </div>
+                    <h4 className="text-[16px] font-semibold text-[#111125] mb-2">Aucune offre</h4>
+                    <p className="text-[13px] text-[#111125]/50 mb-6">Créez votre première offre pour commencer à recevoir des réservations.</p>
+                    <button
+                      onClick={() => navigate('/create-menu')}
+                      className="px-6 py-2.5 bg-[#c1a0fd] hover:bg-[#b090ed] text-white text-[13px] font-semibold rounded-[12px] transition-all"
+                    >
+                      Créer ma première offre
+                    </button>
+                  </div>
+                ) : (
+                  services.map(service => {
+                    const serviceTypes = safeParseJson(service.type);
+                    const typeLabel = serviceTypes[0] || service.type;
+                    const imageUrl = service.images && service.images.length > 0 ? service.images[0].url : '';
+
+                    return (
+                      <div
+                        key={service.id}
+                        className={`bg-white rounded-[20px] border p-5 md:p-6 transition-all hover:shadow-md ${
+                          service.active ? 'border-[#e0e2ef]' : 'border-[#e0e2ef] opacity-70'
+                        }`}
+                      >
+                        <div className="flex flex-col md:flex-row gap-5">
+                          {/* Image placeholder */}
+                          <div className="w-full md:w-[160px] h-[120px] md:h-[120px] rounded-[14px] bg-gradient-to-br from-[#c1a0fd]/15 to-[#c1a0fd]/5 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                            {imageUrl ? (
+                              <img src={imageUrl} alt={service.title} className="w-full h-full object-cover" />
+                            ) : (
+                              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M4 24L11.3333 16.6667L16 21.3333L21.3333 16L28 22.6667" stroke="#c1a0fd" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.4"/>
+                                <circle cx="11" cy="11" r="3" stroke="#c1a0fd" strokeWidth="1.5" opacity="0.4"/>
+                              </svg>
+                            )}
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-start justify-between gap-3 mb-2">
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h4 className="text-[16px] font-semibold text-[#111125]">{service.title}</h4>
+                                  <span className={`px-2 py-0.5 rounded-[6px] text-[11px] font-medium ${
+                                    service.active
+                                      ? 'bg-green-50 text-green-600'
+                                      : 'bg-[#f2f4fc] text-[#111125]/40'
+                                  }`}>
+                                    {service.active ? 'Active' : 'Inactive'}
+                                  </span>
+                                </div>
+                                <span className="text-[12px] text-[#c1a0fd] bg-[#c1a0fd]/10 px-2 py-0.5 rounded-[6px] font-medium">{typeLabel}</span>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                {/* Toggle Active */}
+                                <button
+                                  onClick={() => handleToggleService(service.id)}
+                                  className={`relative w-[44px] h-[24px] rounded-full transition-colors ${
+                                    service.active ? 'bg-green-500' : 'bg-[#e0e2ef]'
+                                  }`}
+                                >
+                                  <div className={`absolute top-[2px] w-[20px] h-[20px] bg-white rounded-full shadow-sm transition-transform ${
+                                    service.active ? 'left-[22px]' : 'left-[2px]'
+                                  }`} />
+                                </button>
+                              </div>
+                            </div>
+
+                            {service.description && (
+                              <p className="text-[13px] text-[#111125]/60 leading-relaxed mb-3 line-clamp-2">{service.description}</p>
+                            )}
+
+                            <div className="flex flex-wrap items-center gap-4 text-[13px]">
+                              <span className="font-bold text-[#111125]">{formatPrice(service.priceInCents)}<span className="font-normal text-[#111125]/40"> / pers.</span></span>
+                              <span className="text-[#111125]/50 flex items-center gap-1">
+                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                  <circle cx="7" cy="7" r="5.25" stroke="currentColor" strokeWidth="1.1"/>
+                                  <path d="M7 4.08337V7.00004L8.75 8.75004" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+                                </svg>
+                                {service.durationMinutes} min
+                              </span>
+                              <span className="text-[#111125]/50 flex items-center gap-1">
+                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                  <path d="M9.91667 12.25V11.0833C9.91667 10.4645 9.67083 9.871 9.23325 9.43342C8.79567 8.99583 8.20217 8.75 7.58333 8.75H3.5C2.88116 8.75 2.28767 8.99583 1.85008 9.43342C1.4125 9.871 1.16667 10.4645 1.16667 11.0833V12.25" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+                                  <circle cx="5.54167" cy="4.08333" r="2.33333" stroke="currentColor" strokeWidth="1.1"/>
+                                </svg>
+                                Max {service.maxGuests} convive{service.maxGuests > 1 ? 's' : ''}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-2 mt-4 pt-4 border-t border-[#e0e2ef]">
+                              <button
+                                onClick={() => navigate(`/edit-menu/${service.id}`)}
+                                className="flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium text-[#111125]/60 hover:text-[#c1a0fd] bg-[#f2f4fc] hover:bg-[#c1a0fd]/10 rounded-[10px] transition-all"
+                              >
+                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                  <path d="M10.0833 1.75L12.25 3.91667L4.66667 11.5H2.5V9.33333L10.0833 1.75Z" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                                Modifier
+                              </button>
+                              <button
+                                onClick={() => handleDeleteService(service.id)}
+                                className="flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100 rounded-[10px] transition-all"
+                              >
+                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                  <path d="M1.75 3.5H12.25" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+                                  <path d="M4.66667 3.5V2.33333C4.66667 1.96514 4.96514 1.66667 5.33333 1.66667H8.66667C9.03486 1.66667 9.33333 1.96514 9.33333 2.33333V3.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+                                  <path d="M11.0833 3.5V11.6667C11.0833 12.0349 10.7849 12.3333 10.4167 12.3333H3.58333C3.21514 12.3333 2.91667 12.0349 2.91667 11.6667V3.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+                                  <path d="M5.83333 6.41663V9.91663" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+                                  <path d="M8.16667 6.41663V9.91663" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+                                </svg>
+                                Supprimer
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ────────────────────── PROFILE TAB ────────────────────── */}
+        {activeTab === 'profile' && (
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-[16px] font-bold text-[#111125]">Mon Profil Kooker</h3>
+                <p className="text-[13px] text-[#111125]/50 mt-1">Modifiez les informations de votre profil kooker.</p>
+              </div>
+            </div>
+
+            {profileLoading ? (
+              <SectionSpinner text="Chargement du profil..." />
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Left: Avatar + Preview */}
+                <div className="lg:col-span-1">
+                  <div className="bg-white rounded-[20px] border border-[#e0e2ef] p-6 sticky top-8">
+                    {/* Avatar */}
+                    <div className="flex flex-col items-center text-center mb-6">
+                      <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#c1a0fd] to-[#9171d9] flex items-center justify-center mb-4 relative group cursor-pointer">
+                        {user?.avatar ? (
+                          <img src={user.avatar} alt="Avatar" className="w-full h-full rounded-full object-cover" />
+                        ) : (
+                          <span className="text-white font-bold text-[28px]">
+                            {user?.firstName?.[0]}{user?.lastName?.[0]}
+                          </span>
+                        )}
+                        <div className="absolute inset-0 bg-black/30 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M15.833 2.5L17.4997 4.16667L4.99967 16.6667H3.33301V15L15.833 2.5Z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </div>
+                      </div>
+                      <h4 className="text-[17px] font-bold text-[#111125]">{user?.firstName} {user?.lastName}</h4>
+                      <p className="text-[13px] text-[#c1a0fd] font-medium mt-1">{profile.type}</p>
+                      <p className="text-[13px] text-[#111125]/50 mt-0.5">{profile.city}</p>
+                    </div>
+
+                    {/* Quick Stats */}
+                    <div className="grid grid-cols-2 gap-3 border-t border-[#e0e2ef] pt-6">
+                      <div className="text-center p-3 bg-[#f2f4fc] rounded-[12px]">
+                        <p className="text-[18px] font-bold text-[#c1a0fd]">{stats?.averageRating ?? '-'}</p>
+                        <p className="text-[11px] text-[#111125]/40 mt-0.5">Note</p>
+                      </div>
+                      <div className="text-center p-3 bg-[#f2f4fc] rounded-[12px]">
+                        <p className="text-[18px] font-bold text-[#c1a0fd]">{stats?.totalReviews ?? '-'}</p>
+                        <p className="text-[11px] text-[#111125]/40 mt-0.5">Avis</p>
+                      </div>
+                      <div className="text-center p-3 bg-[#f2f4fc] rounded-[12px]">
+                        <p className="text-[18px] font-bold text-[#c1a0fd]">{stats?.totalBookings ?? '-'}</p>
+                        <p className="text-[11px] text-[#111125]/40 mt-0.5">Réservations</p>
+                      </div>
+                      <div className="text-center p-3 bg-[#f2f4fc] rounded-[12px]">
+                        <p className="text-[18px] font-bold text-[#c1a0fd]">{stats?.activeServices ?? services.filter(s => s.active).length}</p>
+                        <p className="text-[11px] text-[#111125]/40 mt-0.5">Offres actives</p>
+                      </div>
+                    </div>
+
+                    {/* View Public Profile */}
+                    <button
+                      onClick={() => navigate(`/kookers/${user?.kookerProfileId}`)}
+                      className="w-full mt-6 flex items-center justify-center gap-2 h-[44px] bg-[#f2f4fc] hover:bg-[#e8eaf5] text-[#111125] font-medium text-[13px] rounded-[12px] transition-all"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M1.33333 8.00004C1.33333 8.00004 3.33333 3.33337 8 3.33337C12.6667 3.33337 14.6667 8.00004 14.6667 8.00004C14.6667 8.00004 12.6667 12.6667 8 12.6667C3.33333 12.6667 1.33333 8.00004 1.33333 8.00004Z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.2"/>
+                      </svg>
+                      Voir mon profil public
+                    </button>
+                  </div>
+                </div>
+
+                {/* Right: Edit Form */}
+                <div className="lg:col-span-2 space-y-6">
+                  {/* Bio */}
+                  <div className="bg-white rounded-[20px] border border-[#e0e2ef] p-6">
+                    <h4 className="text-[15px] font-semibold text-[#111125] mb-4">Biographie</h4>
+                    <textarea
+                      value={profile.bio}
+                      onChange={(e) => setProfile(prev => ({ ...prev, bio: e.target.value }))}
+                      rows={5}
+                      className="w-full px-4 py-3 bg-[#f2f4fc] border border-[#e0e2ef] rounded-[12px] text-[14px] text-[#111125] placeholder:text-[#111125]/30 focus:outline-none focus:border-[#c1a0fd] focus:ring-2 focus:ring-[#c1a0fd]/20 transition-all resize-none leading-relaxed"
+                      placeholder="Décrivez votre parcours, vos passions culinaires, ce qui rend votre cuisine unique..."
+                    />
+                    <p className="text-[12px] text-[#111125]/35 mt-2">{profile.bio.length} / 500 caractères</p>
+                  </div>
+
+                  {/* Specialties */}
+                  <div className="bg-white rounded-[20px] border border-[#e0e2ef] p-6">
+                    <h4 className="text-[15px] font-semibold text-[#111125] mb-2">Spécialités</h4>
+                    <p className="text-[13px] text-[#111125]/50 mb-4">Sélectionnez vos spécialités culinaires.</p>
+                    <div className="flex flex-wrap gap-2">
+                      {allSpecialties.map(specialty => (
+                        <button
+                          key={specialty}
+                          onClick={() => toggleSpecialty(specialty)}
+                          className={`px-3.5 py-2 rounded-[10px] text-[13px] font-medium transition-all ${
+                            profile.specialties.includes(specialty)
+                              ? 'bg-[#c1a0fd] text-white'
+                              : 'bg-[#f2f4fc] text-[#111125]/60 hover:bg-[#e8eaf5] hover:text-[#111125]'
+                          }`}
+                        >
+                          {specialty}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Info */}
+                  <div className="bg-white rounded-[20px] border border-[#e0e2ef] p-6">
+                    <h4 className="text-[15px] font-semibold text-[#111125] mb-4">Informations</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      <div>
+                        <label className="block text-[13px] font-medium text-[#111125] mb-1.5">Type d'activité</label>
+                        <select
+                          value={profile.type}
+                          onChange={(e) => setProfile(prev => ({ ...prev, type: e.target.value }))}
+                          className="w-full h-[48px] px-4 bg-[#f2f4fc] border border-[#e0e2ef] rounded-[12px] text-[14px] text-[#111125] focus:outline-none focus:border-[#c1a0fd] focus:ring-2 focus:ring-[#c1a0fd]/20 transition-all appearance-none cursor-pointer"
+                        >
+                          <option>Chef à domicile</option>
+                          <option>Traiteur</option>
+                          <option>Pâtissier</option>
+                          <option>Cuisinier amateur</option>
+                          <option>Cours de cuisine</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[13px] font-medium text-[#111125] mb-1.5">Ville</label>
+                        <input
+                          type="text"
+                          value={profile.city}
+                          onChange={(e) => setProfile(prev => ({ ...prev, city: e.target.value }))}
+                          className="w-full h-[48px] px-4 bg-[#f2f4fc] border border-[#e0e2ef] rounded-[12px] text-[14px] text-[#111125] placeholder:text-[#111125]/30 focus:outline-none focus:border-[#c1a0fd] focus:ring-2 focus:ring-[#c1a0fd]/20 transition-all"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[13px] font-medium text-[#111125] mb-1.5">Expérience</label>
+                        <input
+                          type="text"
+                          value={profile.experience}
+                          onChange={(e) => setProfile(prev => ({ ...prev, experience: e.target.value }))}
+                          placeholder="ex: 5 ans"
+                          className="w-full h-[48px] px-4 bg-[#f2f4fc] border border-[#e0e2ef] rounded-[12px] text-[14px] text-[#111125] placeholder:text-[#111125]/30 focus:outline-none focus:border-[#c1a0fd] focus:ring-2 focus:ring-[#c1a0fd]/20 transition-all"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[13px] font-medium text-[#111125] mb-1.5">Capacité max (convives)</label>
+                        <input
+                          type="number"
+                          value={profile.maxGuests}
+                          onChange={(e) => setProfile(prev => ({ ...prev, maxGuests: parseInt(e.target.value) || 0 }))}
+                          min={1}
+                          max={50}
+                          className="w-full h-[48px] px-4 bg-[#f2f4fc] border border-[#e0e2ef] rounded-[12px] text-[14px] text-[#111125] placeholder:text-[#111125]/30 focus:outline-none focus:border-[#c1a0fd] focus:ring-2 focus:ring-[#c1a0fd]/20 transition-all"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[13px] font-medium text-[#111125] mb-1.5">Téléphone</label>
+                        <input
+                          type="tel"
+                          value={profile.phone}
+                          onChange={(e) => setProfile(prev => ({ ...prev, phone: e.target.value }))}
+                          placeholder="06 12 34 56 78"
+                          className="w-full h-[48px] px-4 bg-[#f2f4fc] border border-[#e0e2ef] rounded-[12px] text-[14px] text-[#111125] placeholder:text-[#111125]/30 focus:outline-none focus:border-[#c1a0fd] focus:ring-2 focus:ring-[#c1a0fd]/20 transition-all"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[13px] font-medium text-[#111125] mb-1.5">Adresse</label>
+                        <input
+                          type="text"
+                          value={profile.address}
+                          onChange={(e) => setProfile(prev => ({ ...prev, address: e.target.value }))}
+                          placeholder="Votre adresse"
+                          className="w-full h-[48px] px-4 bg-[#f2f4fc] border border-[#e0e2ef] rounded-[12px] text-[14px] text-[#111125] placeholder:text-[#111125]/30 focus:outline-none focus:border-[#c1a0fd] focus:ring-2 focus:ring-[#c1a0fd]/20 transition-all"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Save Button */}
+                  <div className="flex justify-end gap-3">
+                    <button
+                      onClick={handleProfileCancel}
+                      className="px-6 py-3 text-[14px] font-medium text-[#111125]/50 hover:text-[#111125] bg-white border border-[#e0e2ef] hover:border-[#111125]/20 rounded-[12px] transition-all"
+                    >
+                      Annuler les modifications
+                    </button>
+                    <button
+                      onClick={handleProfileSave}
+                      disabled={profileSaving}
+                      className="px-8 py-3 text-[14px] font-semibold text-white bg-[#c1a0fd] hover:bg-[#b090ed] rounded-[12px] transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      {profileSaving ? (
+                        <>
+                          <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Sauvegarde...
+                        </>
+                      ) : (
+                        <>
+                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M13.3333 4.66663L6 12L2.66667 8.66663" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                          Sauvegarder
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default KookerDashboardPage;

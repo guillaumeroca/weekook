@@ -14,6 +14,7 @@ export const updateKookerProfileSchema = z.object({
   type: z.array(z.string()).optional(),
   city: z.string().optional(),
   experience: z.string().optional(),
+  address: z.string().optional(),
 });
 
 export const updateUserProfileSchema = z.object({

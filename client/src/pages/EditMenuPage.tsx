@@ -345,20 +345,20 @@ export default function EditMenuPage() {
 
           {/* ── KOURS Form ── */}
           {serviceTypes.includes('KOURS') && (
-            <div className="bg-white rounded-[20px] border border-[#e0e2ef] p-6 md:p-8 mb-8">
+            <div className="bg-white rounded-[16px] p-6 md:p-8 shadow-sm mb-8">
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-[12px] bg-[#c1a0fd]/10 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-[12px] bg-[#f3ecff] flex items-center justify-center">
                   <GraduationCap size={20} className="text-[#c1a0fd]" />
                 </div>
                 <div>
-                  <h3 className="text-[17px] font-bold text-[#111125]">Service KOURS - Cours de cuisine</h3>
+                  <h3 className="text-[24px] font-semibold text-[#111125] tracking-[-0.48px]">Service KOURS - Cours de cuisine</h3>
                   <p className="text-[13px] text-[#111125]/50">Configurez les détails de votre cours</p>
                 </div>
               </div>
 
               {/* Purple info box */}
-              <div className="bg-[#c1a0fd]/10 border border-[#c1a0fd]/20 rounded-[12px] p-4 mb-6">
-                <p className="text-[13px] text-[#c1a0fd] font-medium">
+              <div className="bg-[#f3ecff] rounded-[12px] p-4 mb-6">
+                <p className="text-[14px] text-[#5c5c6f]">
                   Un cours de cuisine permet à vos clients d'apprendre vos recettes et techniques culinaires en votre compagnie.
                 </p>
               </div>
@@ -488,7 +488,7 @@ export default function EditMenuPage() {
                     {koursMenuItems.map((item, idx) => (
                       <div
                         key={idx}
-                        className="flex items-start justify-between gap-3 bg-[#c1a0fd]/5 border border-[#c1a0fd]/15 rounded-[12px] p-4"
+                        className="flex items-start justify-between gap-3 bg-[#f3ecff] rounded-[12px] p-4"
                       >
                         <div className="min-w-0 flex-1">
                           <p className="text-[14px] font-semibold text-[#111125]">{item.name}</p>
@@ -539,13 +539,13 @@ export default function EditMenuPage() {
 
           {/* ── KOOK Form ── */}
           {serviceTypes.includes('KOOK') && (
-            <div className={`bg-white rounded-[20px] border border-[#e0e2ef] p-6 md:p-8 mb-8 ${isKookDisabled ? 'opacity-60 pointer-events-none' : ''}`}>
+            <div className={`bg-white rounded-[16px] p-6 md:p-8 shadow-sm mb-8 ${isKookDisabled ? 'opacity-60 pointer-events-none' : ''}`}>
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-[12px] bg-[#c1a0fd]/10 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-[12px] bg-[#f3ecff] flex items-center justify-center">
                   <CookingPot size={20} className="text-[#c1a0fd]" />
                 </div>
                 <div>
-                  <h3 className="text-[17px] font-bold text-[#111125]">Service KOOK - Préparation de repas</h3>
+                  <h3 className="text-[24px] font-semibold text-[#111125] tracking-[-0.48px]">Service KOOK - Préparation de repas</h3>
                   <p className="text-[13px] text-[#111125]/50">Configurez les détails de votre prestation</p>
                 </div>
               </div>
@@ -670,7 +670,7 @@ export default function EditMenuPage() {
                     {kookMenuItems.map((item, idx) => (
                       <div
                         key={idx}
-                        className="flex items-start justify-between gap-3 bg-[#c1a0fd]/5 border border-[#c1a0fd]/15 rounded-[12px] p-4"
+                        className="flex items-start justify-between gap-3 bg-[#f3ecff] rounded-[12px] p-4"
                       >
                         <div className="min-w-0 flex-1">
                           <p className="text-[14px] font-semibold text-[#111125]">{item.name}</p>
@@ -723,8 +723,8 @@ export default function EditMenuPage() {
           {serviceTypes.length > 0 && (
             <>
               {/* Photos */}
-              <div className="bg-white rounded-[20px] border border-[#e0e2ef] p-6 md:p-8 mb-8">
-                <h3 className="text-[17px] font-bold text-[#111125] mb-2">Photos</h3>
+              <div className="bg-white rounded-[16px] p-6 md:p-8 shadow-sm mb-8">
+                <h3 className="text-[24px] font-semibold text-[#111125] tracking-[-0.48px] mb-2">Photos</h3>
                 <p className="text-[13px] text-[#111125]/50 mb-6">
                   Ajoutez jusqu'à 4 photos pour illustrer votre service.
                 </p>
@@ -756,8 +756,8 @@ export default function EditMenuPage() {
               </div>
 
               {/* Specialties */}
-              <div className="bg-white rounded-[20px] border border-[#e0e2ef] p-6 md:p-8 mb-8">
-                <h3 className="text-[17px] font-bold text-[#111125] mb-2">Spécialités</h3>
+              <div className="bg-white rounded-[16px] p-6 md:p-8 shadow-sm mb-8">
+                <h3 className="text-[24px] font-semibold text-[#111125] tracking-[-0.48px] mb-2">Spécialités</h3>
                 <p className="text-[13px] text-[#111125]/50 mb-4">
                   Ajoutez des tags pour décrire votre cuisine.
                 </p>
@@ -809,8 +809,8 @@ export default function EditMenuPage() {
               </div>
 
               {/* Allergens */}
-              <div className="bg-white rounded-[20px] border border-[#e0e2ef] p-6 md:p-8 mb-8">
-                <h3 className="text-[17px] font-bold text-[#111125] mb-2">Allergènes</h3>
+              <div className="bg-white rounded-[16px] p-6 md:p-8 shadow-sm mb-8">
+                <h3 className="text-[24px] font-semibold text-[#111125] tracking-[-0.48px] mb-2">Allergènes</h3>
                 <p className="text-[13px] text-[#111125]/50 mb-6">
                   Cochez les allergènes pouvant être présents dans vos préparations.
                 </p>
@@ -838,8 +838,8 @@ export default function EditMenuPage() {
               </div>
 
               {/* Dietary */}
-              <div className="bg-white rounded-[20px] border border-[#e0e2ef] p-6 md:p-8 mb-8">
-                <h3 className="text-[17px] font-bold text-[#111125] mb-2">Régimes alimentaires</h3>
+              <div className="bg-white rounded-[16px] p-6 md:p-8 shadow-sm mb-8">
+                <h3 className="text-[24px] font-semibold text-[#111125] tracking-[-0.48px] mb-2">Régimes alimentaires</h3>
                 <p className="text-[13px] text-[#111125]/50 mb-4">
                   Indiquez si votre service est adapté à ces régimes.
                 </p>

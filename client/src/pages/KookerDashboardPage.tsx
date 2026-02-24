@@ -53,7 +53,6 @@ interface KookerProfile {
   city: string;
   type: string;
   experience: string;
-  maxGuests: number;
   phone: string;
   address: string;
 }
@@ -65,13 +64,12 @@ interface KookerApiProfile {
   city: string;
   type: string;
   experience: string;
-  maxGuests: number;
-  phone: string;
   address: string;
   user: {
     firstName: string;
     lastName: string;
     email: string;
+    phone?: string;
     avatar?: string;
   };
   [key: string]: unknown;
@@ -120,15 +118,14 @@ const safeParseJson = (val: string | string[] | unknown): string[] => {
 
 const StatusBadge = ({ status }: { status: KookerBooking['status'] }) => {
   const config = {
-    confirmed: { label: 'Confirmée', bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-500' },
-    pending: { label: 'En attente', bg: 'bg-yellow-50', text: 'text-yellow-700', dot: 'bg-yellow-500' },
-    cancelled: { label: 'Annulée', bg: 'bg-red-50', text: 'text-red-700', dot: 'bg-red-500' },
-    completed: { label: 'Terminée', bg: 'bg-blue-50', text: 'text-blue-700', dot: 'bg-blue-500' },
+    confirmed: { label: 'confirmé', bg: 'bg-[#e8f5e9]', text: 'text-green-600' },
+    pending: { label: 'en attente', bg: 'bg-[#fff3e0]', text: 'text-orange-600' },
+    cancelled: { label: 'annulé', bg: 'bg-red-50', text: 'text-red-600' },
+    completed: { label: 'terminé', bg: 'bg-[#f5f5f5]', text: 'text-[#828294]' },
   };
   const s = config[status];
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-medium ${s.bg} ${s.text}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+    <span className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-[8px] text-[14px] font-medium ${s.bg} ${s.text}`}>
       {s.label}
     </span>
   );
@@ -137,14 +134,14 @@ const StatusBadge = ({ status }: { status: KookerBooking['status'] }) => {
 // ────────────────────────── Stat Card ──────────────────────────
 
 const StatCard = ({ icon, label, value, subtitle, color }: { icon: React.ReactNode; label: string; value: string; subtitle?: string; color: string }) => (
-  <div className="bg-white rounded-[20px] border border-[#e0e2ef] p-5 md:p-6">
+  <div className="bg-white rounded-[20px] p-6 shadow-sm">
     <div className="flex items-start justify-between mb-3">
-      <div className={`w-10 h-10 rounded-[12px] flex items-center justify-center ${color}`}>
+      <div className={`w-[48px] h-[48px] rounded-full flex items-center justify-center ${color}`}>
         {icon}
       </div>
     </div>
-    <p className="text-[24px] md:text-[28px] font-bold text-[#111125]">{value}</p>
-    <p className="text-[13px] text-[#111125]/50 mt-1">{label}</p>
+    <p className="text-[14px] text-[#828294] mb-1">{label}</p>
+    <p className="text-[32px] font-semibold text-[#111125]">{value}</p>
     {subtitle && <p className="text-[12px] text-[#111125]/35 mt-0.5">{subtitle}</p>}
   </div>
 );
@@ -198,7 +195,7 @@ const CalendarView = ({ availabilities }: { availabilities: Availability[] }) =>
   };
 
   return (
-    <div className="bg-white rounded-[20px] border border-[#e0e2ef] overflow-hidden">
+    <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm overflow-hidden">
       {/* Calendar Header */}
       <div className="flex items-center justify-between p-5 border-b border-[#e0e2ef]">
         <button
@@ -331,7 +328,6 @@ const KookerDashboardPage = () => {
     city: '',
     type: '',
     experience: '',
-    maxGuests: 0,
     phone: '',
     address: '',
   });
@@ -422,10 +418,9 @@ const KookerDashboardPage = () => {
           bio: p.bio || '',
           specialties: safeParseJson(p.specialties),
           city: p.city || '',
-          type: typeof p.type === 'string' ? (safeParseJson(p.type)[0] || p.type) : '',
+          type: safeParseJson(p.type)[0] || (typeof p.type === 'string' ? p.type : ''),
           experience: p.experience || '',
-          maxGuests: p.maxGuests || 0,
-          phone: p.phone || '',
+          phone: p.user?.phone || '',
           address: p.address || '',
         };
         setProfile(parsed);
@@ -515,9 +510,9 @@ const KookerDashboardPage = () => {
         bio: profile.bio,
         specialties: profile.specialties,
         city: profile.city,
-        type: profile.type,
+        type: [profile.type],
         experience: profile.experience,
-        maxGuests: profile.maxGuests,
+        address: profile.address,
       });
       await api.put('/users/profile', {
         phone: profile.phone,
@@ -617,45 +612,42 @@ const KookerDashboardPage = () => {
 
   return (
     <div className="min-h-screen bg-[#f2f4fc]">
-      {/* Header */}
-      <div className="bg-white border-b border-[#e0e2ef]">
-        <div className="px-4 md:px-8 lg:px-[96px] py-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-[24px] md:text-[28px] font-bold text-[#111125]">Espace Kooker</h1>
-              <p className="text-[14px] text-[#111125]/50 mt-1">
-                Bienvenue, {user?.firstName} ! Gérez vos réservations et vos offres.
-              </p>
-            </div>
-            <div className="flex items-center gap-3 flex-wrap">
-              <button
-                onClick={() => navigate('/dashboard')}
-                className="flex items-center gap-2 px-4 py-2.5 bg-[#c1a0fd]/10 text-[#c1a0fd] hover:bg-[#c1a0fd]/20 rounded-[12px] text-[13px] font-semibold transition-all"
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M10 14L6 8L10 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                Mon Espace
-              </button>
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 px-4 py-2.5 text-[#111125]/50 hover:text-red-600 hover:bg-red-50 rounded-[12px] text-[13px] font-medium transition-all"
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M6 14H3.33333C2.97971 14 2.64057 13.8595 2.39052 13.6095C2.14048 13.3594 2 13.0203 2 12.6667V3.33333C2 2.97971 2.14048 2.64057 2.39052 2.39052C2.64057 2.14048 2.97971 2 3.33333 2H6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M10.6667 11.3333L14 7.99996L10.6667 4.66663" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M14 8H6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                Déconnexion
-              </button>
-            </div>
+      <div className="max-w-[1200px] mx-auto px-4 md:px-8 lg:px-[96px] py-8 md:py-12">
+        {/* Header */}
+        <div className="mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-[32px] md:text-[40px] font-semibold text-[#111125] tracking-[-0.8px] mb-2">
+              Tableau de bord Kooker
+            </h1>
+            <p className="text-[16px] text-[#5c5c6f]">
+              Gérez vos prestations et suivez votre activité
+            </p>
+          </div>
+          <div className="flex items-center gap-3 flex-wrap">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="flex items-center gap-2 px-4 h-[44px] border border-[#c1a0fd] text-[#c1a0fd] hover:bg-[#f3ecff] rounded-[8px] text-[13px] font-semibold transition-all"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 14L6 8L10 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Mon Espace
+            </button>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-4 h-[44px] border border-red-500 text-red-500 hover:bg-red-50 rounded-[8px] text-[13px] font-medium transition-all"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M6 14H3.33333C2.97971 14 2.64057 13.8595 2.39052 13.6095C2.14048 13.3594 2 13.0203 2 12.6667V3.33333C2 2.97971 2.14048 2.64057 2.39052 2.39052C2.64057 2.14048 2.97971 2 3.33333 2H6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M10.6667 11.3333L14 7.99996L10.6667 4.66663" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M14 8H6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Déconnexion
+            </button>
           </div>
         </div>
-      </div>
-
-      <div className="px-4 md:px-8 lg:px-[96px] py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatCard
             icon={
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -707,15 +699,15 @@ const KookerDashboardPage = () => {
         </div>
 
         {/* Tabs */}
-        <div className="flex bg-white rounded-[16px] border border-[#e0e2ef] p-1.5 mb-8">
+        <div className="grid w-full grid-cols-2 md:grid-cols-4 bg-white rounded-[12px] p-2 mb-8 h-auto md:h-[72px]">
           {tabs.map(tab => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 text-[13px] md:text-[14px] font-semibold rounded-[12px] transition-all duration-200 ${
+              className={`py-3 md:py-0 rounded-[8px] text-[14px] md:text-[18px] font-normal transition-all duration-300 flex items-center justify-center gap-2 ${
                 activeTab === tab.key
-                  ? 'bg-[#c1a0fd] text-white shadow-sm'
-                  : 'text-[#111125]/50 hover:text-[#111125]/70'
+                  ? 'bg-[#c1a0fd] font-bold text-white shadow-sm'
+                  : 'text-[#111125]/60 hover:text-[#111125]'
               }`}
             >
               <span className={activeTab === tab.key ? 'text-white' : 'text-[#111125]/40'}>{tab.icon}</span>
@@ -757,7 +749,7 @@ const KookerDashboardPage = () => {
             ) : (
               <div className="space-y-4">
                 {filteredBookings.length === 0 ? (
-                  <div className="bg-white rounded-[20px] border border-[#e0e2ef] p-12 text-center">
+                  <div className="bg-white rounded-[20px] p-12 text-center shadow-sm">
                     <div className="w-16 h-16 mx-auto bg-[#c1a0fd]/10 rounded-full flex items-center justify-center mb-4">
                       <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <rect x="3.5" y="4.66663" width="21" height="21" rx="3" stroke="#c1a0fd" strokeWidth="1.5"/>
@@ -773,8 +765,8 @@ const KookerDashboardPage = () => {
                     return (
                       <div
                         key={booking.id}
-                        className={`bg-white rounded-[20px] border p-5 md:p-6 transition-shadow hover:shadow-md ${
-                          booking.status === 'pending' ? 'border-yellow-200' : 'border-[#e0e2ef]'
+                        className={`bg-white rounded-[20px] p-5 md:p-6 shadow-sm transition-shadow hover:shadow-md ${
+                          booking.status === 'pending' ? 'border-l-4 border-l-yellow-400' : ''
                         }`}
                       >
                         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
@@ -904,7 +896,7 @@ const KookerDashboardPage = () => {
                       .map(avail => (
                         <div
                           key={avail.id}
-                          className="bg-white rounded-[16px] border border-[#e0e2ef] p-4 flex items-center justify-between hover:shadow-sm transition-shadow"
+                          className="bg-white rounded-[20px] p-4 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow"
                         >
                           <div>
                             <p className="text-[14px] font-semibold text-[#111125]">{formatDateLong(avail.date)}</p>
@@ -956,7 +948,7 @@ const KookerDashboardPage = () => {
             ) : (
               <div className="space-y-4">
                 {services.length === 0 ? (
-                  <div className="bg-white rounded-[20px] border border-[#e0e2ef] p-12 text-center">
+                  <div className="bg-white rounded-[20px] p-12 text-center shadow-sm">
                     <div className="w-16 h-16 mx-auto bg-[#c1a0fd]/10 rounded-full flex items-center justify-center mb-4">
                       <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M4.66667 9.33337H23.3333" stroke="#c1a0fd" strokeWidth="1.5" strokeLinecap="round"/>
@@ -982,8 +974,8 @@ const KookerDashboardPage = () => {
                     return (
                       <div
                         key={service.id}
-                        className={`bg-white rounded-[20px] border p-5 md:p-6 transition-all hover:shadow-md ${
-                          service.active ? 'border-[#e0e2ef]' : 'border-[#e0e2ef] opacity-70'
+                        className={`bg-white rounded-[20px] p-5 md:p-6 shadow-sm transition-all hover:shadow-md ${
+                          service.active ? '' : 'opacity-70'
                         }`}
                       >
                         <div className="flex flex-col md:flex-row gap-5">
@@ -1103,7 +1095,7 @@ const KookerDashboardPage = () => {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Left: Avatar + Preview */}
                 <div className="lg:col-span-1">
-                  <div className="bg-white rounded-[20px] border border-[#e0e2ef] p-6 sticky top-8">
+                  <div className="bg-white rounded-[20px] p-6 shadow-sm sticky top-8">
                     {/* Avatar */}
                     <div className="flex flex-col items-center text-center mb-6">
                       <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#c1a0fd] to-[#9171d9] flex items-center justify-center mb-4 relative group cursor-pointer">
@@ -1162,7 +1154,7 @@ const KookerDashboardPage = () => {
                 {/* Right: Edit Form */}
                 <div className="lg:col-span-2 space-y-6">
                   {/* Bio */}
-                  <div className="bg-white rounded-[20px] border border-[#e0e2ef] p-6">
+                  <div className="bg-white rounded-[20px] p-6 shadow-sm">
                     <h4 className="text-[15px] font-semibold text-[#111125] mb-4">Biographie</h4>
                     <textarea
                       value={profile.bio}
@@ -1175,7 +1167,7 @@ const KookerDashboardPage = () => {
                   </div>
 
                   {/* Specialties */}
-                  <div className="bg-white rounded-[20px] border border-[#e0e2ef] p-6">
+                  <div className="bg-white rounded-[20px] p-6 shadow-sm">
                     <h4 className="text-[15px] font-semibold text-[#111125] mb-2">Spécialités</h4>
                     <p className="text-[13px] text-[#111125]/50 mb-4">Sélectionnez vos spécialités culinaires.</p>
                     <div className="flex flex-wrap gap-2">
@@ -1196,7 +1188,7 @@ const KookerDashboardPage = () => {
                   </div>
 
                   {/* Info */}
-                  <div className="bg-white rounded-[20px] border border-[#e0e2ef] p-6">
+                  <div className="bg-white rounded-[20px] p-6 shadow-sm">
                     <h4 className="text-[15px] font-semibold text-[#111125] mb-4">Informations</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                       <div>
@@ -1229,17 +1221,6 @@ const KookerDashboardPage = () => {
                           value={profile.experience}
                           onChange={(e) => setProfile(prev => ({ ...prev, experience: e.target.value }))}
                           placeholder="ex: 5 ans"
-                          className="w-full h-[48px] px-4 bg-[#f2f4fc] border border-[#e0e2ef] rounded-[12px] text-[14px] text-[#111125] placeholder:text-[#111125]/30 focus:outline-none focus:border-[#c1a0fd] focus:ring-2 focus:ring-[#c1a0fd]/20 transition-all"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[13px] font-medium text-[#111125] mb-1.5">Capacité max (convives)</label>
-                        <input
-                          type="number"
-                          value={profile.maxGuests}
-                          onChange={(e) => setProfile(prev => ({ ...prev, maxGuests: parseInt(e.target.value) || 0 }))}
-                          min={1}
-                          max={50}
                           className="w-full h-[48px] px-4 bg-[#f2f4fc] border border-[#e0e2ef] rounded-[12px] text-[14px] text-[#111125] placeholder:text-[#111125]/30 focus:outline-none focus:border-[#c1a0fd] focus:ring-2 focus:ring-[#c1a0fd]/20 transition-all"
                         />
                       </div>

@@ -99,67 +99,68 @@ export default function PricingPage() {
     <div className="bg-[#f2f4fc] min-h-screen">
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <section className="pt-16 pb-8 px-4 md:px-8 lg:px-[96px] text-center">
-        <h1 className="text-3xl md:text-5xl font-bold text-[#111125]">
+        <h1 className="text-[32px] md:text-[48px] font-semibold text-[#111125] tracking-[-0.96px]">
           Tarification simple et transparente
         </h1>
-        <p className="text-base md:text-lg text-gray-500 mt-4 max-w-2xl mx-auto">
-          Choisissez le plan qui correspond à vos besoins. Tous nos plans incluent
-          les fonctionnalités essentielles pour gérer votre activité de kooker.
+        <p className="text-[16px] md:text-[20px] text-[#5c5c6f] mt-4 max-w-[700px] mx-auto">
+          Choisissez l'offre qui correspond à vos besoins et développez votre activité de kooker en toute sérénité
         </p>
 
         {/* Launch offer badge */}
-        <div className="mt-8 inline-flex items-center gap-2 bg-white border border-[#c1a0fd]/30 rounded-full px-6 py-3 shadow-sm">
-          <span className="text-sm md:text-base font-medium text-[#111125]">
-            Offre de lancement : 14 jours d'essai gratuit sur tous les plans
+        <div className="mt-8 inline-flex items-center gap-2 bg-[#f3ecff] rounded-[12px] px-6 py-3">
+          <span className="font-semibold text-[14px] text-[#c1a0fd]">
+            🎉 Offre de lancement : 14 jours d'essai gratuit sur tous les plans
           </span>
         </div>
       </section>
 
       {/* ── Pricing Cards ──────────────────────────────────────────────── */}
       <section className="pb-16 px-4 md:px-8 lg:px-[96px]">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto items-start">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto items-start">
           {PLANS.map((plan) => (
             <div
               key={plan.name}
-              className={`relative bg-white rounded-[20px] p-6 md:p-8 shadow-sm flex flex-col ${
+              className={`relative bg-white rounded-[24px] p-8 shadow-sm flex flex-col ${
                 plan.highlighted
-                  ? 'ring-2 ring-[#c1a0fd] shadow-md'
+                  ? 'ring-2 ring-[#c1a0fd] shadow-lg'
                   : ''
               }`}
             >
               {/* Badge */}
               {plan.badge && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="bg-[#c1a0fd] text-white text-xs font-semibold px-4 py-1.5 rounded-full whitespace-nowrap">
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                  <span className="bg-[#c1a0fd] text-[#111125] text-[12px] font-semibold px-6 py-2 rounded-[8px] whitespace-nowrap">
                     {plan.badge}
                   </span>
                 </div>
               )}
 
-              <h3 className="text-xl font-semibold text-[#111125]">{plan.name}</h3>
-              <p className="text-sm text-gray-500 mt-1">{plan.description}</p>
+              <h3 className="text-[28px] font-semibold text-[#111125]">{plan.name}</h3>
+              <p className="text-[14px] text-[#5c5c6f] mt-1 min-h-[40px]">{plan.description}</p>
 
-              <div className="mt-6 flex items-baseline gap-1">
-                <span className="text-4xl font-bold text-[#111125]">{plan.price}€</span>
-                <span className="text-gray-500 text-sm">/mois</span>
+              <div className="mt-6 flex items-baseline gap-2">
+                <span className="text-[48px] font-semibold text-[#111125]">{plan.price}€</span>
+                <span className="text-[16px] text-[#828294]">/mois</span>
               </div>
 
               <Button
                 onClick={() => navigate(plan.ctaRoute)}
                 className={`mt-6 w-full rounded-[12px] font-medium py-3 text-sm cursor-pointer ${
                   plan.highlighted
-                    ? 'bg-[#c1a0fd] hover:bg-[#b090ed] text-white'
-                    : 'bg-[#111125] hover:bg-[#111125]/90 text-white'
+                    ? 'bg-[#c1a0fd] hover:bg-[#b090ed] text-[#111125]'
+                    : 'bg-white border-2 border-[#c1a0fd] text-[#c1a0fd] hover:bg-[#f3ecff]'
                 }`}
               >
                 {plan.cta}
               </Button>
 
-              <ul className="mt-6 space-y-3 flex-1">
+              <ul className="mt-8 space-y-4 flex-1">
                 {plan.features.map((feature) => (
-                  <li key={feature} className="flex items-start gap-2.5">
-                    <Check className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-                    <span className="text-sm text-[#111125]">{feature}</span>
+                  <li key={feature} className="flex items-start gap-3">
+                    <div className="bg-[#e8f5e9] w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5">
+                      <Check className="w-3 h-3 text-green-600" />
+                    </div>
+                    <span className="text-[14px] text-[#5c5c6f]">{feature}</span>
                   </li>
                 ))}
               </ul>
@@ -169,48 +170,46 @@ export default function PricingPage() {
       </section>
 
       {/* ── FAQ ────────────────────────────────────────────────────────── */}
-      <section className="py-16 px-4 md:px-8 lg:px-[96px] bg-white">
-        <h2 className="text-2xl md:text-3xl font-bold text-[#111125] text-center">
-          Questions fréquentes
-        </h2>
-        <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-          {FAQ_ITEMS.map((item) => (
-            <div
-              key={item.question}
-              className="bg-[#f2f4fc] rounded-[20px] p-6"
-            >
-              <h3 className="text-base font-semibold text-[#111125]">
-                {item.question}
-              </h3>
-              <p className="text-sm text-gray-500 mt-2 leading-relaxed">
-                {item.answer}
-              </p>
-            </div>
-          ))}
+      <section className="pb-16 px-4 md:px-8 lg:px-[96px]">
+        <div className="max-w-5xl mx-auto bg-white rounded-[24px] p-8 shadow-sm">
+          <h2 className="text-[32px] font-semibold text-[#111125] text-center mb-6">
+            Questions fréquentes
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-[900px] mx-auto">
+            {FAQ_ITEMS.map((item) => (
+              <div key={item.question}>
+                <h3 className="text-[18px] font-semibold text-[#111125] mb-2">
+                  {item.question}
+                </h3>
+                <p className="text-[14px] text-[#5c5c6f] leading-relaxed">
+                  {item.answer}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
       {/* ── CTA Gradient ───────────────────────────────────────────────── */}
       <section className="py-16 px-4 md:px-8 lg:px-[96px]">
-        <div className="max-w-4xl mx-auto bg-gradient-to-r from-[#c1a0fd] to-[#8b6fd1] rounded-[20px] p-8 md:p-12 text-center text-white">
-          <h2 className="text-2xl md:text-3xl font-bold">
-            Prêt à lancer votre activité de kooker ?
+        <div className="max-w-5xl mx-auto bg-gradient-to-r from-[#c1a0fd] to-[#d4b8ff] rounded-[24px] p-8 md:p-12 text-center">
+          <h2 className="text-[28px] md:text-[36px] font-semibold text-[#111125] mb-4">
+            Prêt à commencer votre aventure culinaire ?
           </h2>
-          <p className="mt-3 text-white/80 text-base max-w-xl mx-auto">
-            Rejoignez des centaines de kookers qui partagent leur passion culinaire
-            sur Weekook.
+          <p className="text-[18px] text-[#303044] max-w-[600px] mx-auto mb-8">
+            Rejoignez des centaines de kookers qui partagent leur passion de la cuisine avec Weekook
           </p>
-          <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button
               onClick={() => navigate('/inscription')}
-              className="bg-white text-[#111125] hover:bg-gray-100 font-medium px-8 py-3 rounded-[12px] text-sm cursor-pointer"
+              className="bg-[#111125] hover:bg-[#303044] text-white font-medium px-8 py-3 rounded-[12px] text-sm cursor-pointer"
             >
               Créer mon compte kooker
             </Button>
             <Button
               onClick={() => navigate('/avantages')}
               variant="outline"
-              className="border-white text-white hover:bg-white/10 font-medium px-8 py-3 rounded-[12px] text-sm cursor-pointer"
+              className="bg-white border-2 border-[#111125] text-[#111125] hover:bg-gray-50 font-medium px-8 py-3 rounded-[12px] text-sm cursor-pointer"
             >
               En savoir plus
             </Button>

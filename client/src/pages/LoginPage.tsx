@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { ChefHat, Eye, EyeOff, ChevronLeft } from 'lucide-react';
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -83,71 +84,48 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-[#f2f4fc]">
-      {/* Left side - Form */}
-      <div className="w-full lg:w-1/2 flex flex-col justify-center items-center px-4 md:px-8 lg:px-16 py-8 lg:py-12 min-h-screen lg:min-h-0">
-        <div className="w-full max-w-[480px]">
-          {/* Back button */}
-          <button
-            onClick={() => navigate('/')}
-            className="flex items-center gap-2 text-[#111125]/60 hover:text-[#111125] transition-colors mb-8 group"
-          >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 20 20"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              className="group-hover:-translate-x-1 transition-transform"
-            >
-              <path
-                d="M12.5 15L7.5 10L12.5 5"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <span className="text-[14px] font-medium">Retour</span>
-          </button>
+    <div className="h-screen flex overflow-hidden" style={{ fontFamily: 'Inter, sans-serif' }}>
+      {/* Left Side - Form */}
+      <div className="flex-1 flex flex-col justify-center items-center px-8 sm:px-12 lg:px-16 xl:px-20 py-6 bg-white relative overflow-y-auto">
+        {/* Back Button */}
+        <button
+          onClick={() => navigate('/')}
+          className="absolute top-6 left-6 flex items-center gap-2 text-[#828294] hover:text-[#303044] transition-colors font-medium text-[14px]"
+        >
+          <ChevronLeft className="size-4" />
+          Retour
+        </button>
 
-          {/* Logo */}
-          <div className="mb-8">
-            <h1 className="text-[28px] md:text-[32px] font-bold text-[#111125]">
-              week<span className="text-[#c1a0fd]">ook</span>
-            </h1>
+        {/* Logo */}
+        <div className="mb-6 flex justify-center">
+          <div className="flex items-center gap-3 h-[36px]">
+            <div className="bg-[#c1a0fd] w-[36px] h-[36px] rounded-full flex items-center justify-center shrink-0">
+              <ChefHat className="size-5 text-white" />
+            </div>
+            <p className="font-bold leading-[1.2] text-[#303044] text-[28px] text-center tracking-[-0.56px]">WEEKOOK</p>
           </div>
+        </div>
 
-          {/* Heading */}
-          <div className="mb-8">
-            <h2 className="text-[24px] md:text-[28px] font-bold text-[#111125] mb-2">
-              {activeTab === 'login' ? 'Content de vous revoir !' : 'Créez votre compte'}
-            </h2>
-            <p className="text-[14px] md:text-[15px] text-[#111125]/60">
-              {activeTab === 'login'
-                ? 'Connectez-vous pour accéder à votre espace personnel.'
-                : 'Rejoignez la communauté Weekook et découvrez des kookers près de chez vous.'}
-            </p>
-          </div>
-
+        {/* Main Content */}
+        <div className="max-w-[440px] w-full mx-auto">
           {/* Tabs */}
-          <div className="flex bg-[#e8eaf5] rounded-[12px] p-1 mb-8">
+          <div className="bg-[#f3ecff] h-[48px] rounded-[12px] p-1 flex mb-6">
             <button
               onClick={() => handleTabChange('login')}
-              className={`flex-1 py-3 text-[14px] font-semibold rounded-[10px] transition-all duration-200 ${
+              className={`flex-1 h-full rounded-[8px] text-[14px] font-medium transition-all duration-200 ${
                 activeTab === 'login'
-                  ? 'bg-white text-[#111125] shadow-sm'
-                  : 'text-[#111125]/50 hover:text-[#111125]/70'
+                  ? 'bg-white text-[#303044] shadow-sm'
+                  : 'text-[#828294] hover:text-[#5c5c6f]'
               }`}
             >
               Connexion
             </button>
             <button
               onClick={() => handleTabChange('register')}
-              className={`flex-1 py-3 text-[14px] font-semibold rounded-[10px] transition-all duration-200 ${
+              className={`flex-1 h-full rounded-[8px] text-[14px] font-medium transition-all duration-200 ${
                 activeTab === 'register'
-                  ? 'bg-white text-[#111125] shadow-sm'
-                  : 'text-[#111125]/50 hover:text-[#111125]/70'
+                  ? 'bg-white text-[#303044] shadow-sm'
+                  : 'text-[#828294] hover:text-[#5c5c6f]'
               }`}
             >
               Inscription
@@ -156,96 +134,64 @@ const LoginPage = () => {
 
           {/* Login Form */}
           {activeTab === 'login' && (
-            <form onSubmit={handleLogin} className="space-y-5">
+            <form onSubmit={handleLogin} className="space-y-4">
               {loginError && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-[12px] text-[13px]">
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-[8px] text-[13px]">
                   {loginError}
                 </div>
               )}
 
-              <div>
-                <label className="block text-[13px] font-medium text-[#111125] mb-1.5">
+              <div className="space-y-2">
+                <label htmlFor="login-email" className="font-medium text-[14px] text-[#303044] block">
                   Adresse email
                 </label>
-                <div className="relative">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#111125]/40">
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M3 3H15C15.825 3 16.5 3.675 16.5 4.5V13.5C16.5 14.325 15.825 15 15 15H3C2.175 15 1.5 14.325 1.5 13.5V4.5C1.5 3.675 2.175 3 3 3Z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M16.5 4.5L9 9.75L1.5 4.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </div>
-                  <input
-                    type="email"
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                    placeholder="votre@email.com"
-                    required
-                    className="w-full h-[48px] pl-11 pr-4 bg-white border border-[#e0e2ef] rounded-[12px] text-[14px] text-[#111125] placeholder:text-[#111125]/30 focus:outline-none focus:border-[#c1a0fd] focus:ring-2 focus:ring-[#c1a0fd]/20 transition-all"
-                  />
-                </div>
+                <input
+                  id="login-email"
+                  type="email"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  placeholder="votre@email.com"
+                  required
+                  className="w-full h-[48px] px-4 border border-[#e6e6f0] rounded-[8px] text-[14px] text-[#111125] placeholder:text-[#828294] focus:outline-none focus:border-[#c1a0fd] focus:ring-2 focus:ring-[#c1a0fd]/20 transition-all"
+                />
               </div>
 
-              <div>
-                <label className="block text-[13px] font-medium text-[#111125] mb-1.5">
-                  Mot de passe
-                </label>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label htmlFor="login-password" className="font-medium text-[14px] text-[#303044]">
+                    Mot de passe
+                  </label>
+                  <button
+                    type="button"
+                    className="font-medium text-[13px] text-[#c1a0fd] hover:text-[#b090ed] transition-colors"
+                  >
+                    Mot de passe oublié ?
+                  </button>
+                </div>
                 <div className="relative">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#111125]/40">
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect x="3" y="8.25" width="12" height="8.25" rx="2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M5.25 8.25V5.25C5.25 3.17893 6.92893 1.5 9 1.5C11.0711 1.5 12.75 3.17893 12.75 5.25V8.25" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </div>
                   <input
+                    id="login-password"
                     type={showLoginPassword ? 'text' : 'password'}
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
-                    placeholder="Votre mot de passe"
+                    placeholder="••••••••"
                     required
-                    className="w-full h-[48px] pl-11 pr-12 bg-white border border-[#e0e2ef] rounded-[12px] text-[14px] text-[#111125] placeholder:text-[#111125]/30 focus:outline-none focus:border-[#c1a0fd] focus:ring-2 focus:ring-[#c1a0fd]/20 transition-all"
+                    className="w-full h-[48px] px-4 pr-12 border border-[#e6e6f0] rounded-[8px] text-[14px] text-[#111125] placeholder:text-[#828294] focus:outline-none focus:border-[#c1a0fd] focus:ring-2 focus:ring-[#c1a0fd]/20 transition-all"
                   />
                   <button
                     type="button"
                     onClick={() => setShowLoginPassword(!showLoginPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#111125]/40 hover:text-[#111125]/60 transition-colors"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#828294] hover:text-[#303044] transition-colors"
                   >
-                    {showLoginPassword ? (
-                      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M2.25 2.25L15.75 15.75" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-                        <path d="M7.05 7.05C6.39 7.71 6 8.61 6 9.6C6 11.26 7.34 12.6 9 12.6C9.99 12.6 10.89 12.21 11.55 11.55" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-                        <path d="M3.27 5.04C1.97 6.24 1.05 7.78 0.75 9.6C1.65 13.5 5 16.35 9 16.35C10.59 16.35 12.07 15.9 13.35 15.12" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-                        <path d="M15.36 13.14C16.43 12.01 17.21 10.63 17.55 9.06C16.65 5.16 13.3 2.31 9.3 2.31C8.55 2.31 7.83 2.41 7.14 2.61" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-                      </svg>
-                    ) : (
-                      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M1.5 9C1.5 9 4.125 3.75 9 3.75C13.875 3.75 16.5 9 16.5 9C16.5 9 13.875 14.25 9 14.25C4.125 14.25 1.5 9 1.5 9Z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <circle cx="9" cy="9" r="2.625" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    )}
+                    {showLoginPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                   </button>
                 </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="w-4 h-4 rounded border-[#e0e2ef] text-[#c1a0fd] focus:ring-[#c1a0fd]/30"
-                  />
-                  <span className="text-[13px] text-[#111125]/60">Se souvenir de moi</span>
-                </label>
-                <button
-                  type="button"
-                  className="text-[13px] text-[#c1a0fd] hover:text-[#b090ed] font-medium transition-colors"
-                >
-                  Mot de passe oublié ?
-                </button>
               </div>
 
               <button
                 type="submit"
                 disabled={loginLoading}
-                className="w-full h-[48px] bg-[#c1a0fd] hover:bg-[#b090ed] text-white font-semibold text-[14px] rounded-[12px] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full h-[52px] bg-[#c1a0fd] hover:bg-[#b090ed] text-white font-semibold text-[16px] rounded-[12px] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-6"
               >
                 {loginLoading ? (
                   <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -258,51 +204,44 @@ const LoginPage = () => {
               </button>
 
               {/* Divider */}
-              <div className="relative my-6">
+              <div className="relative my-5">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-[#e0e2ef]" />
+                  <div className="w-full border-t border-[#e6e6f0]" />
                 </div>
-                <div className="relative flex justify-center text-[13px]">
-                  <span className="px-4 bg-[#f2f4fc] text-[#111125]/40">ou continuer avec</span>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-4 bg-white text-[13px] text-[#828294]">
+                    Ou continuer avec
+                  </span>
                 </div>
               </div>
 
-              {/* Social Login Buttons */}
-              <div className="grid grid-cols-3 gap-3">
+              {/* Social Login */}
+              <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
-                  className="flex items-center justify-center h-[48px] bg-white border border-[#e0e2ef] rounded-[12px] hover:bg-[#f8f8fc] hover:border-[#c1a0fd]/30 transition-all duration-200"
+                  className="flex items-center justify-center gap-2 h-[48px] border-2 border-[#e6e6f0] rounded-[8px] hover:border-[#c1a0fd]/50 hover:bg-[#f3ecff]/30 transition-all font-medium text-[14px] text-[#303044]"
                 >
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M18.1713 8.36788H17.5V8.33329H10V11.6666H14.7096C14.0225 13.6071 12.1763 15 10 15C7.23875 15 5 12.7612 5 9.99996C5 7.23871 7.23875 4.99996 10 4.99996C11.2746 4.99996 12.4342 5.48079 13.3171 6.26621L15.6742 3.90913C14.1858 2.52204 12.195 1.66663 10 1.66663C5.39792 1.66663 1.66667 5.39788 1.66667 9.99996C1.66667 14.602 5.39792 18.3333 10 18.3333C14.6021 18.3333 18.3333 14.602 18.3333 9.99996C18.3333 9.44121 18.2758 8.89579 18.1713 8.36788Z" fill="#FFC107"/>
-                    <path d="M2.6275 6.12121L5.36542 8.12913C6.10625 6.29496 7.90042 4.99996 10 4.99996C11.2746 4.99996 12.4342 5.48079 13.3171 6.26621L15.6742 3.90913C14.1858 2.52204 12.195 1.66663 10 1.66663C6.79917 1.66663 4.02333 3.47371 2.6275 6.12121Z" fill="#FF3D00"/>
-                    <path d="M10 18.3334C12.1525 18.3334 14.1084 17.5096 15.5871 16.17L13.0079 13.9875C12.1432 14.6452 11.0865 15.0009 10 15C7.8325 15 5.99208 13.618 5.29875 11.6892L2.58125 13.783C3.96042 16.4817 6.76125 18.3334 10 18.3334Z" fill="#4CAF50"/>
-                    <path d="M18.1713 8.36796H17.5V8.33337H10V11.6667H14.7096C14.3809 12.5902 13.7889 13.3972 13.0067 13.988L13.0079 13.9871L15.5871 16.1696C15.4046 16.3355 18.3333 14.1667 18.3333 10C18.3333 9.44129 18.2758 8.89587 18.1713 8.36796Z" fill="#1976D2"/>
+                  <svg className="size-5" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                   </svg>
+                  Google
                 </button>
                 <button
                   type="button"
-                  className="flex items-center justify-center h-[48px] bg-white border border-[#e0e2ef] rounded-[12px] hover:bg-[#f8f8fc] hover:border-[#c1a0fd]/30 transition-all duration-200"
+                  className="flex items-center justify-center gap-2 h-[48px] border-2 border-[#e6e6f0] rounded-[8px] hover:border-[#c1a0fd]/50 hover:bg-[#f3ecff]/30 transition-all font-medium text-[14px] text-[#303044]"
                 >
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M20 10C20 4.47715 15.5229 0 10 0C4.47715 0 0 4.47715 0 10C0 14.9912 3.65684 19.1283 8.4375 19.8785V12.8906H5.89844V10H8.4375V7.79688C8.4375 5.29063 9.93047 3.90625 12.2146 3.90625C13.3084 3.90625 14.4531 4.10156 14.4531 4.10156V6.5625H13.1922C11.9499 6.5625 11.5625 7.3334 11.5625 8.125V10H14.3359L13.8926 12.8906H11.5625V19.8785C16.3432 19.1283 20 14.9912 20 10Z" fill="#1877F2"/>
+                  <svg className="size-5" viewBox="0 0 24 24" fill="#1877F2">
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                   </svg>
-                </button>
-                <button
-                  type="button"
-                  className="flex items-center justify-center h-[48px] bg-white border border-[#e0e2ef] rounded-[12px] hover:bg-[#f8f8fc] hover:border-[#c1a0fd]/30 transition-all duration-200"
-                >
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M17.0504 6.88C17.0504 6.74 17.0504 6.6 17.0404 6.46C15.7604 6.46 14.8204 5.58 14.6604 4.36H14.6504C14.4704 4.36 14.3004 4.44 14.1504 4.54C13.5004 5 12.7004 5.26 11.8404 5.26C10.9804 5.26 10.1904 5 9.54043 4.54C9.39043 4.44 9.22043 4.36 9.04043 4.36H9.03043C8.87043 5.58 7.93043 6.46 6.65043 6.46C6.64043 6.6 6.64043 6.74 6.64043 6.88C6.64043 10.64 8.86043 13.66 11.8404 13.66C14.8204 13.66 17.0504 10.64 17.0504 6.88Z" fill="#111125"/>
-                    <path d="M14.6602 2C14.6602 2 14.2402 4.36 11.8402 4.36C9.44023 4.36 9.03023 2 9.03023 2" stroke="#111125" strokeWidth="1.2"/>
-                    <path d="M11.8398 13.66V18" stroke="#111125" strokeWidth="1.2" strokeLinecap="round"/>
-                    <path d="M9.24023 16.08H14.4402" stroke="#111125" strokeWidth="1.2" strokeLinecap="round"/>
-                  </svg>
+                  Facebook
                 </button>
               </div>
 
               {/* Register link */}
-              <p className="text-center text-[13px] text-[#111125]/60 mt-6">
+              <p className="text-center text-[13px] text-[#828294] mt-6">
                 Pas encore de compte ?{' '}
                 <button
                   type="button"
@@ -317,168 +256,117 @@ const LoginPage = () => {
 
           {/* Register Form */}
           {activeTab === 'register' && (
-            <form onSubmit={handleRegister} className="space-y-5">
+            <form onSubmit={handleRegister} className="space-y-4">
               {registerError && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-[12px] text-[13px]">
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-[8px] text-[13px]">
                   {registerError}
                 </div>
               )}
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[13px] font-medium text-[#111125] mb-1.5">
+                <div className="space-y-2">
+                  <label htmlFor="signup-first" className="font-medium text-[14px] text-[#303044] block">
                     Prénom
                   </label>
-                  <div className="relative">
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#111125]/40">
-                      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M15 15.75V14.25C15 13.4544 14.6839 12.6913 14.1213 12.1287C13.5587 11.5661 12.7956 11.25 12 11.25H6C5.20435 11.25 4.44129 11.5661 3.87868 12.1287C3.31607 12.6913 3 13.4544 3 14.25V15.75" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <circle cx="9" cy="5.25" r="3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </div>
-                    <input
-                      type="text"
-                      value={registerFirstName}
-                      onChange={(e) => setRegisterFirstName(e.target.value)}
-                      placeholder="Jean"
-                      required
-                      className="w-full h-[48px] pl-11 pr-4 bg-white border border-[#e0e2ef] rounded-[12px] text-[14px] text-[#111125] placeholder:text-[#111125]/30 focus:outline-none focus:border-[#c1a0fd] focus:ring-2 focus:ring-[#c1a0fd]/20 transition-all"
-                    />
-                  </div>
+                  <input
+                    id="signup-first"
+                    type="text"
+                    value={registerFirstName}
+                    onChange={(e) => setRegisterFirstName(e.target.value)}
+                    placeholder="Jean"
+                    required
+                    className="w-full h-[48px] px-4 border border-[#e6e6f0] rounded-[8px] text-[14px] text-[#111125] placeholder:text-[#828294] focus:outline-none focus:border-[#c1a0fd] focus:ring-2 focus:ring-[#c1a0fd]/20 transition-all"
+                  />
                 </div>
-                <div>
-                  <label className="block text-[13px] font-medium text-[#111125] mb-1.5">
+                <div className="space-y-2">
+                  <label htmlFor="signup-last" className="font-medium text-[14px] text-[#303044] block">
                     Nom
                   </label>
-                  <div className="relative">
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#111125]/40">
-                      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M15 15.75V14.25C15 13.4544 14.6839 12.6913 14.1213 12.1287C13.5587 11.5661 12.7956 11.25 12 11.25H6C5.20435 11.25 4.44129 11.5661 3.87868 12.1287C3.31607 12.6913 3 13.4544 3 14.25V15.75" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <circle cx="9" cy="5.25" r="3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </div>
-                    <input
-                      type="text"
-                      value={registerLastName}
-                      onChange={(e) => setRegisterLastName(e.target.value)}
-                      placeholder="Dupont"
-                      required
-                      className="w-full h-[48px] pl-11 pr-4 bg-white border border-[#e0e2ef] rounded-[12px] text-[14px] text-[#111125] placeholder:text-[#111125]/30 focus:outline-none focus:border-[#c1a0fd] focus:ring-2 focus:ring-[#c1a0fd]/20 transition-all"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[13px] font-medium text-[#111125] mb-1.5">
-                  Adresse email
-                </label>
-                <div className="relative">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#111125]/40">
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M3 3H15C15.825 3 16.5 3.675 16.5 4.5V13.5C16.5 14.325 15.825 15 15 15H3C2.175 15 1.5 14.325 1.5 13.5V4.5C1.5 3.675 2.175 3 3 3Z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M16.5 4.5L9 9.75L1.5 4.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </div>
                   <input
-                    type="email"
-                    value={registerEmail}
-                    onChange={(e) => setRegisterEmail(e.target.value)}
-                    placeholder="votre@email.com"
+                    id="signup-last"
+                    type="text"
+                    value={registerLastName}
+                    onChange={(e) => setRegisterLastName(e.target.value)}
+                    placeholder="Dupont"
                     required
-                    className="w-full h-[48px] pl-11 pr-4 bg-white border border-[#e0e2ef] rounded-[12px] text-[14px] text-[#111125] placeholder:text-[#111125]/30 focus:outline-none focus:border-[#c1a0fd] focus:ring-2 focus:ring-[#c1a0fd]/20 transition-all"
+                    className="w-full h-[48px] px-4 border border-[#e6e6f0] rounded-[8px] text-[14px] text-[#111125] placeholder:text-[#828294] focus:outline-none focus:border-[#c1a0fd] focus:ring-2 focus:ring-[#c1a0fd]/20 transition-all"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-[13px] font-medium text-[#111125] mb-1.5">
+              <div className="space-y-2">
+                <label htmlFor="signup-email" className="font-medium text-[14px] text-[#303044] block">
+                  Adresse email
+                </label>
+                <input
+                  id="signup-email"
+                  type="email"
+                  value={registerEmail}
+                  onChange={(e) => setRegisterEmail(e.target.value)}
+                  placeholder="votre@email.com"
+                  required
+                  className="w-full h-[48px] px-4 border border-[#e6e6f0] rounded-[8px] text-[14px] text-[#111125] placeholder:text-[#828294] focus:outline-none focus:border-[#c1a0fd] focus:ring-2 focus:ring-[#c1a0fd]/20 transition-all"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="signup-password" className="font-medium text-[14px] text-[#303044] block">
                   Mot de passe
                 </label>
                 <div className="relative">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#111125]/40">
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect x="3" y="8.25" width="12" height="8.25" rx="2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M5.25 8.25V5.25C5.25 3.17893 6.92893 1.5 9 1.5C11.0711 1.5 12.75 3.17893 12.75 5.25V8.25" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </div>
                   <input
+                    id="signup-password"
                     type={showRegisterPassword ? 'text' : 'password'}
                     value={registerPassword}
                     onChange={(e) => setRegisterPassword(e.target.value)}
                     placeholder="Minimum 8 caractères"
                     required
                     minLength={8}
-                    className="w-full h-[48px] pl-11 pr-12 bg-white border border-[#e0e2ef] rounded-[12px] text-[14px] text-[#111125] placeholder:text-[#111125]/30 focus:outline-none focus:border-[#c1a0fd] focus:ring-2 focus:ring-[#c1a0fd]/20 transition-all"
+                    className="w-full h-[48px] px-4 pr-12 border border-[#e6e6f0] rounded-[8px] text-[14px] text-[#111125] placeholder:text-[#828294] focus:outline-none focus:border-[#c1a0fd] focus:ring-2 focus:ring-[#c1a0fd]/20 transition-all"
                   />
                   <button
                     type="button"
                     onClick={() => setShowRegisterPassword(!showRegisterPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#111125]/40 hover:text-[#111125]/60 transition-colors"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#828294] hover:text-[#303044] transition-colors"
                   >
-                    {showRegisterPassword ? (
-                      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M2.25 2.25L15.75 15.75" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-                        <path d="M7.05 7.05C6.39 7.71 6 8.61 6 9.6C6 11.26 7.34 12.6 9 12.6C9.99 12.6 10.89 12.21 11.55 11.55" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-                      </svg>
-                    ) : (
-                      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M1.5 9C1.5 9 4.125 3.75 9 3.75C13.875 3.75 16.5 9 16.5 9C16.5 9 13.875 14.25 9 14.25C4.125 14.25 1.5 9 1.5 9Z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <circle cx="9" cy="9" r="2.625" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    )}
+                    {showRegisterPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                   </button>
                 </div>
                 {/* Password strength indicator */}
                 {registerPassword.length > 0 && (
                   <div className="mt-2 flex gap-1.5">
-                    <div className={`h-1 flex-1 rounded-full ${registerPassword.length >= 2 ? (registerPassword.length >= 8 ? 'bg-green-400' : 'bg-yellow-400') : 'bg-[#e0e2ef]'}`} />
-                    <div className={`h-1 flex-1 rounded-full ${registerPassword.length >= 5 ? (registerPassword.length >= 8 ? 'bg-green-400' : 'bg-yellow-400') : 'bg-[#e0e2ef]'}`} />
-                    <div className={`h-1 flex-1 rounded-full ${registerPassword.length >= 8 ? 'bg-green-400' : 'bg-[#e0e2ef]'}`} />
-                    <div className={`h-1 flex-1 rounded-full ${registerPassword.length >= 12 ? 'bg-green-400' : 'bg-[#e0e2ef]'}`} />
+                    <div className={`h-1 flex-1 rounded-full ${registerPassword.length >= 2 ? (registerPassword.length >= 8 ? 'bg-green-400' : 'bg-yellow-400') : 'bg-[#e6e6f0]'}`} />
+                    <div className={`h-1 flex-1 rounded-full ${registerPassword.length >= 5 ? (registerPassword.length >= 8 ? 'bg-green-400' : 'bg-yellow-400') : 'bg-[#e6e6f0]'}`} />
+                    <div className={`h-1 flex-1 rounded-full ${registerPassword.length >= 8 ? 'bg-green-400' : 'bg-[#e6e6f0]'}`} />
+                    <div className={`h-1 flex-1 rounded-full ${registerPassword.length >= 12 ? 'bg-green-400' : 'bg-[#e6e6f0]'}`} />
                   </div>
                 )}
               </div>
 
-              <div>
-                <label className="block text-[13px] font-medium text-[#111125] mb-1.5">
+              <div className="space-y-2">
+                <label htmlFor="signup-confirm" className="font-medium text-[14px] text-[#303044] block">
                   Confirmer le mot de passe
                 </label>
                 <div className="relative">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#111125]/40">
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect x="3" y="8.25" width="12" height="8.25" rx="2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M5.25 8.25V5.25C5.25 3.17893 6.92893 1.5 9 1.5C11.0711 1.5 12.75 3.17893 12.75 5.25V8.25" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </div>
                   <input
+                    id="signup-confirm"
                     type={showRegisterConfirm ? 'text' : 'password'}
                     value={registerConfirmPassword}
                     onChange={(e) => setRegisterConfirmPassword(e.target.value)}
                     placeholder="Confirmez votre mot de passe"
                     required
-                    className={`w-full h-[48px] pl-11 pr-12 bg-white border rounded-[12px] text-[14px] text-[#111125] placeholder:text-[#111125]/30 focus:outline-none focus:ring-2 transition-all ${
+                    className={`w-full h-[48px] px-4 pr-12 border rounded-[8px] text-[14px] text-[#111125] placeholder:text-[#828294] focus:outline-none focus:ring-2 transition-all ${
                       registerConfirmPassword.length > 0 && registerPassword !== registerConfirmPassword
                         ? 'border-red-300 focus:border-red-400 focus:ring-red-200'
-                        : 'border-[#e0e2ef] focus:border-[#c1a0fd] focus:ring-[#c1a0fd]/20'
+                        : 'border-[#e6e6f0] focus:border-[#c1a0fd] focus:ring-[#c1a0fd]/20'
                     }`}
                   />
                   <button
                     type="button"
                     onClick={() => setShowRegisterConfirm(!showRegisterConfirm)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#111125]/40 hover:text-[#111125]/60 transition-colors"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#828294] hover:text-[#303044] transition-colors"
                   >
-                    {showRegisterConfirm ? (
-                      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M2.25 2.25L15.75 15.75" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-                        <path d="M7.05 7.05C6.39 7.71 6 8.61 6 9.6C6 11.26 7.34 12.6 9 12.6C9.99 12.6 10.89 12.21 11.55 11.55" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-                      </svg>
-                    ) : (
-                      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M1.5 9C1.5 9 4.125 3.75 9 3.75C13.875 3.75 16.5 9 16.5 9C16.5 9 13.875 14.25 9 14.25C4.125 14.25 1.5 9 1.5 9Z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <circle cx="9" cy="9" r="2.625" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    )}
+                    {showRegisterConfirm ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                   </button>
                 </div>
                 {registerConfirmPassword.length > 0 && registerPassword !== registerConfirmPassword && (
@@ -487,29 +375,30 @@ const LoginPage = () => {
               </div>
 
               {/* Terms */}
-              <label className="flex items-start gap-3 cursor-pointer">
+              <div className="flex items-start gap-2">
                 <input
                   type="checkbox"
+                  id="terms"
                   checked={acceptTerms}
                   onChange={(e) => setAcceptTerms(e.target.checked)}
-                  className="w-4 h-4 mt-0.5 rounded border-[#e0e2ef] text-[#c1a0fd] focus:ring-[#c1a0fd]/30"
+                  className="mt-0.5 rounded border-[#e6e6f0] text-[#c1a0fd] focus:ring-[#c1a0fd]"
                 />
-                <span className="text-[13px] text-[#111125]/60 leading-relaxed">
+                <label htmlFor="terms" className="text-[12px] text-[#828294] leading-[1.4]">
                   J'accepte les{' '}
-                  <a href="/terms" className="text-[#c1a0fd] hover:text-[#b090ed] font-medium">
-                    conditions d'utilisation
-                  </a>{' '}
-                  et la{' '}
-                  <a href="/privacy" className="text-[#c1a0fd] hover:text-[#b090ed] font-medium">
+                  <a href="#" className="text-[#c1a0fd] hover:text-[#b090ed] transition-colors">
+                    conditions générales
+                  </a>
+                  {' '}et la{' '}
+                  <a href="#" className="text-[#c1a0fd] hover:text-[#b090ed] transition-colors">
                     politique de confidentialité
                   </a>
-                </span>
-              </label>
+                </label>
+              </div>
 
               <button
                 type="submit"
                 disabled={registerLoading || !acceptTerms}
-                className="w-full h-[48px] bg-[#c1a0fd] hover:bg-[#b090ed] text-white font-semibold text-[14px] rounded-[12px] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full h-[52px] bg-[#c1a0fd] hover:bg-[#b090ed] text-white font-semibold text-[16px] rounded-[12px] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {registerLoading ? (
                   <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -522,48 +411,44 @@ const LoginPage = () => {
               </button>
 
               {/* Divider */}
-              <div className="relative my-6">
+              <div className="relative my-5">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-[#e0e2ef]" />
+                  <div className="w-full border-t border-[#e6e6f0]" />
                 </div>
-                <div className="relative flex justify-center text-[13px]">
-                  <span className="px-4 bg-[#f2f4fc] text-[#111125]/40">ou continuer avec</span>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-4 bg-white text-[13px] text-[#828294]">
+                    Ou continuer avec
+                  </span>
                 </div>
               </div>
 
-              {/* Social Login Buttons */}
-              <div className="grid grid-cols-3 gap-3">
+              {/* Social Login */}
+              <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
-                  className="flex items-center justify-center h-[48px] bg-white border border-[#e0e2ef] rounded-[12px] hover:bg-[#f8f8fc] hover:border-[#c1a0fd]/30 transition-all duration-200"
+                  className="flex items-center justify-center gap-2 h-[48px] border-2 border-[#e6e6f0] rounded-[8px] hover:border-[#c1a0fd]/50 hover:bg-[#f3ecff]/30 transition-all font-medium text-[14px] text-[#303044]"
                 >
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M18.1713 8.36788H17.5V8.33329H10V11.6666H14.7096C14.0225 13.6071 12.1763 15 10 15C7.23875 15 5 12.7612 5 9.99996C5 7.23871 7.23875 4.99996 10 4.99996C11.2746 4.99996 12.4342 5.48079 13.3171 6.26621L15.6742 3.90913C14.1858 2.52204 12.195 1.66663 10 1.66663C5.39792 1.66663 1.66667 5.39788 1.66667 9.99996C1.66667 14.602 5.39792 18.3333 10 18.3333C14.6021 18.3333 18.3333 14.602 18.3333 9.99996C18.3333 9.44121 18.2758 8.89579 18.1713 8.36788Z" fill="#FFC107"/>
-                    <path d="M2.6275 6.12121L5.36542 8.12913C6.10625 6.29496 7.90042 4.99996 10 4.99996C11.2746 4.99996 12.4342 5.48079 13.3171 6.26621L15.6742 3.90913C14.1858 2.52204 12.195 1.66663 10 1.66663C6.79917 1.66663 4.02333 3.47371 2.6275 6.12121Z" fill="#FF3D00"/>
-                    <path d="M10 18.3334C12.1525 18.3334 14.1084 17.5096 15.5871 16.17L13.0079 13.9875C12.1432 14.6452 11.0865 15.0009 10 15C7.8325 15 5.99208 13.618 5.29875 11.6892L2.58125 13.783C3.96042 16.4817 6.76125 18.3334 10 18.3334Z" fill="#4CAF50"/>
-                    <path d="M18.1713 8.36796H17.5V8.33337H10V11.6667H14.7096C14.3809 12.5902 13.7889 13.3972 13.0067 13.988L13.0079 13.9871L15.5871 16.1696C15.4046 16.3355 18.3333 14.1667 18.3333 10C18.3333 9.44129 18.2758 8.89587 18.1713 8.36796Z" fill="#1976D2"/>
+                  <svg className="size-5" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                   </svg>
+                  Google
                 </button>
                 <button
                   type="button"
-                  className="flex items-center justify-center h-[48px] bg-white border border-[#e0e2ef] rounded-[12px] hover:bg-[#f8f8fc] hover:border-[#c1a0fd]/30 transition-all duration-200"
+                  className="flex items-center justify-center gap-2 h-[48px] border-2 border-[#e6e6f0] rounded-[8px] hover:border-[#c1a0fd]/50 hover:bg-[#f3ecff]/30 transition-all font-medium text-[14px] text-[#303044]"
                 >
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M20 10C20 4.47715 15.5229 0 10 0C4.47715 0 0 4.47715 0 10C0 14.9912 3.65684 19.1283 8.4375 19.8785V12.8906H5.89844V10H8.4375V7.79688C8.4375 5.29063 9.93047 3.90625 12.2146 3.90625C13.3084 3.90625 14.4531 4.10156 14.4531 4.10156V6.5625H13.1922C11.9499 6.5625 11.5625 7.3334 11.5625 8.125V10H14.3359L13.8926 12.8906H11.5625V19.8785C16.3432 19.1283 20 14.9912 20 10Z" fill="#1877F2"/>
+                  <svg className="size-5" viewBox="0 0 24 24" fill="#1877F2">
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                   </svg>
-                </button>
-                <button
-                  type="button"
-                  className="flex items-center justify-center h-[48px] bg-white border border-[#e0e2ef] rounded-[12px] hover:bg-[#f8f8fc] hover:border-[#c1a0fd]/30 transition-all duration-200"
-                >
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M14.4277 10.5889C14.4176 8.88555 15.1152 7.63086 16.5254 6.69336C15.7334 5.56445 14.5342 4.94336 12.9551 4.82227C11.4609 4.70508 9.82422 5.70898 9.22656 5.70898C8.59375 5.70898 7.13672 4.86523 5.98828 4.86523C3.61328 4.90234 1.09375 6.73047 1.09375 10.7852C1.09375 11.9531 1.30469 13.1602 1.72656 14.4062C2.29297 16.0664 4.33984 19.8926 6.47656 19.8223C7.54688 19.7969 8.31641 19.0488 9.71484 19.0488C11.0742 19.0488 11.7832 19.8223 12.9746 19.8223C15.1289 19.793 16.9727 16.3184 17.5098 14.6543C14.3066 13.1367 14.4277 10.6816 14.4277 10.5889ZM12.0312 3.32422C13.1758 1.96484 13.0703 0.726562 13.0352 0.3125C12.0273 0.371094 10.8633 0.996094 10.2031 1.76953C9.47656 2.60156 9.05469 3.62891 9.14844 4.80078C10.2383 4.88672 11.2266 4.33203 12.0312 3.32422Z" fill="#111125"/>
-                  </svg>
+                  Facebook
                 </button>
               </div>
 
               {/* Login link */}
-              <p className="text-center text-[13px] text-[#111125]/60 mt-6">
+              <p className="text-center text-[13px] text-[#828294] mt-6">
                 Déjà un compte ?{' '}
                 <button
                   type="button"
@@ -578,53 +463,87 @@ const LoginPage = () => {
         </div>
       </div>
 
-      {/* Right side - Image / Branding */}
-      <div className="hidden lg:flex w-1/2 bg-gradient-to-br from-[#c1a0fd] to-[#9171d9] relative overflow-hidden items-center justify-center">
-        {/* Decorative circles */}
-        <div className="absolute top-[-100px] right-[-100px] w-[400px] h-[400px] rounded-full bg-white/5" />
-        <div className="absolute bottom-[-150px] left-[-50px] w-[300px] h-[300px] rounded-full bg-white/5" />
-        <div className="absolute top-[40%] left-[10%] w-[200px] h-[200px] rounded-full bg-white/5" />
+      {/* Right Side - Image & Info */}
+      <div className="hidden lg:flex lg:flex-1 relative overflow-hidden">
+        {/* Background Image */}
+        <div className="absolute inset-0">
+          <img
+            src="https://plus.unsplash.com/premium_photo-1683707120428-8893fe258de8?q=80&w=1171&auto=format&fit=crop"
+            alt="Cooking community"
+            className="w-full h-full object-cover"
+          />
+        </div>
 
-        <div className="relative z-10 text-center px-12 max-w-[520px]">
-          {/* Illustration */}
-          <div className="mb-10">
-            <div className="w-[200px] h-[200px] mx-auto bg-white/10 rounded-full flex items-center justify-center backdrop-blur-sm">
-              <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M50 15C30 15 20 30 20 45C20 60 30 75 50 85C70 75 80 60 80 45C80 30 70 15 50 15Z" fill="white" fillOpacity="0.2" stroke="white" strokeWidth="2"/>
-                <circle cx="50" cy="42" r="12" fill="white" fillOpacity="0.3" stroke="white" strokeWidth="1.5"/>
-                <path d="M35 68C35 58 42 52 50 52C58 52 65 58 65 68" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-                <path d="M38 35L42 38M62 35L58 38" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-              </svg>
-            </div>
-          </div>
+        {/* Black Overlay 60% */}
+        <div className="absolute inset-0 bg-black opacity-60" />
 
-          <h3 className="text-[28px] font-bold text-white mb-4 leading-tight">
-            Des repas faits maison,{' '}
-            <span className="text-white/80">livrés chez vous</span>
-          </h3>
-          <p className="text-[15px] text-white/70 leading-relaxed mb-8">
-            Rejoignez une communauté de passionnés de cuisine. Trouvez un kooker près de chez vous et savourez des plats authentiques préparés avec amour.
-          </p>
-
-          {/* Testimonial */}
-          <div className="bg-white/10 backdrop-blur-sm rounded-[20px] p-6 text-left">
-            <div className="flex gap-1 mb-3">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <svg key={star} width="16" height="16" viewBox="0 0 16 16" fill="white" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M8 1L10.163 5.27865L15 5.97368L11.5 9.32135L12.326 14L8 11.7787L3.674 14L4.5 9.32135L1 5.97368L5.837 5.27865L8 1Z"/>
-                </svg>
-              ))}
-            </div>
-            <p className="text-[14px] text-white/90 leading-relaxed mb-4">
-              "Grace a Weekook, je decouvre chaque semaine de nouveaux plats faits maison. C'est comme avoir un chef personnel !"
-            </p>
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white text-[12px] font-bold">
-                ML
+        {/* Content */}
+        <div className="relative z-10 flex flex-col justify-center items-center px-12 text-white w-full">
+          <div className="max-w-[480px] w-full">
+            {/* Logo centré */}
+            <div className="flex justify-center mb-8">
+              <div className="flex items-center gap-3 h-[36px]">
+                <div className="bg-[#c1a0fd] w-[36px] h-[36px] rounded-full flex items-center justify-center shrink-0">
+                  <ChefHat className="size-5 text-white" />
+                </div>
+                <p className="font-bold leading-[1.2] text-white text-[28px] text-center tracking-[-0.56px]">WEEKOOK</p>
               </div>
-              <div>
-                <p className="text-[13px] font-semibold text-white">Marie L.</p>
-                <p className="text-[11px] text-white/50">Marseille</p>
+            </div>
+
+            <h3 className="font-semibold text-[28px] tracking-[-0.56px] mb-3 text-center">
+              Rejoignez la communauté Weekook
+            </h3>
+            <p className="text-[16px] leading-[1.5] text-white/90 mb-6 text-center">
+              Découvrez des kookers passionnés près de chez vous et vivez des expériences culinaires uniques.
+            </p>
+
+            <div className="space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="bg-white/20 rounded-full p-2 mt-0.5">
+                  <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="font-medium text-[16px] mb-0.5">
+                    Des cours de cuisine authentiques
+                  </p>
+                  <p className="text-[14px] text-white/80 leading-[1.4]">
+                    Apprenez auprès de passionnés dans votre région
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="bg-white/20 rounded-full p-2 mt-0.5">
+                  <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="font-medium text-[16px] mb-0.5">
+                    Des repas préparés avec amour
+                  </p>
+                  <p className="text-[14px] text-white/80 leading-[1.4]">
+                    Savourez des plats faits maison livrés chez vous
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="bg-white/20 rounded-full p-2 mt-0.5">
+                  <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="font-medium text-[16px] mb-0.5">
+                    Une communauté bienveillante
+                  </p>
+                  <p className="text-[14px] text-white/80 leading-[1.4]">
+                    Partagez votre passion avec des milliers de membres
+                  </p>
+                </div>
               </div>
             </div>
           </div>

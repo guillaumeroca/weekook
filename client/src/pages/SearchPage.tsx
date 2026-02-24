@@ -219,12 +219,15 @@ export default function SearchPage() {
   return (
     <div className="min-h-screen bg-[#f2f4fc]">
       {/* Hero Search Bar */}
-      <section className="bg-white border-b border-[#e5e7eb]">
+      <section className="bg-[#f2f4fc]">
         <div className="px-4 md:px-8 lg:px-[96px] py-6 md:py-8">
+          {/* Section Label */}
+          <p className="text-[#cdb3fd] text-[16px] font-semibold tracking-[2.56px] uppercase leading-[1.5] mb-4">RÉSULTATS DE RECHERCHE</p>
           {/* Title */}
-          <h1 className="text-[24px] md:text-[32px] font-bold text-[#111125] mb-6">
+          <h1 className="text-[32px] md:text-[40px] tracking-[-0.8px] font-bold text-[#111125] mb-6">
             Trouvez votre Kooker
           </h1>
+          <p className="text-[16px] text-[#5c5c6f] tracking-[-0.32px] mt-2 mb-6">Découvrez nos talents culinaires disponibles</p>
 
           {/* Search Input */}
           <div className="relative mb-6">
@@ -248,7 +251,7 @@ export default function SearchPage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Rechercher par nom, ville ou spécialité..."
-              className="w-full h-[52px] pl-12 pr-4 bg-[#f8f9fc] border border-[#e5e7eb] rounded-[12px] text-[15px] text-[#111125] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd] focus:border-transparent transition-all"
+              className="w-full h-[52px] pl-12 pr-4 bg-white border-2 border-[#c1a0fd] rounded-[12px] text-[15px] text-[#111125] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd] focus:border-transparent transition-all"
             />
             {query && (
               <button
@@ -302,92 +305,96 @@ export default function SearchPage() {
           </div>
 
           {/* Desktop Filters */}
-          <div className="hidden md:flex items-center gap-4 flex-wrap">
-            {/* Specialty Select */}
-            <div className="flex flex-col gap-1">
-              <label className="text-[12px] font-medium text-[#6b7280] uppercase tracking-wide">
-                Spécialité
-              </label>
-              <select
-                value={specialty}
-                onChange={(e) => setSpecialty(e.target.value)}
-                className="h-[44px] px-3 bg-[#f8f9fc] border border-[#e5e7eb] rounded-[12px] text-[14px] text-[#111125] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd] focus:border-transparent cursor-pointer min-w-[180px]"
-              >
-                {SPECIALTIES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <div className="hidden md:block">
+            <div className="bg-white rounded-[20px] p-6 shadow-sm mt-6">
+              <div className="flex items-center gap-4 flex-wrap">
+                {/* Specialty Select */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-[14px] font-medium text-[#303044] mb-2 block">
+                    Spécialité
+                  </label>
+                  <select
+                    value={specialty}
+                    onChange={(e) => setSpecialty(e.target.value)}
+                    className="h-[48px] px-3 bg-white border-2 border-[#e0e0e6] hover:border-[#c1a0fd] rounded-[12px] text-[14px] text-[#111125] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd] focus:border-transparent cursor-pointer min-w-[180px]"
+                  >
+                    {SPECIALTIES.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-            {/* City Select */}
-            <div className="flex flex-col gap-1">
-              <label className="text-[12px] font-medium text-[#6b7280] uppercase tracking-wide">
-                Ville
-              </label>
-              <select
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                className="h-[44px] px-3 bg-[#f8f9fc] border border-[#e5e7eb] rounded-[12px] text-[14px] text-[#111125] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd] focus:border-transparent cursor-pointer min-w-[180px]"
-              >
-                {CITIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </div>
+                {/* City Select */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-[14px] font-medium text-[#303044] mb-2 block">
+                    Ville
+                  </label>
+                  <select
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    className="h-[48px] px-3 bg-white border-2 border-[#e0e0e6] hover:border-[#c1a0fd] rounded-[12px] text-[14px] text-[#111125] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd] focus:border-transparent cursor-pointer min-w-[180px]"
+                  >
+                    {CITIES.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-            {/* Price Range Select */}
-            <div className="flex flex-col gap-1">
-              <label className="text-[12px] font-medium text-[#6b7280] uppercase tracking-wide">
-                Prix
-              </label>
-              <select
-                value={priceRangeIndex}
-                onChange={(e) => setPriceRangeIndex(Number(e.target.value))}
-                className="h-[44px] px-3 bg-[#f8f9fc] border border-[#e5e7eb] rounded-[12px] text-[14px] text-[#111125] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd] focus:border-transparent cursor-pointer min-w-[180px]"
-              >
-                {PRICE_RANGES.map((r, i) => (
-                  <option key={i} value={i}>
-                    {r.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+                {/* Price Range Select */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-[14px] font-medium text-[#303044] mb-2 block">
+                    Prix
+                  </label>
+                  <select
+                    value={priceRangeIndex}
+                    onChange={(e) => setPriceRangeIndex(Number(e.target.value))}
+                    className="h-[48px] px-3 bg-white border-2 border-[#e0e0e6] hover:border-[#c1a0fd] rounded-[12px] text-[14px] text-[#111125] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd] focus:border-transparent cursor-pointer min-w-[180px]"
+                  >
+                    {PRICE_RANGES.map((r, i) => (
+                      <option key={i} value={i}>
+                        {r.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-            {/* Sort Select */}
-            <div className="flex flex-col gap-1">
-              <label className="text-[12px] font-medium text-[#6b7280] uppercase tracking-wide">
-                Trier par
-              </label>
-              <select
-                value={sort}
-                onChange={(e) => setSort(e.target.value as SortOption)}
-                className="h-[44px] px-3 bg-[#f8f9fc] border border-[#e5e7eb] rounded-[12px] text-[14px] text-[#111125] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd] focus:border-transparent cursor-pointer min-w-[160px]"
-              >
-                <option value="pertinence">Pertinence</option>
-                <option value="prix-asc">Prix croissant</option>
-                <option value="prix-desc">Prix décroissant</option>
-                <option value="note">Meilleures notes</option>
-              </select>
-            </div>
+                {/* Sort Select */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-[14px] font-medium text-[#303044] mb-2 block">
+                    Trier par
+                  </label>
+                  <select
+                    value={sort}
+                    onChange={(e) => setSort(e.target.value as SortOption)}
+                    className="h-[48px] px-3 bg-white border-2 border-[#e0e0e6] hover:border-[#c1a0fd] rounded-[12px] text-[14px] text-[#111125] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd] focus:border-transparent cursor-pointer min-w-[160px]"
+                  >
+                    <option value="pertinence">Pertinence</option>
+                    <option value="prix-asc">Prix croissant</option>
+                    <option value="prix-desc">Prix décroissant</option>
+                    <option value="note">Meilleures notes</option>
+                  </select>
+                </div>
 
-            {/* Reset Filters */}
-            {hasActiveFilters && (
-              <div className="flex flex-col gap-1">
-                <label className="text-[12px] font-medium text-transparent uppercase tracking-wide">
-                  &nbsp;
-                </label>
-                <button
-                  onClick={resetFilters}
-                  className="h-[44px] px-4 text-[14px] font-medium text-[#ef4444] hover:text-[#dc2626] hover:bg-[#fef2f2] rounded-[12px] transition-all"
-                >
-                  Réinitialiser
-                </button>
+                {/* Reset Filters */}
+                {hasActiveFilters && (
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[14px] font-medium text-transparent mb-2 block">
+                      &nbsp;
+                    </label>
+                    <button
+                      onClick={resetFilters}
+                      className="h-[48px] px-4 text-[14px] font-medium text-[#ef4444] hover:text-[#dc2626] hover:bg-[#fef2f2] rounded-[12px] transition-all"
+                    >
+                      Réinitialiser
+                    </button>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
 
           {/* Mobile Filter Toggle */}
@@ -438,7 +445,7 @@ export default function SearchPage() {
 
           {/* Mobile Filters Panel */}
           {showMobileFilters && (
-            <div className="md:hidden mt-4 p-4 bg-[#f8f9fc] rounded-[16px] border border-[#e5e7eb] space-y-4 animate-in slide-in-from-top-2 duration-200">
+            <div className="md:hidden mt-4 p-4 bg-white rounded-[20px] shadow-sm space-y-4 animate-in slide-in-from-top-2 duration-200">
               {/* Mobile Specialty */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-[12px] font-medium text-[#6b7280] uppercase tracking-wide">
@@ -447,7 +454,7 @@ export default function SearchPage() {
                 <select
                   value={specialty}
                   onChange={(e) => setSpecialty(e.target.value)}
-                  className="h-[48px] px-3 bg-white border border-[#e5e7eb] rounded-[12px] text-[14px] text-[#111125] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd]"
+                  className="h-[48px] px-3 border-2 border-[#e0e0e6] hover:border-[#c1a0fd] rounded-[12px] text-[14px] text-[#111125] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd]"
                 >
                   {SPECIALTIES.map((s) => (
                     <option key={s} value={s}>
@@ -465,7 +472,7 @@ export default function SearchPage() {
                 <select
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
-                  className="h-[48px] px-3 bg-white border border-[#e5e7eb] rounded-[12px] text-[14px] text-[#111125] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd]"
+                  className="h-[48px] px-3 border-2 border-[#e0e0e6] hover:border-[#c1a0fd] rounded-[12px] text-[14px] text-[#111125] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd]"
                 >
                   {CITIES.map((c) => (
                     <option key={c} value={c}>
@@ -483,7 +490,7 @@ export default function SearchPage() {
                 <select
                   value={priceRangeIndex}
                   onChange={(e) => setPriceRangeIndex(Number(e.target.value))}
-                  className="h-[48px] px-3 bg-white border border-[#e5e7eb] rounded-[12px] text-[14px] text-[#111125] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd]"
+                  className="h-[48px] px-3 border-2 border-[#e0e0e6] hover:border-[#c1a0fd] rounded-[12px] text-[14px] text-[#111125] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd]"
                 >
                   {PRICE_RANGES.map((r, i) => (
                     <option key={i} value={i}>
@@ -501,7 +508,7 @@ export default function SearchPage() {
                 <select
                   value={sort}
                   onChange={(e) => setSort(e.target.value as SortOption)}
-                  className="h-[48px] px-3 bg-white border border-[#e5e7eb] rounded-[12px] text-[14px] text-[#111125] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd]"
+                  className="h-[48px] px-3 border-2 border-[#e0e0e6] hover:border-[#c1a0fd] rounded-[12px] text-[14px] text-[#111125] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd]"
                 >
                   <option value="pertinence">Pertinence</option>
                   <option value="prix-asc">Prix croissant</option>
@@ -541,7 +548,7 @@ export default function SearchPage() {
               <span className="inline-block w-32 h-4 bg-[#e5e7eb] rounded animate-pulse" />
             ) : (
               <>
-                <span className="font-semibold text-[#111125]">
+                <span className="font-semibold text-[18px] text-[#111125]">
                   {results.length}
                 </span>{' '}
                 {results.length === 1 ? 'résultat' : 'résultats'} trouvés
@@ -552,7 +559,7 @@ export default function SearchPage() {
           {/* Active Filter Tags (desktop) */}
           <div className="hidden md:flex items-center gap-2 flex-wrap">
             {type && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#ede7fb] text-[#7c5cbf] rounded-full text-[12px] font-medium">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] border border-[#c1a0fd] text-[#c1a0fd] rounded-[8px] text-[12px] font-medium">
                 {type === 'KOOK' ? 'Kook' : 'Kours'}
                 <button
                   onClick={() => setType('')}
@@ -575,7 +582,7 @@ export default function SearchPage() {
               </span>
             )}
             {specialty !== 'Toutes' && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#ede7fb] text-[#7c5cbf] rounded-full text-[12px] font-medium">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] border border-[#c1a0fd] text-[#c1a0fd] rounded-[8px] text-[12px] font-medium">
                 {specialty}
                 <button
                   onClick={() => setSpecialty('Toutes')}
@@ -598,7 +605,7 @@ export default function SearchPage() {
               </span>
             )}
             {city !== 'Toutes' && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#ede7fb] text-[#7c5cbf] rounded-full text-[12px] font-medium">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] border border-[#c1a0fd] text-[#c1a0fd] rounded-[8px] text-[12px] font-medium">
                 {city}
                 <button
                   onClick={() => setCity('Toutes')}
@@ -621,7 +628,7 @@ export default function SearchPage() {
               </span>
             )}
             {priceRangeIndex > 0 && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#ede7fb] text-[#7c5cbf] rounded-full text-[12px] font-medium">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] border border-[#c1a0fd] text-[#c1a0fd] rounded-[8px] text-[12px] font-medium">
                 {PRICE_RANGES[priceRangeIndex].label}
                 <button
                   onClick={() => setPriceRangeIndex(0)}

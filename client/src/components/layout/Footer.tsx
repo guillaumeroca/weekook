@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 
 const quickLinks = [
   { label: 'Accueil', path: '/' },
-  { label: 'A propos', path: '/a-propos' },
+  { label: 'A propos de nous', path: '/a-propos' },
   { label: 'Tarification', path: '/tarification' },
   { label: 'Se connecter', path: '/connexion' },
 ];
@@ -18,12 +18,12 @@ const discoverLinks = [
 const helpLinks = [
   { label: 'FAQ', path: '/#faq' },
   { label: 'Contact', path: '#' },
-  { label: 'Les Kookers Guides', path: '#' },
+  { label: 'Les Kookers Guides !', path: '#' },
 ];
 
 const legalLinks = [
   { label: 'CGU', path: '#' },
-  { label: 'Privacy Policy', path: '#' },
+  { label: 'Privacy Policy ou pas', path: '#' },
   { label: 'Gestion des cookies', path: '#' },
 ];
 
@@ -37,16 +37,16 @@ function FooterColumn({
   onNavigate: (path: string) => void;
 }) {
   return (
-    <div className="flex flex-col gap-4">
-      <h4 className="font-semibold text-[16px] text-[#303044] tracking-[2.56px] uppercase">
+    <div className="flex flex-col gap-[24px]">
+      <p className="font-semibold text-[16px] text-[#303044] tracking-[2.56px] uppercase leading-[1.5]">
         {title}
-      </h4>
-      <div className="flex flex-col gap-3">
+      </p>
+      <div className="flex flex-col gap-[8px]">
         {links.map((link) => (
           <button
             key={link.label}
             onClick={() => onNavigate(link.path)}
-            className="font-bold text-[12px] text-[#828294] hover:text-[#c1a0fd] transition-colors text-left cursor-pointer"
+            className="font-bold text-[12px] text-[#828294] leading-[1.5] tracking-[-0.24px] hover:text-[#c1a0fd] transition-colors text-left cursor-pointer"
           >
             {link.label}
           </button>
@@ -65,31 +65,30 @@ export function Footer() {
   };
 
   return (
-    <footer className="border-t border-[#ece2fe]" style={{ fontFamily: 'Inter, sans-serif' }}>
+    <footer className="bg-white border-t border-[#ece2fe]" style={{ fontFamily: 'Inter, sans-serif' }}>
       {/* Main Footer Content */}
-      <div className="px-4 md:px-12 lg:px-24 py-[48px]">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8 lg:gap-12">
+      <div className="px-4 md:px-12 lg:px-[96px] py-[48px]">
+        <div className="flex flex-col md:flex-row items-start justify-between gap-[40px]">
           {/* Link Columns */}
-          <FooterColumn title="LIENS RAPIDES" links={quickLinks} onNavigate={handleNavigate} />
-          <FooterColumn title="DECOUVRIR" links={discoverLinks} onNavigate={handleNavigate} />
-          <FooterColumn title="AIDE" links={helpLinks} onNavigate={handleNavigate} />
-          <FooterColumn title="LEGAL" links={legalLinks} onNavigate={handleNavigate} />
+          <div className="flex flex-col md:flex-row gap-[24px] md:gap-[72px]">
+            <FooterColumn title="Liens rapides" links={quickLinks} onNavigate={handleNavigate} />
+            <FooterColumn title="Découvrir" links={discoverLinks} onNavigate={handleNavigate} />
+            <FooterColumn title="AIDE" links={helpLinks} onNavigate={handleNavigate} />
+            <FooterColumn title="legal" links={legalLinks} onNavigate={handleNavigate} />
+          </div>
 
           {/* Newsletter */}
-          <div className="col-span-2 md:col-span-3 lg:col-span-1 flex flex-col gap-4">
-            <h4 className="font-semibold text-[16px] text-[#303044] tracking-[2.56px] uppercase">
-              NEWSLETTER
-            </h4>
-            <p className="font-bold text-[12px] text-[#828294]">
-              Recevez les dernières nouveautés et offres exclusives.
+          <div className="bg-[#f8f9fb] rounded-[16px] px-[24px] py-[32px] w-full md:w-auto">
+            <p className="font-bold text-[18px] text-[#303044] tracking-[-0.54px] leading-[1.5] mb-[24px]">
+              Recevoir notre Newsletter
             </p>
-            <div className="flex gap-2">
+            <div className="bg-[#f3ecff] flex items-center h-[40px] rounded-[8px] w-full md:max-w-[500px] lg:max-w-[550px]">
               <input
                 type="email"
-                placeholder="Votre email"
-                className="flex-1 h-[40px] px-4 rounded-[8px] border border-[#ece2fe] bg-white text-[14px] text-[#303044] placeholder:text-[#828294] outline-none focus:border-[#c1a0fd] transition-colors"
+                placeholder="Entrer votre adresse email"
+                className="flex-1 bg-transparent pl-[16px] font-bold text-[12px] text-[#828294] leading-[1.5] tracking-[-0.24px] outline-none placeholder:text-[#828294] placeholder:opacity-80"
               />
-              <button className="h-[40px] px-5 rounded-[8px] bg-[#c1a0fd] text-white font-semibold text-[14px] transition-colors hover:bg-[#b090ed] cursor-pointer shrink-0">
+              <button className="bg-[#c1a0fd] h-full px-[16px] rounded-tr-[8px] rounded-br-[8px] font-bold text-[14px] text-[#111125] tracking-[-0.28px] hover:bg-[#b090ed] transition-colors cursor-pointer flex items-center gap-[8px] shrink-0">
                 OK
               </button>
             </div>
@@ -97,119 +96,49 @@ export function Footer() {
         </div>
       </div>
 
+      {/* Separator Line */}
+      <div className="mx-4 md:mx-12 lg:mx-[96px] border-t border-[#ece2fe]" />
+
       {/* Bottom Bar */}
-      <div className="border-t border-[#ece2fe]">
-        <div className="px-4 md:px-12 lg:px-24 py-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          {/* Logo and Copyright */}
-          <div className="flex flex-col md:flex-row items-center gap-2 md:gap-4">
-            <button
-              onClick={() => navigate('/')}
-              className="font-bold text-[37px] text-[#c1a0fd] tracking-[-0.74px] cursor-pointer"
-            >
-              WEEKOOK
-            </button>
-            <span className="text-[12px] text-[#828294]">
-              &copy; {new Date().getFullYear()} Weekook. Tous droits réservés.
-            </span>
-          </div>
+      <div className="px-4 md:px-12 lg:px-[96px] py-[24px]">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          {/* Logo */}
+          <button
+            onClick={() => navigate('/')}
+            className="font-bold text-[37px] text-[#c1a0fd] tracking-[-0.74px] leading-[1.2] cursor-pointer shrink-0"
+          >
+            WEEKOOK
+          </button>
+
+          {/* Copyright */}
+          <p className="font-bold text-[12px] text-[#828294] leading-[1.5] tracking-[-0.24px] text-center">
+            &copy; 2026 Weekook, Tous droits réservés.
+          </p>
 
           {/* Social Icons */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-[16px]">
             {/* Facebook */}
-            <a
-              href="#"
-              className="w-[40px] h-[40px] rounded-full border border-[#ece2fe] flex items-center justify-center transition-colors hover:border-[#c1a0fd] hover:bg-[#c1a0fd]/5"
-              aria-label="Facebook"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path
-                  d="M18 2H15C13.6739 2 12.4021 2.52678 11.4645 3.46447C10.5268 4.40215 10 5.67392 10 7V10H7V14H10V22H14V14H17L18 10H14V7C14 6.73478 14.1054 6.48043 14.2929 6.29289C14.4804 6.10536 14.7348 6 15 6H18V2Z"
-                  stroke="#c1a0fd"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
+            <a href="#" className="w-[28px] h-[28px] cursor-pointer hover:opacity-80 transition-opacity" aria-label="Facebook">
+              <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M21 2H17.5C15.8424 2 14.2527 2.65848 13.0806 3.83058C11.9085 5.00269 11.25 6.59239 11.25 8.25V11.75H7.75V16.25H11.25V25.25H15.75V16.25H19.25L21 11.75H15.75V8.25C15.75 7.91848 15.8817 7.60054 16.1161 7.36612C16.3505 7.1317 16.6685 7 17 7H21V2Z" fill="#C1A0FD"/>
               </svg>
             </a>
-
             {/* Instagram */}
-            <a
-              href="#"
-              className="w-[40px] h-[40px] rounded-full border border-[#ece2fe] flex items-center justify-center transition-colors hover:border-[#c1a0fd] hover:bg-[#c1a0fd]/5"
-              aria-label="Instagram"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect
-                  x="2"
-                  y="2"
-                  width="20"
-                  height="20"
-                  rx="5"
-                  stroke="#c1a0fd"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="5"
-                  stroke="#c1a0fd"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <circle cx="17.5" cy="6.5" r="1.5" fill="#c1a0fd" />
+            <a href="#" className="w-[28px] h-[28px] cursor-pointer hover:opacity-80 transition-opacity" aria-label="Instagram">
+              <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path fillRule="evenodd" clipRule="evenodd" d="M8.75 2.625H19.25C22.6307 2.625 25.375 5.36929 25.375 8.75V19.25C25.375 22.6307 22.6307 25.375 19.25 25.375H8.75C5.36929 25.375 2.625 22.6307 2.625 19.25V8.75C2.625 5.36929 5.36929 2.625 8.75 2.625ZM14 19.25C16.8995 19.25 19.25 16.8995 19.25 14C19.25 11.1005 16.8995 8.75 14 8.75C11.1005 8.75 8.75 11.1005 8.75 14C8.75 16.8995 11.1005 19.25 14 19.25ZM20.5625 8.3125C21.3564 8.3125 22 7.66893 22 6.875C22 6.08107 21.3564 5.4375 20.5625 5.4375C19.7686 5.4375 19.125 6.08107 19.125 6.875C19.125 7.66893 19.7686 8.3125 20.5625 8.3125Z" fill="#C1A0FD"/>
               </svg>
             </a>
-
             {/* X / Twitter */}
-            <a
-              href="#"
-              className="w-[40px] h-[40px] rounded-full border border-[#ece2fe] flex items-center justify-center transition-colors hover:border-[#c1a0fd] hover:bg-[#c1a0fd]/5"
-              aria-label="X (Twitter)"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path
-                  d="M18.244 2.25H21.552L14.325 10.51L22.827 21.75H16.17L10.956 14.933L4.99 21.75H1.68L9.41 12.915L1.254 2.25H8.08L12.793 8.481L18.244 2.25ZM17.083 19.77H18.916L7.084 4.126H5.117L17.083 19.77Z"
-                  fill="#c1a0fd"
-                />
+            <a href="#" className="w-[28px] h-[28px] cursor-pointer hover:opacity-80 transition-opacity" aria-label="X (Twitter)">
+              <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M21.285 2.625H25.144L16.713 12.262L26.631 25.375H18.865L12.781 17.421L5.822 25.375H1.96L10.974 15.068L1.463 2.625H9.427L14.925 9.895L21.285 2.625ZM19.928 23.065H22.067L8.264 4.814H5.97L19.928 23.065Z" fill="#C1A0FD"/>
               </svg>
             </a>
-
             {/* LinkedIn */}
-            <a
-              href="#"
-              className="w-[40px] h-[40px] rounded-full border border-[#ece2fe] flex items-center justify-center transition-colors hover:border-[#c1a0fd] hover:bg-[#c1a0fd]/5"
-              aria-label="LinkedIn"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path
-                  d="M16 8C17.5913 8 19.1174 8.63214 20.2426 9.75736C21.3679 10.8826 22 12.4087 22 14V21H18V14C18 13.4696 17.7893 12.9609 17.4142 12.5858C17.0391 12.2107 16.5304 12 16 12C15.4696 12 14.9609 12.2107 14.5858 12.5858C14.2107 12.9609 14 13.4696 14 14V21H10V14C10 12.4087 10.6321 10.8826 11.7574 9.75736C12.8826 8.63214 14.4087 8 16 8Z"
-                  stroke="#c1a0fd"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <rect
-                  x="2"
-                  y="9"
-                  width="4"
-                  height="12"
-                  stroke="#c1a0fd"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <circle
-                  cx="4"
-                  cy="4"
-                  r="2"
-                  stroke="#c1a0fd"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
+            <a href="#" className="w-[28px] h-[28px] cursor-pointer hover:opacity-80 transition-opacity" aria-label="LinkedIn">
+              <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path fillRule="evenodd" clipRule="evenodd" d="M4.375 2.625C3.40851 2.625 2.625 3.40851 2.625 4.375C2.625 5.34149 3.40851 6.125 4.375 6.125C5.34149 6.125 6.125 5.34149 6.125 4.375C6.125 3.40851 5.34149 2.625 4.375 2.625ZM2.625 9.625H6.125V25.375H2.625V9.625ZM18.375 9.625C16.4587 9.625 14.6209 10.3862 13.2661 11.7411C11.9112 13.0959 11.25 14.9337 11.25 16.85V25.375H14.75V16.85C14.75 15.8835 15.1339 14.9564 15.8201 14.2701C16.5064 13.5839 17.4335 13.2 18.4 13.2C19.3665 13.2 20.2936 13.5839 20.9799 14.2701C21.6661 14.9564 22.05 15.8835 22.05 16.85V25.375H25.55V16.85C25.55 14.9337 24.7888 13.0959 23.4339 11.7411C22.0791 10.3862 20.2413 9.625 18.375 9.625Z" fill="#C1A0FD"/>
               </svg>
             </a>
           </div>

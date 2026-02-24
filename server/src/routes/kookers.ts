@@ -180,6 +180,7 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
             id: true,
             firstName: true,
             lastName: true,
+            phone: true,
             avatar: true,
             createdAt: true,
           },
@@ -281,7 +282,7 @@ router.put(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const kookerProfileId = req.user!.kookerProfileId!;
-      const { bio, specialties, type, city, experience } = req.body;
+      const { bio, specialties, type, city, experience, address } = req.body;
 
       const data: Record<string, unknown> = {};
       if (bio !== undefined) data.bio = bio;
@@ -289,6 +290,7 @@ router.put(
       if (type !== undefined) data.type = type;
       if (city !== undefined) data.city = city;
       if (experience !== undefined) data.experience = experience;
+      if (address !== undefined) data.address = address;
 
       const updated = await prisma.kookerProfile.update({
         where: { id: kookerProfileId },

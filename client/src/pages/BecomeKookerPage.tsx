@@ -80,18 +80,22 @@ export default function BecomeKookerPage() {
   return (
     <div className="min-h-screen bg-[#f2f4fc]">
       <div className="py-10 md:py-16 px-4 md:px-8 lg:px-[96px]">
-        <div className="max-w-[720px] mx-auto">
+        <div className="max-w-[900px] mx-auto">
           {/* ── Header ─────────────────────────────────────────────── */}
-          <div className="text-center mb-10">
-            <div className="w-16 h-16 rounded-full bg-[#c1a0fd]/15 flex items-center justify-center mx-auto mb-5">
-              <ChefHat className="w-8 h-8 text-[#c1a0fd]" />
+          <div className="mb-8">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="bg-[#c1a0fd] w-[64px] h-[64px] rounded-full flex items-center justify-center">
+                <ChefHat className="w-8 h-8 text-white" />
+              </div>
+              <div>
+                <h1 className="font-semibold text-[40px] text-[#111125] tracking-[-0.8px] leading-[1.15]">
+                  Devenir Kooker
+                </h1>
+                <p className="text-[16px] text-[#5c5c6f]">
+                  Partagez votre passion culinaire et gagnez de l'argent en proposant vos services
+                </p>
+              </div>
             </div>
-            <h1 className="text-[28px] md:text-[32px] font-bold text-[#111125] mb-2">
-              Devenir Kooker
-            </h1>
-            <p className="text-[14px] md:text-[15px] text-[#111125]/60 max-w-[480px] mx-auto">
-              Partagez votre passion pour la cuisine et rejoignez la communauté Weekook en quelques minutes.
-            </p>
           </div>
 
           {/* ── Form Card ──────────────────────────────────────────── */}
@@ -101,14 +105,14 @@ export default function BecomeKookerPage() {
               <div className="mb-8">
                 <div className="flex items-center gap-2.5 mb-5">
                   <MapPin className="w-5 h-5 text-[#c1a0fd]" />
-                  <h2 className="text-[16px] font-semibold text-[#111125]">
+                  <h2 className="text-[24px] font-semibold text-[#111125]">
                     Informations de contact
                   </h2>
                 </div>
 
                 <div className="space-y-4">
                   <div>
-                    <Label className="text-[13px] font-medium text-[#111125] mb-1.5">
+                    <Label className="text-[14px] font-semibold text-[#111125] mb-2">
                       Téléphone
                     </Label>
                     <Input
@@ -124,7 +128,7 @@ export default function BecomeKookerPage() {
                   </div>
 
                   <div>
-                    <Label className="text-[13px] font-medium text-[#111125] mb-1.5">
+                    <Label className="text-[14px] font-semibold text-[#111125] mb-2">
                       Adresse
                     </Label>
                     <Input
@@ -140,7 +144,7 @@ export default function BecomeKookerPage() {
                   </div>
 
                   <div>
-                    <Label className="text-[13px] font-medium text-[#111125] mb-1.5">
+                    <Label className="text-[14px] font-semibold text-[#111125] mb-2">
                       Ville
                     </Label>
                     <Input
@@ -164,7 +168,7 @@ export default function BecomeKookerPage() {
               <div className="mb-8">
                 <div className="flex items-center gap-2.5 mb-5">
                   <ChefHat className="w-5 h-5 text-[#c1a0fd]" />
-                  <h2 className="text-[16px] font-semibold text-[#111125]">
+                  <h2 className="text-[24px] font-semibold text-[#111125]">
                     Profil culinaire
                   </h2>
                 </div>
@@ -172,7 +176,7 @@ export default function BecomeKookerPage() {
                 <div className="space-y-4">
                   {/* Bio */}
                   <div>
-                    <Label className="text-[13px] font-medium text-[#111125] mb-1.5">
+                    <Label className="text-[14px] font-semibold text-[#111125] mb-2">
                       Bio / Description
                     </Label>
                     <Textarea
@@ -188,14 +192,14 @@ export default function BecomeKookerPage() {
                       required
                       className="bg-white border-[#e0e2ef] rounded-[12px] text-[14px] text-[#111125] placeholder:text-[#111125]/30 focus-visible:border-[#c1a0fd] focus-visible:ring-[#c1a0fd]/20"
                     />
-                    <p className="text-[12px] text-[#111125]/40 mt-1.5">
+                    <p className="text-[12px] text-[#828294] mt-1.5">
                       Cette description sera visible sur votre profil public.
                     </p>
                   </div>
 
                   {/* Specialties */}
                   <div>
-                    <Label className="text-[13px] font-medium text-[#111125] mb-1.5">
+                    <Label className="text-[14px] font-semibold text-[#111125] mb-2">
                       Spécialités
                     </Label>
                     <div className="flex gap-2">
@@ -210,7 +214,7 @@ export default function BecomeKookerPage() {
                       <button
                         type="button"
                         onClick={addSpecialty}
-                        className="h-[48px] w-[48px] flex-shrink-0 flex items-center justify-center bg-[#c1a0fd] hover:bg-[#b090ed] text-white rounded-[12px] transition-colors"
+                        className="h-[48px] w-[48px] flex-shrink-0 flex items-center justify-center bg-[#c1a0fd] hover:bg-[#b090ed] text-[#111125] rounded-[8px] transition-colors"
                       >
                         <Plus className="w-5 h-5" />
                       </button>
@@ -221,7 +225,7 @@ export default function BecomeKookerPage() {
                         {formData.specialties.map((specialty) => (
                           <span
                             key={specialty}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#c1a0fd]/15 text-[#7c5cbf] text-[13px] font-medium rounded-full"
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-[rgba(218,198,254,0.48)] text-violet-600 text-[14px] rounded-[12px]"
                           >
                             {specialty}
                             <button
@@ -239,7 +243,7 @@ export default function BecomeKookerPage() {
 
                   {/* Experience */}
                   <div>
-                    <Label className="text-[13px] font-medium text-[#111125] mb-1.5">
+                    <Label className="text-[14px] font-semibold text-[#111125] mb-2">
                       Années d'expérience
                     </Label>
                     <Input
@@ -268,7 +272,7 @@ export default function BecomeKookerPage() {
               <div>
                 <div className="flex items-center gap-2.5 mb-5">
                   <Clock className="w-5 h-5 text-[#c1a0fd]" />
-                  <h2 className="text-[16px] font-semibold text-[#111125]">
+                  <h2 className="text-[24px] font-semibold text-[#111125]">
                     Capacité et disponibilités
                   </h2>
                 </div>
@@ -276,7 +280,7 @@ export default function BecomeKookerPage() {
                 <div className="space-y-4">
                   {/* Max capacity */}
                   <div>
-                    <Label className="text-[13px] font-medium text-[#111125] mb-1.5">
+                    <Label className="text-[14px] font-semibold text-[#111125] mb-2">
                       Capacité maximale (nombre de convives)
                     </Label>
                     <div className="relative max-w-[200px]">
@@ -301,7 +305,7 @@ export default function BecomeKookerPage() {
 
                   {/* Availability */}
                   <div>
-                    <Label className="text-[13px] font-medium text-[#111125] mb-1.5">
+                    <Label className="text-[14px] font-semibold text-[#111125] mb-2">
                       Disponibilités générales
                     </Label>
                     <Input
@@ -316,7 +320,7 @@ export default function BecomeKookerPage() {
                       }
                       className="h-[48px] bg-white border-[#e0e2ef] rounded-[12px] text-[14px] text-[#111125] placeholder:text-[#111125]/30 focus-visible:border-[#c1a0fd] focus-visible:ring-[#c1a0fd]/20"
                     />
-                    <p className="text-[12px] text-[#111125]/40 mt-1.5">
+                    <p className="text-[12px] text-[#828294] mt-1.5">
                       Vous pourrez configurer un planning détaillé depuis votre tableau de bord Kooker.
                     </p>
                   </div>
@@ -325,11 +329,11 @@ export default function BecomeKookerPage() {
             </div>
 
             {/* ── Info Box ────────────────────────────────────────── */}
-            <div className="bg-[#c1a0fd]/10 border border-[#c1a0fd]/20 rounded-[20px] p-6 md:p-8 mb-8">
+            <div className="bg-[#f3ecff] border-2 border-[#c1a0fd] rounded-[12px] p-6 md:p-8 mb-8">
               <h3 className="text-[15px] font-semibold text-[#111125] mb-3">
                 Prochaines étapes
               </h3>
-              <ul className="space-y-2 text-[13px] text-[#111125]/70">
+              <ul className="space-y-2 text-[13px] text-[#5c5c6f]">
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 w-1.5 h-1.5 rounded-full bg-[#c1a0fd] flex-shrink-0" />
                   Votre profil Kooker sera immédiatement visible sur la plateforme
@@ -354,18 +358,18 @@ export default function BecomeKookerPage() {
               <button
                 type="button"
                 onClick={() => navigate(-1)}
-                className="h-[48px] px-6 border border-[#e0e2ef] text-[#111125] font-semibold text-[14px] rounded-[12px] hover:bg-[#f8f8fc] transition-colors"
+                className="h-[48px] px-6 border-2 border-[#e0e0e6] text-[#303044] font-medium text-[16px] tracking-[-0.32px] rounded-[8px] hover:bg-gray-50 transition-colors"
               >
                 Annuler
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="h-[48px] px-8 bg-[#c1a0fd] hover:bg-[#b090ed] text-white font-semibold text-[14px] rounded-[12px] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="h-[48px] px-8 bg-[#c1a0fd] hover:bg-[#b090ed] text-[#111125] font-medium text-[16px] tracking-[-0.32px] rounded-[8px] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 flex-1"
               >
                 {isSubmitting ? (
                   <svg
-                    className="animate-spin h-5 w-5 text-white"
+                    className="animate-spin h-5 w-5 text-[#111125]"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"

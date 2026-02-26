@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
+import AvailabilityCalendar, { type AvailabilitySlot } from '@/components/dashboard/AvailabilityCalendar';
 
 // ────────────────────────── Types ──────────────────────────
 
@@ -41,10 +42,11 @@ interface Service {
 
 interface Availability {
   id: number;
+  kookerProfileId: number;
   date: string;
   startTime: string;
   endTime: string;
-  isBooked: boolean;
+  isAvailable: boolean;
 }
 
 interface KookerProfile {
@@ -158,157 +160,6 @@ const SectionSpinner = ({ text }: { text?: string }) => (
   </div>
 );
 
-// ────────────────────────── Calendar Component ──────────────────────────
-
-const CalendarView = ({ availabilities }: { availabilities: Availability[] }) => {
-  const [currentMonth, setCurrentMonth] = useState(new Date(2026, 1, 1)); // Feb 2026
-
-  const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
-  const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
-  const adjustedFirstDay = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1; // Monday start
-
-  const monthName = currentMonth.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-
-  const prevMonth = () => {
-    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
-  };
-
-  const nextMonth = () => {
-    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
-  };
-
-  const getAvailabilityForDay = (day: number) => {
-    const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    return availabilities.filter(a => a.date === dateStr);
-  };
-
-  const today = new Date();
-  const isToday = (day: number) =>
-    today.getDate() === day &&
-    today.getMonth() === currentMonth.getMonth() &&
-    today.getFullYear() === currentMonth.getFullYear();
-
-  const isPast = (day: number) => {
-    const cellDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-    const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    return cellDate < todayMidnight;
-  };
-
-  return (
-    <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm overflow-hidden">
-      {/* Calendar Header */}
-      <div className="flex items-center justify-between p-5 border-b border-[#e0e2ef]">
-        <button
-          onClick={prevMonth}
-          className="w-9 h-9 flex items-center justify-center rounded-[10px] hover:bg-[#f2f4fc] transition-colors"
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M10 12L6 8L10 4" stroke="#111125" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
-        <h4 className="text-[15px] font-semibold text-[#111125] capitalize">{monthName}</h4>
-        <button
-          onClick={nextMonth}
-          className="w-9 h-9 flex items-center justify-center rounded-[10px] hover:bg-[#f2f4fc] transition-colors"
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M6 4L10 8L6 12" stroke="#111125" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
-      </div>
-
-      {/* Day Names */}
-      <div className="grid grid-cols-7 border-b border-[#e0e2ef]">
-        {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map(day => (
-          <div key={day} className="py-3 text-center text-[12px] font-medium text-[#111125]/40 uppercase tracking-wider">
-            {day}
-          </div>
-        ))}
-      </div>
-
-      {/* Calendar Grid */}
-      <div className="grid grid-cols-7">
-        {/* Empty cells before first day */}
-        {Array.from({ length: adjustedFirstDay }, (_, i) => (
-          <div key={`empty-${i}`} className="h-[80px] md:h-[100px] border-b border-r border-[#e0e2ef]/50" />
-        ))}
-
-        {/* Day cells */}
-        {Array.from({ length: daysInMonth }, (_, i) => {
-          const day = i + 1;
-          const dayAvailabilities = getAvailabilityForDay(day);
-          const hasBooked = dayAvailabilities.some(a => a.isBooked);
-          const hasFree = dayAvailabilities.some(a => !a.isBooked);
-          const past = isPast(day);
-
-          return (
-            <div
-              key={day}
-              className={`h-[80px] md:h-[100px] border-b border-r border-[#e0e2ef]/50 p-1.5 md:p-2 relative ${
-                past ? 'bg-[#f8f8fc]' : ''
-              } ${isToday(day) ? 'bg-[#c1a0fd]/5' : ''}`}
-            >
-              <span className={`text-[13px] font-medium ${
-                isToday(day)
-                  ? 'w-6 h-6 bg-[#c1a0fd] text-white rounded-full flex items-center justify-center'
-                  : past
-                    ? 'text-[#111125]/25'
-                    : 'text-[#111125]'
-              }`}>
-                {day}
-              </span>
-
-              {dayAvailabilities.length > 0 && (
-                <div className="mt-1 space-y-0.5">
-                  {dayAvailabilities.map((avail) => (
-                    <div
-                      key={avail.id}
-                      className={`text-[10px] md:text-[11px] px-1.5 py-0.5 rounded-[4px] truncate ${
-                        avail.isBooked
-                          ? 'bg-[#c1a0fd]/15 text-[#c1a0fd] font-medium'
-                          : 'bg-green-50 text-green-600'
-                      }`}
-                    >
-                      {avail.startTime}-{avail.endTime}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {!past && dayAvailabilities.length === 0 && (
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                  <button className="w-7 h-7 bg-[#c1a0fd]/10 hover:bg-[#c1a0fd]/20 rounded-full flex items-center justify-center transition-colors">
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M6 2.5V9.5" stroke="#c1a0fd" strokeWidth="1.5" strokeLinecap="round"/>
-                      <path d="M2.5 6H9.5" stroke="#c1a0fd" strokeWidth="1.5" strokeLinecap="round"/>
-                    </svg>
-                  </button>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Legend */}
-      <div className="flex items-center gap-6 p-4 border-t border-[#e0e2ef]">
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-[3px] bg-[#c1a0fd]/15 border border-[#c1a0fd]/30" />
-          <span className="text-[12px] text-[#111125]/50">Réservé</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-[3px] bg-green-50 border border-green-200" />
-          <span className="text-[12px] text-[#111125]/50">Disponible</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-[3px] bg-[#f8f8fc] border border-[#e0e2ef]" />
-          <span className="text-[12px] text-[#111125]/50">Passé</span>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 // ────────────────────────── Main Page ──────────────────────────
 
 const KookerDashboardPage = () => {
@@ -341,6 +192,8 @@ const KookerDashboardPage = () => {
   const [availabilitiesLoading, setAvailabilitiesLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileSaving, setProfileSaving] = useState(false);
+  const [pendingAvailabilities, setPendingAvailabilities] = useState<AvailabilitySlot[] | null>(null);
+  const [availabilitiesSaving, setAvailabilitiesSaving] = useState(false);
 
   const kookerProfileId = user?.kookerProfileId;
 
@@ -529,6 +382,21 @@ const KookerDashboardPage = () => {
   const handleProfileCancel = () => {
     if (originalProfile) {
       setProfile(originalProfile);
+    }
+  };
+
+  const handleSaveAvailabilities = async () => {
+    if (!pendingAvailabilities) return;
+    setAvailabilitiesSaving(true);
+    try {
+      await api.put('/availability', { availabilities: pendingAvailabilities });
+      setPendingAvailabilities(null);
+      await fetchAvailabilities();
+      toast.success('Disponibilités mises à jour !');
+    } catch (err: any) {
+      toast.error(err?.error || 'Erreur lors de la sauvegarde');
+    } finally {
+      setAvailabilitiesSaving(false);
     }
   };
 
@@ -869,55 +737,65 @@ const KookerDashboardPage = () => {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <div>
                 <h3 className="text-[16px] font-bold text-[#111125]">Mon Planning</h3>
-                <p className="text-[13px] text-[#111125]/50 mt-1">Gérez vos disponibilités et consultez vos réservations.</p>
+                <p className="text-[13px] text-[#111125]/50 mt-1">Cliquez sur les créneaux pour activer ou désactiver vos disponibilités.</p>
               </div>
-              <button className="flex items-center gap-2 px-4 py-2.5 bg-[#c1a0fd] hover:bg-[#b090ed] text-white text-[13px] font-semibold rounded-[12px] transition-all self-start sm:self-auto">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M8 3.33337V12.6667" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                  <path d="M3.33333 8H12.6667" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                </svg>
-                Ajouter un créneau
-              </button>
+              {pendingAvailabilities !== null && (
+                <button
+                  onClick={handleSaveAvailabilities}
+                  disabled={availabilitiesSaving}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-[#c1a0fd] hover:bg-[#b090ed] disabled:opacity-60 text-white text-[13px] font-semibold rounded-[12px] transition-all self-start sm:self-auto"
+                >
+                  {availabilitiesSaving ? (
+                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                    </svg>
+                  ) : (
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M13.3333 4L6 11.3333L2.66667 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
+                  {availabilitiesSaving ? 'Enregistrement...' : 'Sauvegarder'}
+                </button>
+              )}
             </div>
 
             {availabilitiesLoading ? (
               <SectionSpinner text="Chargement du planning..." />
             ) : (
               <>
-                <CalendarView availabilities={availabilities} />
+                <AvailabilityCalendar
+                  availabilities={availabilities}
+                  mode="edit"
+                  onAvailabilitiesChange={setPendingAvailabilities}
+                  isSaving={availabilitiesSaving}
+                />
 
-                {/* Upcoming Slots */}
-                <div className="mt-6">
-                  <h4 className="text-[15px] font-semibold text-[#111125] mb-4">Prochains créneaux</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {availabilities
-                      .filter(a => !a.isBooked)
-                      .slice(0, 6)
-                      .map(avail => (
-                        <div
-                          key={avail.id}
-                          className="bg-white rounded-[20px] p-4 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow"
-                        >
-                          <div>
-                            <p className="text-[14px] font-semibold text-[#111125]">{formatDateLong(avail.date)}</p>
-                            <p className="text-[13px] text-[#111125]/50 mt-0.5">
-                              {avail.startTime} - {avail.endTime}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2">
+                {/* Upcoming available slots */}
+                {availabilities.filter(a => a.isAvailable).length > 0 && (
+                  <div className="mt-6">
+                    <h4 className="text-[15px] font-semibold text-[#111125] mb-4">Prochains créneaux disponibles</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {availabilities
+                        .filter(a => a.isAvailable)
+                        .slice(0, 6)
+                        .map(avail => (
+                          <div
+                            key={avail.id}
+                            className="bg-white rounded-[20px] p-4 shadow-sm flex items-center justify-between"
+                          >
+                            <div>
+                              <p className="text-[14px] font-semibold text-[#111125]">{formatDateLong(avail.date)}</p>
+                              <p className="text-[13px] text-[#111125]/50 mt-0.5">
+                                {avail.startTime} - {avail.endTime}
+                              </p>
+                            </div>
                             <span className="px-2 py-1 bg-green-50 text-green-600 text-[11px] font-medium rounded-[6px]">Libre</span>
-                            <button className="w-8 h-8 flex items-center justify-center rounded-[8px] hover:bg-red-50 text-[#111125]/30 hover:text-red-500 transition-all">
-                              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M1.75 3.5H12.25" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
-                                <path d="M4.66667 3.5V2.33333C4.66667 1.96514 4.96514 1.66667 5.33333 1.66667H8.66667C9.03486 1.66667 9.33333 1.96514 9.33333 2.33333V3.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
-                                <path d="M11.0833 3.5V11.6667C11.0833 12.0349 10.7849 12.3333 10.4167 12.3333H3.58333C3.21514 12.3333 2.91667 12.0349 2.91667 11.6667V3.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
-                              </svg>
-                            </button>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </>
             )}
           </div>

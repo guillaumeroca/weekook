@@ -18,6 +18,7 @@ const BecomeKookerPage = lazy(() => import('@/pages/BecomeKookerPage').then(m =>
 const CreateMenuPage = lazy(() => import('@/pages/CreateMenuPage').then(m => ({ default: m.default })));
 const EditMenuPage = lazy(() => import('@/pages/EditMenuPage').then(m => ({ default: m.default })));
 const BookingPage = lazy(() => import('@/pages/BookingPage').then(m => ({ default: m.default })));
+const FaqPage = lazy(() => import('@/pages/FaqPage').then(m => ({ default: m.default })));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage').then(m => ({ default: m.default })));
 
 export function AppRouter() {
@@ -32,6 +33,7 @@ export function AppRouter() {
           <Route path="/a-propos" element={<AboutPage />} />
           <Route path="/avantages" element={<BenefitsPage />} />
           <Route path="/confiance" element={<TrustPage />} />
+          <Route path="/faq" element={<FaqPage />} />
           <Route path="/tableau-de-bord" element={
             <ProtectedRoute><UserDashboardPage /></ProtectedRoute>
           } />

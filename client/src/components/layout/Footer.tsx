@@ -16,7 +16,7 @@ const discoverLinks = [
 ];
 
 const helpLinks = [
-  { label: 'FAQ', path: '/#faq' },
+  { label: 'FAQ', path: '/faq' },
   { label: 'Contact', path: '#' },
   { label: 'Les Kookers Guides !', path: '#' },
 ];

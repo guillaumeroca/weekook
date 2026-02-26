@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
-import AvailabilityCalendar, { type AvailabilitySlot } from '@/components/dashboard/AvailabilityCalendar';
+import PlanningTab from '@/components/dashboard/PlanningTab';
 
 // ────────────────────────── Types ──────────────────────────
 
@@ -192,8 +192,6 @@ const KookerDashboardPage = () => {
   const [availabilitiesLoading, setAvailabilitiesLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileSaving, setProfileSaving] = useState(false);
-  const [pendingAvailabilities, setPendingAvailabilities] = useState<AvailabilitySlot[] | null>(null);
-  const [availabilitiesSaving, setAvailabilitiesSaving] = useState(false);
 
   const kookerProfileId = user?.kookerProfileId;
 
@@ -382,21 +380,6 @@ const KookerDashboardPage = () => {
   const handleProfileCancel = () => {
     if (originalProfile) {
       setProfile(originalProfile);
-    }
-  };
-
-  const handleSaveAvailabilities = async () => {
-    if (!pendingAvailabilities) return;
-    setAvailabilitiesSaving(true);
-    try {
-      await api.put('/availability', { availabilities: pendingAvailabilities });
-      setPendingAvailabilities(null);
-      await fetchAvailabilities();
-      toast.success('Disponibilités mises à jour !');
-    } catch (err: any) {
-      toast.error(err?.error || 'Erreur lors de la sauvegarde');
-    } finally {
-      setAvailabilitiesSaving(false);
     }
   };
 
@@ -733,72 +716,11 @@ const KookerDashboardPage = () => {
 
         {/* ────────────────────── PLANNING TAB ────────────────────── */}
         {activeTab === 'planning' && (
-          <div>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-              <div>
-                <h3 className="text-[16px] font-bold text-[#111125]">Mon Planning</h3>
-                <p className="text-[13px] text-[#111125]/50 mt-1">Cliquez sur les créneaux pour activer ou désactiver vos disponibilités.</p>
-              </div>
-              {pendingAvailabilities !== null && (
-                <button
-                  onClick={handleSaveAvailabilities}
-                  disabled={availabilitiesSaving}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-[#c1a0fd] hover:bg-[#b090ed] disabled:opacity-60 text-white text-[13px] font-semibold rounded-[12px] transition-all self-start sm:self-auto"
-                >
-                  {availabilitiesSaving ? (
-                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-                    </svg>
-                  ) : (
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M13.3333 4L6 11.3333L2.66667 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  )}
-                  {availabilitiesSaving ? 'Enregistrement...' : 'Sauvegarder'}
-                </button>
-              )}
-            </div>
-
-            {availabilitiesLoading ? (
-              <SectionSpinner text="Chargement du planning..." />
-            ) : (
-              <>
-                <AvailabilityCalendar
-                  availabilities={availabilities}
-                  mode="edit"
-                  onAvailabilitiesChange={setPendingAvailabilities}
-                  isSaving={availabilitiesSaving}
-                />
-
-                {/* Upcoming available slots */}
-                {availabilities.filter(a => a.isAvailable).length > 0 && (
-                  <div className="mt-6">
-                    <h4 className="text-[15px] font-semibold text-[#111125] mb-4">Prochains créneaux disponibles</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {availabilities
-                        .filter(a => a.isAvailable)
-                        .slice(0, 6)
-                        .map(avail => (
-                          <div
-                            key={avail.id}
-                            className="bg-white rounded-[20px] p-4 shadow-sm flex items-center justify-between"
-                          >
-                            <div>
-                              <p className="text-[14px] font-semibold text-[#111125]">{formatDateLong(avail.date)}</p>
-                              <p className="text-[13px] text-[#111125]/50 mt-0.5">
-                                {avail.startTime} - {avail.endTime}
-                              </p>
-                            </div>
-                            <span className="px-2 py-1 bg-green-50 text-green-600 text-[11px] font-medium rounded-[6px]">Libre</span>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+          <PlanningTab
+            availabilities={availabilities}
+            availabilitiesLoading={availabilitiesLoading}
+            onSaved={fetchAvailabilities}
+          />
         )}
 
         {/* ────────────────────── SERVICES TAB ────────────────────── */}

@@ -26,13 +26,14 @@ const MONTHS_FR = [
   'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
 ];
 const DAYS_FR = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+const DAYS_FULL_FR = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
 
-// 3 créneaux par jour
-const DEFAULT_SLOTS = [
-  { startTime: '08:00', endTime: '12:00' },
-  { startTime: '13:00', endTime: '17:00' },
-  { startTime: '18:00', endTime: '22:00' },
-];
+// Les 3 créneaux par jour (indices : 0=Matin, 1=Après-midi, 2=Soir)
+const SLOTS = [
+  { label: 'Matin',       startTime: '08:00', endTime: '12:00' },
+  { label: 'Après-midi',  startTime: '12:00', endTime: '18:00' },
+  { label: 'Soir',        startTime: '18:00', endTime: '23:00' },
+] as const;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -53,14 +54,23 @@ function isToday(year: number, month: number, day: number) {
 
 function firstWeekday(year: number, month: number) {
   const d = new Date(year, month, 1).getDay();
-  return d === 0 ? 6 : d - 1; // Lun=0 … Dim=6
+  return d === 0 ? 6 : d - 1;
 }
 
 function daysInMonth(year: number, month: number) {
   return new Date(year, month + 1, 0).getDate();
 }
 
-// ─── Sub-components ──────────────────────────────────────────────────────────
+// Formate "YYYY-MM-DD" → "mercredi 25 février 2026"
+function formatDayLong(dateStr: string): string {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  const weekday = DAYS_FULL_FR[date.getDay()];
+  const monthName = MONTHS_FR[month - 1].toLowerCase();
+  return `${weekday} ${day} ${monthName} ${year}`;
+}
+
+// ─── Icons ────────────────────────────────────────────────────────────────────
 
 function ChevronLeft() {
   return (
@@ -83,9 +93,9 @@ function CloseIcon() {
     </svg>
   );
 }
-function CheckIcon({ color = 'currentColor' }: { color?: string }) {
+function CheckIcon({ color = 'currentColor', size = 16 }: { color?: string; size?: number }) {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
       <path d="M13.3333 4L6 11.3333L2.66667 8" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   );
@@ -104,7 +114,6 @@ function EditIcon() {
     </svg>
   );
 }
-
 function SpinnerIcon() {
   return (
     <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -114,106 +123,115 @@ function SpinnerIcon() {
   );
 }
 
-// Pastille "réservé" = vert avec petit point rouge
+// Pastille vert+rouge pour "réservé"
 function DotBooked() {
   return (
-    <div className="relative w-5 h-5">
-      <div className="w-5 h-5 rounded-full bg-green-500" />
+    <div className="relative w-[18px] h-[18px] flex-shrink-0">
+      <div className="w-[18px] h-[18px] rounded-full bg-green-500" />
       <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-red-500 border-2 border-white" />
     </div>
   );
 }
 
-// ─── Legend ──────────────────────────────────────────────────────────────────
-
-function Legend({ compact = false }: { compact?: boolean }) {
-  const gap = compact ? 'gap-4' : 'gap-6';
-  const text = compact ? 'text-[12px]' : 'text-[13px]';
-  return (
-    <div className={`flex items-center justify-center flex-wrap ${gap}`}>
-      <div className="flex items-center gap-2">
-        <div className="w-4 h-4 rounded-full bg-green-500 flex-shrink-0" />
-        <span className={`${text} text-[#5c5c6f]`}>Au moins 1 créneau disponible</span>
-      </div>
-      <div className="flex items-center gap-2">
-        <DotBooked />
-        <span className={`${text} text-[#5c5c6f]`}>Créneau réservé</span>
-      </div>
-      <div className="flex items-center gap-2">
-        <div className="w-4 h-4 rounded-full bg-[#d1d5db] flex-shrink-0" />
-        <span className={`${text} text-[#5c5c6f]`}>Aucun créneau disponible</span>
-      </div>
-    </div>
-  );
-}
-
-// ─── Main component ──────────────────────────────────────────────────────────
+// ─── Main component ───────────────────────────────────────────────────────────
 
 export default function PlanningTab({ availabilities, availabilitiesLoading, onSaved }: PlanningTabProps) {
-  // ── View calendar state
+
+  // ── Vue calendrier principale
   const [viewMonth, setViewMonth] = useState(() => new Date());
 
-  // ── Edit modal state
+  // ── Modal d'édition
   const [showEdit, setShowEdit] = useState(false);
   const [editMonth, setEditMonth] = useState(() => new Date());
-  const [editDays, setEditDays] = useState<Set<string>>(new Set());
+  // Map<dateKey, Set<slotIndex>> — les créneaux sélectionnés par jour
+  const [editDaySlots, setEditDaySlots] = useState<Map<string, Set<number>>>(new Map());
   const [isSaving, setIsSaving] = useState(false);
 
-  // ── Confirm modals state
+  // ── Sous-modale "Définir les disponibilités" (1 jour)
+  const [editingDay, setEditingDay] = useState<string | null>(null);
+  const [tempSlots, setTempSlots] = useState<Set<number>>(new Set());
+
+  // ── Modales de confirmation bulk
   const [showConfirmAvail, setShowConfirmAvail] = useState(false);
   const [showConfirmUnavail, setShowConfirmUnavail] = useState(false);
 
-  // ── Derive set of available dates from API data
-  const apiAvailableDates = useMemo(() => {
-    const set = new Set<string>();
+  // ── Construit Map<dateKey, Set<slotIndex>> depuis les données API
+  const initFromApi = useMemo(() => {
+    const map = new Map<string, Set<number>>();
     availabilities.forEach(a => {
-      if (a.isAvailable) {
-        // Normalize ISO datetime → YYYY-MM-DD
-        set.add(String(a.date).substring(0, 10));
-      }
+      if (!a.isAvailable) return;
+      const d = String(a.date).substring(0, 10);
+      const idx = SLOTS.findIndex(s => s.startTime === a.startTime);
+      if (idx === -1) return;
+      if (!map.has(d)) map.set(d, new Set());
+      map.get(d)!.add(idx);
     });
-    return set;
+    return map;
   }, [availabilities]);
 
-  // ── Open edit modal: initialize editDays from current API data
+  // ── Ensemble de dates avec au moins 1 créneau (pour la vue principale)
+  const apiAvailableDates = useMemo(() => new Set(initFromApi.keys()), [initFromApi]);
+
+  // ── Ouvre la modale d'édition en initialisant depuis l'API
   const openEdit = useCallback(() => {
-    setEditDays(new Set(apiAvailableDates));
+    const copy = new Map<string, Set<number>>();
+    initFromApi.forEach((slots, date) => copy.set(date, new Set(slots)));
+    setEditDaySlots(copy);
     setEditMonth(new Date());
     setShowEdit(true);
-  }, [apiAvailableDates]);
+  }, [initFromApi]);
 
-  // ── Toggle a day in edit modal
-  const toggleDay = (key: string) => {
-    setEditDays(prev => {
+  // ── Clic sur un jour dans l'éditeur → ouvre la sous-modale
+  const clickDay = (key: string) => {
+    const current = editDaySlots.get(key) ?? new Set<number>();
+    setTempSlots(new Set(current));
+    setEditingDay(key);
+  };
+
+  // ── Toggle un créneau dans la sous-modale
+  const toggleTempSlot = (idx: number) => {
+    setTempSlots(prev => {
       const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
+      if (next.has(idx)) next.delete(idx);
+      else next.add(idx);
       return next;
     });
   };
 
-  // ── Mark all future days of editMonth as available
+  // ── Valide les créneaux de la sous-modale
+  const saveDaySlots = () => {
+    if (!editingDay) return;
+    setEditDaySlots(prev => {
+      const next = new Map(prev);
+      if (tempSlots.size === 0) next.delete(editingDay);
+      else next.set(editingDay, new Set(tempSlots));
+      return next;
+    });
+    setEditingDay(null);
+  };
+
+  // ── Tout marquer disponible (3 créneaux sur tous les jours futurs du mois)
   const doMarkAllAvailable = () => {
     const y = editMonth.getFullYear();
     const m = editMonth.getMonth();
     const total = daysInMonth(y, m);
-    setEditDays(prev => {
-      const next = new Set(prev);
+    setEditDaySlots(prev => {
+      const next = new Map(prev);
       for (let d = 1; d <= total; d++) {
-        if (!isPast(y, m, d)) next.add(dateKey(y, m, d));
+        if (!isPast(y, m, d)) next.set(dateKey(y, m, d), new Set([0, 1, 2]));
       }
       return next;
     });
     setShowConfirmAvail(false);
   };
 
-  // ── Mark all future days of editMonth as unavailable
+  // ── Tout marquer indisponible
   const doMarkAllUnavailable = () => {
     const y = editMonth.getFullYear();
     const m = editMonth.getMonth();
     const total = daysInMonth(y, m);
-    setEditDays(prev => {
-      const next = new Set(prev);
+    setEditDaySlots(prev => {
+      const next = new Map(prev);
       for (let d = 1; d <= total; d++) {
         if (!isPast(y, m, d)) next.delete(dateKey(y, m, d));
       }
@@ -222,14 +240,15 @@ export default function PlanningTab({ availabilities, availabilitiesLoading, onS
     setShowConfirmUnavail(false);
   };
 
-  // ── Save
+  // ── Sauvegarde finale (Je valide)
   const handleSave = async () => {
     setIsSaving(true);
     try {
       const slots: { date: string; startTime: string; endTime: string; isAvailable: boolean }[] = [];
-      editDays.forEach(dateStr => {
-        DEFAULT_SLOTS.forEach(slot => {
-          slots.push({ date: dateStr, ...slot, isAvailable: true });
+      editDaySlots.forEach((slotIndices, dateStr) => {
+        slotIndices.forEach(idx => {
+          const s = SLOTS[idx];
+          slots.push({ date: dateStr, startTime: s.startTime, endTime: s.endTime, isAvailable: true });
         });
       });
       await api.put('/availability', { availabilities: slots });
@@ -243,17 +262,11 @@ export default function PlanningTab({ availabilities, availabilitiesLoading, onS
     }
   };
 
-  // ── Derived values for view calendar
+  // ── Valeurs dérivées calendriers
   const viewY = viewMonth.getFullYear();
   const viewM = viewMonth.getMonth();
-  const viewFirstWd = firstWeekday(viewY, viewM);
-  const viewDays = daysInMonth(viewY, viewM);
-
-  // ── Derived values for edit calendar
   const editY = editMonth.getFullYear();
   const editM = editMonth.getMonth();
-  const editFirstWd = firstWeekday(editY, editM);
-  const editDaysTotal = daysInMonth(editY, editM);
 
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -287,7 +300,7 @@ export default function PlanningTab({ availabilities, availabilitiesLoading, onS
           </button>
         </div>
 
-        {/* Month navigation */}
+        {/* Navigation mois */}
         <div className="flex items-center justify-between mb-5">
           <button
             onClick={() => setViewMonth(new Date(viewY, viewM - 1))}
@@ -306,80 +319,71 @@ export default function PlanningTab({ availabilities, availabilitiesLoading, onS
           </button>
         </div>
 
-        {/* Legend */}
-        <div className="mb-6">
-          <Legend />
+        {/* Légende */}
+        <div className="flex items-center justify-center flex-wrap gap-5 mb-6">
+          <div className="flex items-center gap-2">
+            <div className="w-[18px] h-[18px] rounded-full bg-green-500 flex-shrink-0" />
+            <span className="text-[13px] text-[#5c5c6f]">Au moins 1 créneau disponible</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <DotBooked />
+            <span className="text-[13px] text-[#5c5c6f]">Créneau réservé</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-[18px] h-[18px] rounded-full bg-[#d1d5db] flex-shrink-0" />
+            <span className="text-[13px] text-[#5c5c6f]">Aucun créneau disponible</span>
+          </div>
         </div>
 
-        {/* Day headers */}
+        {/* En-têtes jours */}
         <div className="grid grid-cols-7 border-b border-[#e0e2ef] pb-2 mb-1">
           {DAYS_FR.map(d => (
-            <div key={d} className="text-center text-[13px] md:text-[14px] font-bold text-[#111125]">
-              {d}
-            </div>
+            <div key={d} className="text-center text-[13px] md:text-[14px] font-bold text-[#111125]">{d}</div>
           ))}
         </div>
 
-        {/* Calendar grid */}
+        {/* Grille calendrier vue */}
         <div className="grid grid-cols-7">
-          {/* Empty cells */}
-          {Array.from({ length: viewFirstWd }, (_, i) => (
-            <div key={`ev-${i}`} className="h-[72px] border-b border-[#e0e2ef]/50" />
+          {Array.from({ length: firstWeekday(viewY, viewM) }, (_, i) => (
+            <div key={`ev-${i}`} className="h-[68px] border-b border-[#e0e2ef]/40" />
           ))}
-
-          {/* Day cells */}
-          {Array.from({ length: viewDays }, (_, i) => {
+          {Array.from({ length: daysInMonth(viewY, viewM) }, (_, i) => {
             const day = i + 1;
             const past = isPast(viewY, viewM, day);
             const tod = isToday(viewY, viewM, day);
             const key = dateKey(viewY, viewM, day);
             const available = apiAvailableDates.has(key);
-
             return (
-              <div
-                key={day}
-                className="h-[72px] border-b border-[#e0e2ef]/50 flex flex-col items-center justify-center gap-1.5"
-              >
-                <span
-                  className={`text-[14px] md:text-[15px] font-medium leading-none ${
-                    past
-                      ? 'text-[#111125]/30'
-                      : tod
-                      ? 'text-[#c1a0fd] font-bold'
-                      : 'text-[#111125]'
-                  }`}
-                >
-                  {day}
-                </span>
-                {available ? (
-                  <div className="w-4 h-4 rounded-full bg-green-500" />
-                ) : (
-                  <div className={`w-4 h-4 rounded-full ${past ? 'bg-[#e5e7eb]' : 'bg-[#d1d5db]'}`} />
-                )}
+              <div key={day} className="h-[68px] border-b border-[#e0e2ef]/40 flex flex-col items-center justify-center gap-1.5">
+                <span className={`text-[14px] font-medium leading-none ${
+                  past ? 'text-[#111125]/30' : tod ? 'text-[#c1a0fd] font-bold' : 'text-[#111125]'
+                }`}>{day}</span>
+                {available
+                  ? <div className="w-[16px] h-[16px] rounded-full bg-green-500" />
+                  : <div className={`w-[16px] h-[16px] rounded-full ${past ? 'bg-[#e9eaec]' : 'bg-[#d1d5db]'}`} />
+                }
               </div>
             );
           })}
         </div>
 
-        {/* Info box */}
+        {/* Note */}
         <div className="mt-6 p-4 bg-[#eef2ff] border border-[#c1a0fd]/30 rounded-[12px]">
           <p className="text-[12px] text-[#5c5c6f] leading-relaxed">
-            📅 Vue mensuelle synthétique : Naviguez entre les mois avec les flèches. Pastille verte = au moins 1 créneau disponible. Pastille rouge = créneau réservé. Survolez une pastille pour voir le détail des créneaux. Cliquez sur "Modifier les disponibilités" pour gérer votre planning en détail.
+            📅 Vue mensuelle synthétique : Naviguez entre les mois avec les flèches. Pastille verte = au moins 1 créneau disponible. Pastille rouge = créneau réservé. Cliquez sur "Modifier les disponibilités" pour gérer votre planning en détail.
           </p>
         </div>
       </div>
 
-      {/* ════════════════════ MODAL ÉDITION ════════════════════ */}
+      {/* ════════════════════ MODAL ÉDITION PRINCIPALE ════════════════════ */}
       {showEdit && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-[20px] w-full max-w-[680px] max-h-[90vh] overflow-y-auto shadow-xl">
+          <div className="bg-white rounded-[20px] w-full max-w-[700px] max-h-[90vh] overflow-y-auto shadow-xl">
 
-            {/* Modal header */}
+            {/* Header */}
             <div className="px-6 pt-6 pb-4 flex items-start justify-between">
               <div>
-                <h2 className="text-[22px] md:text-[26px] font-bold text-[#111125]">
-                  Gérer mes disponibilités
-                </h2>
+                <h2 className="text-[22px] md:text-[26px] font-bold text-[#111125]">Gérer mes disponibilités</h2>
                 <p className="text-[13px] text-[#5c5c6f] mt-1.5 leading-relaxed">
                   Cliquez sur un jour pour définir vos créneaux de disponibilité. Les jours passés ne peuvent pas être modifiés.
                 </p>
@@ -393,42 +397,8 @@ export default function PlanningTab({ availabilities, availabilitiesLoading, onS
             </div>
 
             <div className="px-6 pb-6">
-              {/* Legend */}
-              <div className="flex items-center justify-center gap-6 py-3 bg-[#f8f9fb] rounded-[12px] mb-5">
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded-full bg-green-500 flex-shrink-0" />
-                  <span className="text-[13px] text-[#5c5c6f]">Disponible</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <DotBooked />
-                  <span className="text-[13px] text-[#5c5c6f]">Réservé</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded-full bg-[#d1d5db] flex-shrink-0" />
-                  <span className="text-[13px] text-[#5c5c6f]">Indisponible</span>
-                </div>
-              </div>
 
-              {/* Edit month navigation */}
-              <div className="flex items-center justify-center gap-5 mb-5">
-                <button
-                  onClick={() => setEditMonth(new Date(editY, editM - 1))}
-                  className="w-10 h-10 rounded-full border border-[#c1a0fd] flex items-center justify-center text-[#c1a0fd] hover:bg-[#f3ecff] transition-colors flex-shrink-0"
-                >
-                  <ChevronLeft />
-                </button>
-                <h4 className="text-[20px] md:text-[24px] font-semibold text-[#111125]">
-                  {MONTHS_FR[editM]} {editY}
-                </h4>
-                <button
-                  onClick={() => setEditMonth(new Date(editY, editM + 1))}
-                  className="w-10 h-10 rounded-full border border-[#c1a0fd] flex items-center justify-center text-[#c1a0fd] hover:bg-[#f3ecff] transition-colors flex-shrink-0"
-                >
-                  <ChevronRight />
-                </button>
-              </div>
-
-              {/* Bulk action buttons */}
+              {/* Boutons bulk */}
               <div className="flex gap-3 mb-5">
                 <button
                   onClick={() => setShowConfirmAvail(true)}
@@ -446,50 +416,75 @@ export default function PlanningTab({ availabilities, availabilitiesLoading, onS
                 </button>
               </div>
 
-              {/* Day headers */}
+              {/* Navigation mois édition */}
+              <div className="flex items-center justify-center gap-5 mb-4">
+                <button
+                  onClick={() => setEditMonth(new Date(editY, editM - 1))}
+                  className="w-10 h-10 rounded-full border border-[#c1a0fd] flex items-center justify-center text-[#c1a0fd] hover:bg-[#f3ecff] transition-colors flex-shrink-0"
+                >
+                  <ChevronLeft />
+                </button>
+                <h4 className="text-[20px] md:text-[22px] font-semibold text-[#111125]">
+                  {MONTHS_FR[editM]} {editY}
+                </h4>
+                <button
+                  onClick={() => setEditMonth(new Date(editY, editM + 1))}
+                  className="w-10 h-10 rounded-full border border-[#c1a0fd] flex items-center justify-center text-[#c1a0fd] hover:bg-[#f3ecff] transition-colors flex-shrink-0"
+                >
+                  <ChevronRight />
+                </button>
+              </div>
+
+              {/* En-têtes jours */}
               <div className="grid grid-cols-7 mb-2">
                 {DAYS_FR.map(d => (
-                  <div key={d} className="text-center text-[12px] font-semibold text-[#5c5c6f] py-1">
-                    {d}
-                  </div>
+                  <div key={d} className="text-center text-[12px] font-semibold text-[#5c5c6f] py-1">{d}</div>
                 ))}
               </div>
 
-              {/* Edit calendar grid */}
+              {/* Grille cartes jours */}
               <div className="grid grid-cols-7 gap-1.5">
-                {/* Empty cells */}
-                {Array.from({ length: editFirstWd }, (_, i) => (
+                {Array.from({ length: firstWeekday(editY, editM) }, (_, i) => (
                   <div key={`ee-${i}`} />
                 ))}
-
-                {/* Day cards */}
-                {Array.from({ length: editDaysTotal }, (_, i) => {
+                {Array.from({ length: daysInMonth(editY, editM) }, (_, i) => {
                   const day = i + 1;
                   const past = isPast(editY, editM, day);
                   const key = dateKey(editY, editM, day);
-                  const available = editDays.has(key);
+                  const slots = editDaySlots.get(key);
+                  const slotCount = slots?.size ?? 0;
+                  const isEditing = editingDay === key;
 
                   return (
                     <button
                       key={day}
                       disabled={past}
-                      onClick={() => toggleDay(key)}
-                      className={`aspect-square rounded-[10px] flex items-center justify-center text-[14px] font-medium border-2 transition-all ${
+                      onClick={() => !past && clickDay(key)}
+                      className={`aspect-square rounded-[12px] flex flex-col items-center justify-center gap-1 border transition-all text-[14px] font-medium ${
                         past
                           ? 'bg-[#f8f9fb] border-[#e5e7eb] text-[#111125]/25 cursor-not-allowed'
-                          : available
-                          ? 'bg-green-50 border-green-400 text-green-700 hover:bg-green-100 cursor-pointer'
-                          : 'bg-white border-[#e0e2ef] text-[#111125] hover:border-[#c1a0fd]/50 hover:bg-[#faf9ff] cursor-pointer'
+                          : isEditing
+                          ? 'bg-[#f3ecff] border-[#c1a0fd] text-[#111125] cursor-pointer'
+                          : slotCount > 0
+                          ? 'bg-white border-[#e0e2ef] text-[#111125] hover:border-[#c1a0fd]/60 cursor-pointer'
+                          : 'bg-white border-[#e0e2ef] text-[#5c5c6f] hover:border-[#c1a0fd]/40 cursor-pointer'
                       }`}
                     >
-                      {day}
+                      <span>{day}</span>
+                      {slotCount > 0 && (
+                        <div className="flex gap-0.5">
+                          {Array.from({ length: slotCount }, (_, si) => (
+                            <div key={si} className="w-[6px] h-[6px] rounded-full bg-green-500" />
+                          ))}
+                        </div>
+                      )}
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            {/* Modal footer */}
+            {/* Footer */}
             <div className="px-6 pb-6 flex justify-end">
               <button
                 onClick={handleSave}
@@ -504,16 +499,93 @@ export default function PlanningTab({ availabilities, availabilitiesLoading, onS
         </div>
       )}
 
+      {/* ════════════════════ SOUS-MODALE : DÉFINIR LES CRÉNEAUX D'UN JOUR ════════════════════ */}
+      {editingDay && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-[20px] w-full max-w-[540px] shadow-xl p-8">
+
+            {/* Header */}
+            <div className="flex items-start justify-between mb-2">
+              <h2 className="text-[22px] font-bold text-[#111125]">Définir les disponibilités</h2>
+              <button
+                onClick={() => setEditingDay(null)}
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors ml-4 flex-shrink-0"
+              >
+                <CloseIcon />
+              </button>
+            </div>
+            <p className="text-[13px] text-[#5c5c6f] mb-5">
+              Sélectionnez vos créneaux de disponibilité pour cette journée
+            </p>
+
+            {/* Date */}
+            <div className="flex items-baseline gap-2 mb-5">
+              <span className="text-[14px] text-[#5c5c6f]">Date :</span>
+              <span className="text-[16px] font-semibold text-[#111125] capitalize">
+                {formatDayLong(editingDay)}
+              </span>
+            </div>
+
+            {/* Label */}
+            <p className="text-[14px] font-semibold text-[#111125] mb-3">
+              Sélectionnez vos créneaux de disponibilité :
+            </p>
+
+            {/* Créneaux */}
+            <div className="flex flex-col gap-3 mb-8">
+              {SLOTS.map((slot, idx) => {
+                const selected = tempSlots.has(idx);
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => toggleTempSlot(idx)}
+                    className={`flex items-center gap-4 p-4 rounded-[14px] border-2 transition-all cursor-pointer text-left w-full ${
+                      selected
+                        ? 'bg-[#f3ecff] border-[#c1a0fd]'
+                        : 'bg-white border-[#e0e2ef] hover:border-[#c1a0fd]/40'
+                    }`}
+                  >
+                    {/* Cercle checkbox */}
+                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                      selected ? 'bg-[#c1a0fd] border-[#c1a0fd]' : 'bg-white border-[#d1d5db]'
+                    }`}>
+                      {selected && <CheckIcon color="white" size={12} />}
+                    </div>
+                    <div>
+                      <p className="text-[15px] font-semibold text-[#111125]">{slot.label}</p>
+                      <p className="text-[13px] text-[#5c5c6f]">{slot.startTime} - {slot.endTime}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Boutons */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setEditingDay(null)}
+                className="flex-1 h-[52px] border-2 border-[#e0e2ef] text-[#111125] font-semibold rounded-[12px] hover:bg-gray-50 transition-colors cursor-pointer"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={saveDaySlots}
+                className="flex-1 h-[52px] bg-[#c1a0fd] hover:bg-[#b090ed] text-white font-semibold rounded-[12px] transition-colors cursor-pointer"
+              >
+                Enregistrer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ════════════════════ CONFIRM : TOUT DISPONIBLE ════════════════════ */}
       {showConfirmAvail && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-[20px] w-full max-w-[500px] shadow-xl p-8">
             <div className="flex items-start justify-between mb-3">
               <h2 className="text-[22px] font-bold text-[#111125]">Tout marquer disponible</h2>
-              <button
-                onClick={() => setShowConfirmAvail(false)}
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors ml-4 flex-shrink-0"
-              >
+              <button onClick={() => setShowConfirmAvail(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors ml-4 flex-shrink-0">
                 <CloseIcon />
               </button>
             </div>
@@ -523,12 +595,12 @@ export default function PlanningTab({ availabilities, availabilitiesLoading, onS
             <div className="bg-green-50 border border-green-200 rounded-[12px] p-4 mb-6">
               <p className="text-[13px] font-semibold text-[#111125] mb-3">Cette action va :</p>
               <ul className="space-y-2">
-                {[
-                  <>Marquer tous les jours du mois <strong>{MONTHS_FR[editM]} {editY}</strong> comme disponibles</>,
+                {([
+                  <span>Marquer tous les jours du mois <strong>{MONTHS_FR[editM]} {editY}</strong> comme disponibles</span>,
                   'Ajouter les 3 créneaux (Matin, Après-midi, Soir) à chaque jour',
                   'Les jours passés ne seront pas modifiés',
                   'Les créneaux déjà réservés seront préservés',
-                ].map((item, idx) => (
+                ] as React.ReactNode[]).map((item, idx) => (
                   <li key={idx} className="flex items-start gap-2 text-[13px] text-[#5c5c6f]">
                     <span className="text-green-500 mt-0.5 flex-shrink-0">✓</span>
                     <span>{item}</span>
@@ -537,18 +609,8 @@ export default function PlanningTab({ availabilities, availabilitiesLoading, onS
               </ul>
             </div>
             <div className="flex gap-3">
-              <button
-                onClick={() => setShowConfirmAvail(false)}
-                className="flex-1 h-[52px] border-2 border-[#e0e2ef] text-[#111125] font-semibold rounded-[12px] hover:bg-gray-50 transition-colors cursor-pointer"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={doMarkAllAvailable}
-                className="flex-1 h-[52px] bg-green-500 hover:bg-green-600 text-white font-semibold rounded-[12px] transition-colors cursor-pointer"
-              >
-                Confirmer
-              </button>
+              <button onClick={() => setShowConfirmAvail(false)} className="flex-1 h-[52px] border-2 border-[#e0e2ef] text-[#111125] font-semibold rounded-[12px] hover:bg-gray-50 transition-colors cursor-pointer">Annuler</button>
+              <button onClick={doMarkAllAvailable} className="flex-1 h-[52px] bg-green-500 hover:bg-green-600 text-white font-semibold rounded-[12px] transition-colors cursor-pointer">Confirmer</button>
             </div>
           </div>
         </div>
@@ -560,10 +622,7 @@ export default function PlanningTab({ availabilities, availabilitiesLoading, onS
           <div className="bg-white rounded-[20px] w-full max-w-[500px] shadow-xl p-8">
             <div className="flex items-start justify-between mb-3">
               <h2 className="text-[22px] font-bold text-[#111125]">Tout marquer indisponible</h2>
-              <button
-                onClick={() => setShowConfirmUnavail(false)}
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors ml-4 flex-shrink-0"
-              >
+              <button onClick={() => setShowConfirmUnavail(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors ml-4 flex-shrink-0">
                 <CloseIcon />
               </button>
             </div>
@@ -574,10 +633,10 @@ export default function PlanningTab({ availabilities, availabilitiesLoading, onS
               <p className="text-[13px] font-semibold text-[#111125] mb-3">Cette action va :</p>
               <ul className="space-y-2">
                 {[
-                  { icon: '⚠️', text: <><span>Retirer toutes les disponibilités du mois </span><strong>{MONTHS_FR[editM]} {editY}</strong></> },
+                  { icon: '⚠️', text: <span>Retirer toutes les disponibilités du mois <strong>{MONTHS_FR[editM]} {editY}</strong></span> },
                   { icon: '⚠️', text: 'Les nouveaux clients ne pourront pas réserver' },
-                  { icon: '✓', text: 'Les jours passés ne seront pas modifiés' },
-                  { icon: '✓', text: 'Les créneaux déjà réservés seront préservés' },
+                  { icon: '✓',  text: 'Les jours passés ne seront pas modifiés' },
+                  { icon: '✓',  text: 'Les créneaux déjà réservés seront préservés' },
                 ].map((item, idx) => (
                   <li key={idx} className="flex items-start gap-2 text-[13px] text-[#5c5c6f]">
                     <span className="flex-shrink-0">{item.icon}</span>
@@ -587,18 +646,8 @@ export default function PlanningTab({ availabilities, availabilitiesLoading, onS
               </ul>
             </div>
             <div className="flex gap-3">
-              <button
-                onClick={() => setShowConfirmUnavail(false)}
-                className="flex-1 h-[52px] border-2 border-[#e0e2ef] text-[#111125] font-semibold rounded-[12px] hover:bg-gray-50 transition-colors cursor-pointer"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={doMarkAllUnavailable}
-                className="flex-1 h-[52px] bg-red-500 hover:bg-red-600 text-white font-semibold rounded-[12px] transition-colors cursor-pointer"
-              >
-                Confirmer
-              </button>
+              <button onClick={() => setShowConfirmUnavail(false)} className="flex-1 h-[52px] border-2 border-[#e0e2ef] text-[#111125] font-semibold rounded-[12px] hover:bg-gray-50 transition-colors cursor-pointer">Annuler</button>
+              <button onClick={doMarkAllUnavailable} className="flex-1 h-[52px] bg-red-500 hover:bg-red-600 text-white font-semibold rounded-[12px] transition-colors cursor-pointer">Confirmer</button>
             </div>
           </div>
         </div>

@@ -137,7 +137,7 @@ export default function SearchPage() {
     setIsLoading(true);
     try {
       const params = new URLSearchParams();
-      if (query.trim()) params.set('query', query.trim());
+      if (query.trim()) params.set('q', query.trim());
       if (type) params.set('type', type);
       if (specialty !== 'Toutes') params.set('specialty', specialty);
       if (city !== 'Toutes') params.set('city', city);

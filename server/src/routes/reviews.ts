@@ -1,12 +1,11 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma.js';
 import { authenticate } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { createReviewSchema } from '../schemas/review.js';
 import { AppError } from '../utils/errors.js';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // GET /kooker/:id - Get reviews for a kooker profile
 router.get('/kooker/:id', async (req: Request, res: Response, next: NextFunction) => {

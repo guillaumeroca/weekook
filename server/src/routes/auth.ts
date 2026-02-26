@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
+import prisma from '../lib/prisma.js';
 import bcrypt from 'bcrypt';
-import { PrismaClient } from '@prisma/client';
 import { signToken } from '../utils/jwt.js';
 import { authenticate } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
@@ -10,7 +10,6 @@ import { AppError } from '../utils/errors.js';
 import { env } from '../config/env.js';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 const COOKIE_OPTIONS = {
   httpOnly: true,

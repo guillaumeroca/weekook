@@ -1,9 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
+import prisma from '../lib/prisma.js';
 import { verifyToken } from '../utils/jwt.js';
 import { UnauthorizedError } from '../utils/errors.js';
-import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
 
 declare global {
   namespace Express {

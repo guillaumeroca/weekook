@@ -1,11 +1,10 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma.js';
 import { authenticate } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { updateUserProfileSchema } from '../schemas/kooker.js';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // PUT /profile - Update user profile
 router.put(

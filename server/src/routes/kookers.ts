@@ -1,12 +1,12 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { PrismaClient, Prisma } from '@prisma/client';
+import prisma from '../lib/prisma.js';
+import { Prisma } from '@prisma/client';
 import { authenticate, requireKooker } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { becomeKookerSchema, updateKookerProfileSchema } from '../schemas/kooker.js';
 import { AppError, NotFoundError } from '../utils/errors.js';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // GET / - Search kookers with filters
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {

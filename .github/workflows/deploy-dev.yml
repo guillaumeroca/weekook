@@ -19,4 +19,4 @@ jobs:
             cd /var/www/weekook-dev
             git pull origin develop
             npm run build
-            pm2 restart weekook-dev
+            pm2 reload weekook-dev

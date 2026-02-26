@@ -24,8 +24,10 @@ interface MenuItem {
 // ────────────────────────── Allergens List ──────────────────────────
 
 const ALL_ALLERGENS = [
-  'Gluten', 'Crustacés', 'Œufs', 'Poisson', 'Arachides', 'Soja',
-  'Lait', 'Fruits à coque', 'Céleri', 'Moutarde', 'Sésame', 'Sulfites',
+  'Gluten', 'Crustacés', 'Œufs',
+  'Poisson', 'Arachides', 'Soja',
+  'Lait', 'Fruits à coque', 'Céleri',
+  'Moutarde', 'Sésame', 'Sulfites',
   'Lupin', 'Mollusques',
 ];
 
@@ -45,7 +47,7 @@ export default function CreateMenuPage() {
   const [koursMinParticipants, setKoursMinParticipants] = useState('');
   const [koursMaxParticipants, setKoursMaxParticipants] = useState('');
   const [koursDifficulty, setKoursDifficulty] = useState('Débutant');
-  const [koursLocation, setKoursLocation] = useState('Chez moi');
+  const [koursLocation, setKoursLocation] = useState('Chez moi (le kooker)');
   const [koursEquipmentProvided, setKoursEquipmentProvided] = useState(false);
   const [koursMenuItems, setKoursMenuItems] = useState<MenuItem[]>([]);
   const [koursNewItemName, setKoursNewItemName] = useState('');
@@ -151,7 +153,6 @@ export default function CreateMenuPage() {
         setPhotos((prev) => [...prev, res.data!.url]);
       }
     } catch {
-      // Use local preview as fallback
       const url = URL.createObjectURL(file);
       setPhotos((prev) => [...prev, url]);
     }
@@ -211,69 +212,72 @@ export default function CreateMenuPage() {
     'w-full h-[48px] px-4 bg-[#f2f4fc] border border-[#e0e2ef] rounded-[12px] text-[14px] text-[#111125] placeholder:text-[#111125]/30 focus:outline-none focus:border-[#c1a0fd] focus:ring-2 focus:ring-[#c1a0fd]/20 transition-all';
   const textareaClass =
     'w-full px-4 py-3 bg-[#f2f4fc] border border-[#e0e2ef] rounded-[12px] text-[14px] text-[#111125] placeholder:text-[#111125]/30 focus:outline-none focus:border-[#c1a0fd] focus:ring-2 focus:ring-[#c1a0fd]/20 transition-all resize-none leading-relaxed';
-  const labelClass = 'block text-[13px] font-medium text-[#111125] mb-1.5';
+  const labelClass = 'block text-[14px] font-semibold text-[#303044] mb-2';
 
   // ────────────────────────── Render ──────────────────────────
 
   return (
-    <div className="min-h-screen bg-[#f2f4fc] pb-28">
+    <div className="min-h-screen bg-[#f2f4fc] pb-28" style={{ fontFamily: 'Inter, sans-serif' }}>
       <form onSubmit={handleSubmit}>
-        <div className="max-w-[1000px] mx-auto px-4 md:px-8 py-8">
+        <div className="max-w-[800px] mx-auto px-4 md:px-8 py-8">
+
           {/* ── Header ── */}
           <div className="mb-8">
             <button
               type="button"
               onClick={() => navigate('/kooker-dashboard')}
-              className="flex items-center gap-2 text-[13px] font-medium text-[#111125]/50 hover:text-[#c1a0fd] transition-colors mb-4"
+              className="flex items-center gap-2 text-[14px] font-medium text-[#303044]/60 hover:text-[#c1a0fd] transition-colors mb-6 cursor-pointer"
             >
               <ArrowLeft size={16} />
-              Retour au dashboard
+              Retour
             </button>
-            <h1 className="text-[24px] md:text-[28px] font-bold text-[#111125]">Créer une nouvelle offre</h1>
-            <p className="text-[14px] text-[#111125]/50 mt-1">
-              Configurez votre service et publiez-le pour recevoir des réservations.
+            <h1 className="text-[28px] font-bold text-[#111125] tracking-[-0.56px] mb-1">
+              Créer une nouvelle offre
+            </h1>
+            <p className="text-[14px] text-[#303044]/50">
+              Remplissez les informations pour créer votre service
             </p>
           </div>
 
-          {/* ── Service Type Selection ── */}
-          <div className="relative rounded-[20px] overflow-hidden mb-8">
-            {/* Background overlay */}
-            <div className="absolute inset-0 bg-gradient-to-br from-[#111125]/80 to-[#111125]/60" />
+          {/* ── Type d'offre ── */}
+          <div className="relative rounded-[20px] overflow-hidden mb-8 min-h-[160px]">
             <div
-              className="absolute inset-0 opacity-20"
+              className="absolute inset-0"
               style={{
                 backgroundImage: 'url(https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=1200&q=80)',
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
               }}
             />
+            <div className="absolute inset-0 bg-[#111125]/60" />
 
             <div className="relative z-10 p-6 md:p-8">
-              <h2 className="text-[18px] font-bold text-white mb-2">Type de service</h2>
-              <p className="text-[14px] text-white/60 mb-6">
-                Sélectionnez un ou deux types de service. Vous pouvez proposer les deux.
+              <h2 className="text-[18px] font-bold text-white mb-1">Type d'offre</h2>
+              <p className="text-[14px] text-white/70 mb-6">
+                Vous pouvez sélectionner un ou les deux types de service
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4">
                 <button
                   type="button"
                   onClick={() => toggleType('KOURS')}
-                  className={`flex-1 flex items-center justify-center gap-3 h-[56px] rounded-[12px] text-[15px] font-semibold transition-all ${
+                  className={`flex-1 flex items-center justify-center gap-3 h-[52px] rounded-[12px] text-[15px] font-semibold transition-all cursor-pointer ${
                     serviceTypes.includes('KOURS')
-                      ? 'bg-[#c1a0fd] text-white shadow-lg shadow-[#c1a0fd]/30'
-                      : 'bg-white/10 text-white/80 hover:bg-white/20 border border-white/20'
+                      ? 'bg-[#f3ecff] border-2 border-[#c1a0fd] text-[#c1a0fd]'
+                      : 'bg-white border-2 border-transparent text-[#303044] hover:border-[#c1a0fd]/40'
                   }`}
                 >
                   <GraduationCap size={20} />
                   KOURS
                 </button>
+
                 <button
                   type="button"
                   onClick={() => toggleType('KOOK')}
-                  className={`flex-1 flex items-center justify-center gap-3 h-[56px] rounded-[12px] text-[15px] font-semibold transition-all ${
+                  className={`flex-1 flex items-center justify-center gap-3 h-[52px] rounded-[12px] text-[15px] font-semibold transition-all cursor-pointer ${
                     serviceTypes.includes('KOOK')
-                      ? 'bg-[#c1a0fd] text-white shadow-lg shadow-[#c1a0fd]/30'
-                      : 'bg-white/10 text-white/80 hover:bg-white/20 border border-white/20'
+                      ? 'bg-[#f3ecff] border-2 border-[#c1a0fd] text-[#c1a0fd]'
+                      : 'bg-white border-2 border-transparent text-[#303044] hover:border-[#c1a0fd]/40'
                   }`}
                 >
                   <CookingPot size={20} />
@@ -285,161 +289,201 @@ export default function CreateMenuPage() {
 
           {/* ── KOURS Form ── */}
           {serviceTypes.includes('KOURS') && (
-            <div className="bg-white rounded-[16px] p-6 md:p-8 shadow-sm mb-8">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-[12px] bg-[#f3ecff] flex items-center justify-center">
-                  <GraduationCap size={20} className="text-[#c1a0fd]" />
+            <>
+              {/* Main KOURS fields card */}
+              <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm mb-6">
+                <h3 className="text-[22px] font-bold text-[#111125] tracking-[-0.44px] mb-6">
+                  Service KOURS - Cours de cuisine
+                </h3>
+
+                {/* Info box */}
+                <div className="bg-[#f3ecff] rounded-[12px] px-4 py-3 mb-6 flex items-center gap-2">
+                  <span className="text-[16px] shrink-0">💜</span>
+                  <p className="text-[13px] text-[#5c5c6f]">
+                    Service KOURS : Apprenez à cuisiner avec un kooker passionné
+                  </p>
                 </div>
-                <div>
-                  <h3 className="text-[24px] font-semibold text-[#111125] tracking-[-0.48px]">Service KOURS - Cours de cuisine</h3>
-                  <p className="text-[13px] text-[#111125]/50">Configurez les détails de votre cours</p>
-                </div>
-              </div>
 
-              {/* Purple info box */}
-              <div className="bg-[#f3ecff] rounded-[12px] p-4 mb-6">
-                <p className="text-[14px] text-[#5c5c6f]">
-                  Un cours de cuisine permet à vos clients d'apprendre vos recettes et techniques culinaires en votre compagnie.
-                </p>
-              </div>
-
-              {/* Title */}
-              <div className="mb-5">
-                <label className={labelClass}>Titre du cours</label>
-                <input
-                  type="text"
-                  value={koursTitle}
-                  onChange={(e) => setKoursTitle(e.target.value)}
-                  placeholder="ex: Cours de pâtes fraîches maison"
-                  className={inputClass}
-                />
-              </div>
-
-              {/* Description */}
-              <div className="mb-5">
-                <label className={labelClass}>Description</label>
-                <textarea
-                  value={koursDescription}
-                  onChange={(e) => setKoursDescription(e.target.value)}
-                  placeholder="Décrivez le contenu de votre cours, ce que les participants vont apprendre..."
-                  rows={5}
-                  className={textareaClass}
-                />
-              </div>
-
-              {/* Price + Duration */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
-                <div>
-                  <label className={labelClass}>Prix par personne (EUR)</label>
+                {/* Titre du cours */}
+                <div className="mb-5">
+                  <label className={labelClass}>
+                    Titre du cours <span className="text-[#c1a0fd]">*</span>
+                  </label>
                   <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={koursPrice}
-                    onChange={(e) => setKoursPrice(e.target.value)}
-                    placeholder="35.00"
+                    type="text"
+                    value={koursTitle}
+                    onChange={(e) => setKoursTitle(e.target.value)}
+                    placeholder="Ex: Cours de cuisine italienne authentique"
                     className={inputClass}
                   />
                 </div>
-                <div>
-                  <label className={labelClass}>Durée (minutes)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={koursDuration}
-                    onChange={(e) => setKoursDuration(e.target.value)}
-                    placeholder="120"
-                    className={inputClass}
-                  />
-                </div>
-              </div>
 
-              {/* Min / Max participants */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
-                <div>
-                  <label className={labelClass}>Min participants</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={koursMinParticipants}
-                    onChange={(e) => setKoursMinParticipants(e.target.value)}
-                    placeholder="2"
-                    className={inputClass}
+                {/* Description */}
+                <div className="mb-5">
+                  <label className={labelClass}>
+                    Description <span className="text-[#c1a0fd]">*</span>
+                  </label>
+                  <textarea
+                    value={koursDescription}
+                    onChange={(e) => setKoursDescription(e.target.value)}
+                    placeholder="Décrivez votre cours en détail..."
+                    rows={4}
+                    className={textareaClass}
                   />
                 </div>
-                <div>
-                  <label className={labelClass}>Max participants</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={koursMaxParticipants}
-                    onChange={(e) => setKoursMaxParticipants(e.target.value)}
-                    placeholder="8"
-                    className={inputClass}
-                  />
-                </div>
-              </div>
 
-              {/* Difficulty */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
-                <div>
-                  <label className={labelClass}>Difficulté</label>
-                  <select
-                    value={koursDifficulty}
-                    onChange={(e) => setKoursDifficulty(e.target.value)}
-                    className={inputClass + ' appearance-none cursor-pointer'}
+                {/* Prix + Durée */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+                  <div>
+                    <label className={labelClass}>
+                      Prix par personne (€) <span className="text-[#c1a0fd]">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={koursPrice}
+                      onChange={(e) => setKoursPrice(e.target.value)}
+                      placeholder="45"
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className={labelClass}>
+                      Durée (minutes) <span className="text-[#c1a0fd]">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={koursDuration}
+                      onChange={(e) => setKoursDuration(e.target.value)}
+                      placeholder="180"
+                      className={inputClass}
+                    />
+                  </div>
+                </div>
+
+                {/* Min / Max participants */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+                  <div>
+                    <label className={labelClass}>
+                      Nombre minimum de participants <span className="text-[#c1a0fd]">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={koursMinParticipants}
+                      onChange={(e) => setKoursMinParticipants(e.target.value)}
+                      placeholder="2"
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className={labelClass}>
+                      Nombre maximum de participants <span className="text-[#c1a0fd]">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={koursMaxParticipants}
+                      onChange={(e) => setKoursMaxParticipants(e.target.value)}
+                      placeholder="8"
+                      className={inputClass}
+                    />
+                  </div>
+                </div>
+
+                {/* Niveau de difficulté */}
+                <div className="mb-5">
+                  <label className={labelClass}>
+                    Niveau de difficulté <span className="text-[#c1a0fd]">*</span>
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={koursDifficulty}
+                      onChange={(e) => setKoursDifficulty(e.target.value)}
+                      className={inputClass + ' appearance-none cursor-pointer pr-10'}
+                    >
+                      <option value="Débutant">Débutant</option>
+                      <option value="Intermédiaire">Intermédiaire</option>
+                      <option value="Avancé">Avancé</option>
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M4 6L8 10L12 6" stroke="#303044" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Lieu du cours */}
+                <div className="mb-6">
+                  <label className={labelClass}>
+                    Lieu du cours <span className="text-[#c1a0fd]">*</span>
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={koursLocation}
+                      onChange={(e) => setKoursLocation(e.target.value)}
+                      className={inputClass + ' appearance-none cursor-pointer pr-10'}
+                    >
+                      <option value="Chez moi (le kooker)">Chez moi (le kooker)</option>
+                      <option value="Chez le client">Chez le client</option>
+                      <option value="Les deux">Les deux</option>
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M4 6L8 10L12 6" stroke="#303044" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Matériel checkbox */}
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <div
+                    onClick={() => setKoursEquipmentProvided(!koursEquipmentProvided)}
+                    className={`w-5 h-5 rounded-[4px] border-2 flex items-center justify-center cursor-pointer transition-all shrink-0 ${
+                      koursEquipmentProvided
+                        ? 'bg-[#303044] border-[#303044]'
+                        : 'bg-white border-[#c0c0cc]'
+                    }`}
                   >
-                    <option value="Débutant">Débutant</option>
-                    <option value="Intermédiaire">Intermédiaire</option>
-                    <option value="Avancé">Avancé</option>
-                  </select>
-                </div>
-                <div>
-                  <label className={labelClass}>Lieu</label>
-                  <select
-                    value={koursLocation}
-                    onChange={(e) => setKoursLocation(e.target.value)}
-                    className={inputClass + ' appearance-none cursor-pointer'}
+                    {koursEquipmentProvided && (
+                      <svg width="12" height="9" viewBox="0 0 12 9" fill="none">
+                        <path d="M1 4L4.5 7.5L11 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                  </div>
+                  <span
+                    className="text-[14px] text-[#303044] font-medium cursor-pointer"
+                    onClick={() => setKoursEquipmentProvided(!koursEquipmentProvided)}
                   >
-                    <option value="Chez moi">Chez moi</option>
-                    <option value="Chez le client">Chez le client</option>
-                    <option value="Les deux">Les deux</option>
-                  </select>
-                </div>
+                    Matériel et ustensiles fournis
+                  </span>
+                </label>
               </div>
 
-              {/* Equipment checkbox */}
-              <label className="flex items-center gap-3 cursor-pointer mb-8">
-                <input
-                  type="checkbox"
-                  checked={koursEquipmentProvided}
-                  onChange={(e) => setKoursEquipmentProvided(e.target.checked)}
-                  className="w-5 h-5 rounded-[4px] border-[#e0e2ef] text-[#c1a0fd] focus:ring-[#c1a0fd]/20 cursor-pointer"
-                />
-                <span className="text-[14px] text-[#111125] font-medium">Matériel et ustensiles fournis</span>
-              </label>
-
-              {/* Menu Items - KOURS */}
-              <div className="border-t border-[#e0e2ef] pt-6">
-                <h4 className="text-[15px] font-semibold text-[#111125] mb-4">Ce que vous allez apprendre</h4>
+              {/* Ce que vous allez apprendre — separate card */}
+              <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm mb-6">
+                <h3 className="text-[22px] font-bold text-[#111125] tracking-[-0.44px] mb-5">
+                  Ce que vous allez apprendre
+                </h3>
 
                 {koursMenuItems.length > 0 && (
-                  <div className="space-y-3 mb-5">
+                  <div className="space-y-2 mb-4">
                     {koursMenuItems.map((item, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-start justify-between gap-3 bg-[#f3ecff] rounded-[12px] p-4"
-                      >
+                      <div key={idx} className="flex items-start justify-between gap-3 bg-[#f3ecff] rounded-[12px] p-4">
                         <div className="min-w-0 flex-1">
                           <p className="text-[14px] font-semibold text-[#111125]">{item.name}</p>
                           {item.description && (
-                            <p className="text-[13px] text-[#111125]/50 mt-0.5">{item.description}</p>
+                            <p className="text-[13px] text-[#303044]/50 mt-0.5">{item.description}</p>
                           )}
                         </div>
                         <button
                           type="button"
                           onClick={() => removeKoursItem(idx)}
-                          className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-[8px] hover:bg-red-50 text-[#111125]/30 hover:text-red-500 transition-all"
+                          className="shrink-0 w-8 h-8 flex items-center justify-center rounded-[8px] hover:bg-red-50 text-[#303044]/30 hover:text-red-500 transition-all cursor-pointer"
                         >
                           <X size={16} />
                         </button>
@@ -448,61 +492,66 @@ export default function CreateMenuPage() {
                   </div>
                 )}
 
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <input
-                    type="text"
-                    value={koursNewItemName}
-                    onChange={(e) => setKoursNewItemName(e.target.value)}
-                    placeholder="Nom de l'élément"
-                    className={inputClass + ' sm:flex-1'}
-                  />
-                  <input
-                    type="text"
-                    value={koursNewItemDesc}
-                    onChange={(e) => setKoursNewItemDesc(e.target.value)}
-                    placeholder="Description (optionnel)"
-                    className={inputClass + ' sm:flex-1'}
-                  />
-                  <button
-                    type="button"
-                    onClick={addKoursItem}
-                    disabled={!koursNewItemName.trim()}
-                    className="h-[48px] px-5 flex items-center justify-center gap-2 bg-[#c1a0fd] hover:bg-[#b090ed] text-white text-[13px] font-semibold rounded-[12px] transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
-                  >
-                    <Plus size={16} />
-                    Ajouter un élément
-                  </button>
+                <div className="border-2 border-dashed border-[#e0e2ef] rounded-[16px] p-4">
+                  <div className="flex flex-col gap-3">
+                    <input
+                      type="text"
+                      value={koursNewItemName}
+                      onChange={(e) => setKoursNewItemName(e.target.value)}
+                      placeholder="Ex: Pâtes fraîches maison"
+                      className={inputClass}
+                    />
+                    <input
+                      type="text"
+                      value={koursNewItemDesc}
+                      onChange={(e) => setKoursNewItemDesc(e.target.value)}
+                      placeholder="Description (optionnel)"
+                      className={inputClass}
+                    />
+                    <button
+                      type="button"
+                      onClick={addKoursItem}
+                      disabled={!koursNewItemName.trim()}
+                      className="h-[48px] flex items-center justify-center gap-2 bg-white border-2 border-[#c1a0fd] text-[#c1a0fd] text-[14px] font-semibold rounded-[12px] transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#f3ecff] cursor-pointer"
+                    >
+                      <Plus size={16} />
+                      Ajouter un élément
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
+            </>
           )}
 
           {/* ── KOOK Form ── */}
           {serviceTypes.includes('KOOK') && (
-            <div className={`bg-white rounded-[16px] p-6 md:p-8 shadow-sm mb-8 ${isKookDisabled ? 'opacity-60 pointer-events-none' : ''}`}>
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-[12px] bg-[#f3ecff] flex items-center justify-center">
-                  <CookingPot size={20} className="text-[#c1a0fd]" />
-                </div>
-                <div>
-                  <h3 className="text-[24px] font-semibold text-[#111125] tracking-[-0.48px]">Service KOOK - Préparation de repas</h3>
-                  <p className="text-[13px] text-[#111125]/50">Configurez les détails de votre prestation</p>
-                </div>
-              </div>
+            <div className={`bg-white rounded-[20px] p-6 md:p-8 shadow-sm mb-6 ${isKookDisabled ? 'opacity-60 pointer-events-none' : ''}`}>
+              <h3 className="text-[22px] font-bold text-[#111125] tracking-[-0.44px] mb-6">
+                Service KOOK - Préparation de repas
+              </h3>
 
-              {/* Orange info box when disabled */}
               {isKookDisabled && (
                 <div className="bg-orange-50 border border-orange-200 rounded-[12px] p-4 mb-6 flex items-center gap-3">
-                  <Lock size={18} className="text-orange-500 flex-shrink-0" />
+                  <Lock size={18} className="text-orange-500 shrink-0" />
                   <p className="text-[13px] text-orange-700 font-medium">
                     Complétez d'abord le formulaire KOURS ci-dessus pour débloquer cette section.
                   </p>
                 </div>
               )}
 
-              {/* Title */}
+              {/* Info box */}
+              <div className="bg-[#f3ecff] rounded-[12px] px-4 py-3 mb-6 flex items-center gap-2">
+                <span className="text-[16px] shrink-0">💜</span>
+                <p className="text-[13px] text-[#5c5c6f]">
+                  Service KOOK : Le kooker vient préparer le repas au domicile du client.
+                </p>
+              </div>
+
+              {/* Titre */}
               <div className="mb-5">
-                <label className={labelClass}>Titre du service</label>
+                <label className={labelClass}>
+                  Titre <span className="text-[#c1a0fd]">*</span>
+                </label>
                 <input
                   type="text"
                   value={kookTitle}
@@ -514,20 +563,24 @@ export default function CreateMenuPage() {
 
               {/* Description */}
               <div className="mb-5">
-                <label className={labelClass}>Description</label>
+                <label className={labelClass}>
+                  Description <span className="text-[#c1a0fd]">*</span>
+                </label>
                 <textarea
                   value={kookDescription}
                   onChange={(e) => setKookDescription(e.target.value)}
                   placeholder="Décrivez votre prestation, le menu proposé, les produits utilisés..."
-                  rows={5}
+                  rows={4}
                   className={textareaClass}
                 />
               </div>
 
-              {/* Price + Duration */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+              {/* Prix + Durée */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
                 <div>
-                  <label className={labelClass}>Prix par personne (EUR)</label>
+                  <label className={labelClass}>
+                    Prix par personne (€) <span className="text-[#c1a0fd]">*</span>
+                  </label>
                   <input
                     type="number"
                     step="0.01"
@@ -539,7 +592,9 @@ export default function CreateMenuPage() {
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>Durée (minutes)</label>
+                  <label className={labelClass}>
+                    Durée totale (minutes) <span className="text-[#c1a0fd]">*</span>
+                  </label>
                   <input
                     type="number"
                     min="0"
@@ -552,9 +607,11 @@ export default function CreateMenuPage() {
               </div>
 
               {/* Min / Max convives */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
                 <div>
-                  <label className={labelClass}>Min convives</label>
+                  <label className={labelClass}>
+                    Min convives <span className="text-[#c1a0fd]">*</span>
+                  </label>
                   <input
                     type="number"
                     min="1"
@@ -565,7 +622,9 @@ export default function CreateMenuPage() {
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>Max convives</label>
+                  <label className={labelClass}>
+                    Max convives <span className="text-[#c1a0fd]">*</span>
+                  </label>
                   <input
                     type="number"
                     min="1"
@@ -577,51 +636,63 @@ export default function CreateMenuPage() {
                 </div>
               </div>
 
-              {/* Preparation time */}
+              {/* Temps de préparation */}
               <div className="mb-5">
-                <label className={labelClass}>Temps de préparation (minutes)</label>
+                <label className={labelClass}>
+                  Temps de préparation estimé (minutes)
+                </label>
                 <input
                   type="number"
                   min="0"
                   value={kookPrepTime}
                   onChange={(e) => setKookPrepTime(e.target.value)}
                   placeholder="60"
-                  className={inputClass + ' max-w-[300px]'}
+                  className={inputClass}
                 />
               </div>
 
-              {/* Ingredients checkbox */}
-              <label className="flex items-center gap-3 cursor-pointer mb-8">
-                <input
-                  type="checkbox"
-                  checked={kookIngredientsIncluded}
-                  onChange={(e) => setKookIngredientsIncluded(e.target.checked)}
-                  className="w-5 h-5 rounded-[4px] border-[#e0e2ef] text-[#c1a0fd] focus:ring-[#c1a0fd]/20 cursor-pointer"
-                />
-                <span className="text-[14px] text-[#111125] font-medium">Ingrédients inclus</span>
+              {/* Ingrédients checkbox */}
+              <label className="flex items-center gap-3 cursor-pointer mb-6">
+                <div
+                  onClick={() => setKookIngredientsIncluded(!kookIngredientsIncluded)}
+                  className={`w-5 h-5 rounded-[4px] border-2 flex items-center justify-center cursor-pointer transition-all shrink-0 ${
+                    kookIngredientsIncluded
+                      ? 'bg-[#c1a0fd] border-[#c1a0fd]'
+                      : 'bg-white border-[#c0c0cc]'
+                  }`}
+                >
+                  {kookIngredientsIncluded && (
+                    <svg width="12" height="9" viewBox="0 0 12 9" fill="none">
+                      <path d="M1 4L4.5 7.5L11 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
+                </div>
+                <span
+                  className="text-[14px] text-[#303044] font-medium cursor-pointer"
+                  onClick={() => setKookIngredientsIncluded(!kookIngredientsIncluded)}
+                >
+                  Ingrédients inclus dans le prix
+                </span>
               </label>
 
-              {/* Menu Items - KOOK */}
-              <div className="border-t border-[#e0e2ef] pt-6">
-                <h4 className="text-[15px] font-semibold text-[#111125] mb-4">Menu proposé</h4>
+              {/* Menu proposé */}
+              <div>
+                <h4 className="text-[15px] font-semibold text-[#111125] mb-3">Menu proposé</h4>
 
                 {kookMenuItems.length > 0 && (
-                  <div className="space-y-3 mb-5">
+                  <div className="space-y-2 mb-4">
                     {kookMenuItems.map((item, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-start justify-between gap-3 bg-[#f3ecff] rounded-[12px] p-4"
-                      >
+                      <div key={idx} className="flex items-start justify-between gap-3 bg-[#f3ecff] rounded-[12px] p-4">
                         <div className="min-w-0 flex-1">
                           <p className="text-[14px] font-semibold text-[#111125]">{item.name}</p>
                           {item.description && (
-                            <p className="text-[13px] text-[#111125]/50 mt-0.5">{item.description}</p>
+                            <p className="text-[13px] text-[#303044]/50 mt-0.5">{item.description}</p>
                           )}
                         </div>
                         <button
                           type="button"
                           onClick={() => removeKookItem(idx)}
-                          className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-[8px] hover:bg-red-50 text-[#111125]/30 hover:text-red-500 transition-all"
+                          className="shrink-0 w-8 h-8 flex items-center justify-center rounded-[8px] hover:bg-red-50 text-[#303044]/30 hover:text-red-500 transition-all cursor-pointer"
                         >
                           <X size={16} />
                         </button>
@@ -630,99 +701,103 @@ export default function CreateMenuPage() {
                   </div>
                 )}
 
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <input
-                    type="text"
-                    value={kookNewItemName}
-                    onChange={(e) => setKookNewItemName(e.target.value)}
-                    placeholder="Nom du plat"
-                    className={inputClass + ' sm:flex-1'}
-                  />
-                  <input
-                    type="text"
-                    value={kookNewItemDesc}
-                    onChange={(e) => setKookNewItemDesc(e.target.value)}
-                    placeholder="Description (optionnel)"
-                    className={inputClass + ' sm:flex-1'}
-                  />
-                  <button
-                    type="button"
-                    onClick={addKookItem}
-                    disabled={!kookNewItemName.trim()}
-                    className="h-[48px] px-5 flex items-center justify-center gap-2 bg-[#c1a0fd] hover:bg-[#b090ed] text-white text-[13px] font-semibold rounded-[12px] transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
-                  >
-                    <Plus size={16} />
-                    Ajouter un élément
-                  </button>
+                <div className="border-2 border-dashed border-[#e0e2ef] rounded-[16px] p-4">
+                  <div className="flex flex-col gap-3">
+                    <input
+                      type="text"
+                      value={kookNewItemName}
+                      onChange={(e) => setKookNewItemName(e.target.value)}
+                      placeholder="Ex: Entrée"
+                      className={inputClass}
+                    />
+                    <input
+                      type="text"
+                      value={kookNewItemDesc}
+                      onChange={(e) => setKookNewItemDesc(e.target.value)}
+                      placeholder="Description (optionnel)"
+                      className={inputClass}
+                    />
+                    <button
+                      type="button"
+                      onClick={addKookItem}
+                      disabled={!kookNewItemName.trim()}
+                      className="h-[48px] flex items-center justify-center gap-2 bg-white border-2 border-[#c1a0fd] text-[#c1a0fd] text-[14px] font-semibold rounded-[12px] transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#f3ecff] cursor-pointer"
+                    >
+                      <Plus size={16} />
+                      Ajouter un plat
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* ── Common Sections (shown when any type selected) ── */}
+          {/* ── Common Sections ── */}
           {serviceTypes.length > 0 && (
             <>
               {/* Photos */}
-              <div className="bg-white rounded-[16px] p-6 md:p-8 shadow-sm mb-8">
-                <h3 className="text-[24px] font-semibold text-[#111125] tracking-[-0.48px] mb-2">Photos</h3>
-                <p className="text-[13px] text-[#111125]/50 mb-6">
-                  Ajoutez jusqu'à 4 photos pour illustrer votre service.
-                </p>
+              <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm mb-6">
+                <h3 className="text-[22px] font-bold text-[#111125] tracking-[-0.44px] mb-6">
+                  Photos
+                </h3>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="flex flex-wrap gap-3">
                   {photos.map((photo, idx) => (
-                    <div key={idx} className="relative aspect-square rounded-[12px] overflow-hidden group">
+                    <div key={idx} className="relative w-[160px] h-[160px] rounded-[12px] overflow-hidden group shrink-0">
                       <img src={photo} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
                       <button
                         type="button"
                         onClick={() => removePhoto(idx)}
-                        className="absolute top-2 right-2 w-8 h-8 bg-black/50 hover:bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
+                        className="absolute top-2 right-2 w-7 h-7 bg-black/50 hover:bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={13} />
                       </button>
                     </div>
                   ))}
 
-                  {photos.length < 4 && (
-                    <label className="aspect-square border-2 border-dashed border-[#e0e2ef] hover:border-[#c1a0fd] rounded-[12px] flex flex-col items-center justify-center cursor-pointer transition-colors group">
-                      <Upload size={24} className="text-[#111125]/20 group-hover:text-[#c1a0fd] transition-colors mb-2" />
-                      <span className="text-[12px] text-[#111125]/30 group-hover:text-[#c1a0fd] font-medium transition-colors">
+                  {photos.length < 8 && (
+                    <label className="w-[160px] h-[160px] border-2 border-dashed border-[#e0e2ef] hover:border-[#c1a0fd] rounded-[12px] flex flex-col items-center justify-center cursor-pointer transition-colors group shrink-0">
+                      <Upload size={24} className="text-[#303044]/30 group-hover:text-[#c1a0fd] transition-colors mb-2" />
+                      <span className="text-[13px] text-[#303044]/40 group-hover:text-[#c1a0fd] font-medium transition-colors">
                         Ajouter
                       </span>
                       <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
                     </label>
                   )}
                 </div>
+
+                <p className="text-[13px] text-[#303044]/40 mt-4">
+                  Ajoutez jusqu'à 8 photos de votre service
+                </p>
               </div>
 
-              {/* Specialties */}
-              <div className="bg-white rounded-[16px] p-6 md:p-8 shadow-sm mb-8">
-                <h3 className="text-[24px] font-semibold text-[#111125] tracking-[-0.48px] mb-2">Spécialités</h3>
-                <p className="text-[13px] text-[#111125]/50 mb-4">
-                  Ajoutez des tags pour décrire votre cuisine.
-                </p>
+              {/* Spécialités */}
+              <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm mb-6">
+                <h3 className="text-[22px] font-bold text-[#111125] tracking-[-0.44px] mb-5">
+                  Spécialités
+                </h3>
 
                 {specialties.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-4">
                     {specialties.map((s) => (
                       <span
                         key={s}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#c1a0fd]/10 text-[#c1a0fd] text-[13px] font-medium rounded-[8px]"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] text-[#c1a0fd] text-[13px] font-semibold rounded-[8px]"
                       >
                         {s}
                         <button
                           type="button"
                           onClick={() => removeSpecialty(s)}
-                          className="hover:text-red-500 transition-colors"
+                          className="hover:text-red-500 transition-colors cursor-pointer"
                         >
-                          <X size={14} />
+                          <X size={12} />
                         </button>
                       </span>
                     ))}
                   </div>
                 )}
 
-                <div className="flex gap-3">
+                <div className="flex gap-2">
                   <input
                     type="text"
                     value={newSpecialty}
@@ -733,87 +808,96 @@ export default function CreateMenuPage() {
                         addSpecialty();
                       }
                     }}
-                    placeholder="ex: Méditerranéen, Provençal..."
+                    placeholder="Ex: Italien, Végétarien, Bio..."
                     className={inputClass + ' flex-1'}
                   />
                   <button
                     type="button"
                     onClick={addSpecialty}
                     disabled={!newSpecialty.trim()}
-                    className="h-[48px] px-5 flex items-center gap-2 bg-[#c1a0fd] hover:bg-[#b090ed] text-white text-[13px] font-semibold rounded-[12px] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="w-[48px] h-[48px] flex items-center justify-center bg-[#c1a0fd] hover:bg-[#b090ed] text-white rounded-[12px] transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0 cursor-pointer"
                   >
-                    <Plus size={16} />
-                    Ajouter
+                    <Plus size={20} />
                   </button>
                 </div>
               </div>
 
-              {/* Allergens */}
-              <div className="bg-white rounded-[16px] p-6 md:p-8 shadow-sm mb-8">
-                <h3 className="text-[24px] font-semibold text-[#111125] tracking-[-0.48px] mb-2">Allergènes</h3>
-                <p className="text-[13px] text-[#111125]/50 mb-6">
-                  Cochez les allergènes pouvant être présents dans vos préparations.
-                </p>
+              {/* Allergènes et régimes alimentaires */}
+              <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm mb-6">
+                <h3 className="text-[22px] font-bold text-[#111125] tracking-[-0.44px] mb-6">
+                  Allergènes et régimes alimentaires
+                </h3>
 
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {/* Allergènes présents */}
+                <p className="text-[14px] font-bold text-[#303044] mb-4">Allergènes présents</p>
+                <div className="grid grid-cols-3 gap-x-6 gap-y-3 mb-6">
                   {ALL_ALLERGENS.map((a) => (
                     <label
                       key={a}
-                      className={`flex items-center gap-3 p-3 rounded-[12px] cursor-pointer transition-all ${
-                        allergens.includes(a)
-                          ? 'bg-[#c1a0fd]/10 border border-[#c1a0fd]/30'
-                          : 'bg-[#f2f4fc] border border-transparent hover:border-[#e0e2ef]'
-                      }`}
+                      className="flex items-center gap-2.5 cursor-pointer"
+                      onClick={() => toggleAllergen(a)}
                     >
-                      <input
-                        type="checkbox"
-                        checked={allergens.includes(a)}
-                        onChange={() => toggleAllergen(a)}
-                        className="w-4 h-4 rounded-[4px] border-[#e0e2ef] text-[#c1a0fd] focus:ring-[#c1a0fd]/20 cursor-pointer"
-                      />
-                      <span className="text-[13px] font-medium text-[#111125]">{a}</span>
+                      <div
+                        className={`w-4 h-4 rounded-[3px] border-2 flex items-center justify-center shrink-0 transition-all ${
+                          allergens.includes(a)
+                            ? 'bg-[#c1a0fd] border-[#c1a0fd]'
+                            : 'bg-white border-[#c0c0cc]'
+                        }`}
+                      >
+                        {allergens.includes(a) && (
+                          <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+                            <path d="M1 3L3.5 5.5L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        )}
+                      </div>
+                      <span className="text-[14px] text-[#303044]">{a}</span>
                     </label>
                   ))}
                 </div>
-              </div>
 
-              {/* Dietary */}
-              <div className="bg-white rounded-[16px] p-6 md:p-8 shadow-sm mb-8">
-                <h3 className="text-[24px] font-semibold text-[#111125] tracking-[-0.48px] mb-2">Régimes alimentaires</h3>
-                <p className="text-[13px] text-[#111125]/50 mb-4">
-                  Indiquez si votre service est adapté à ces régimes.
-                </p>
+                {/* Divider */}
+                <div className="border-t border-[#f0f0f5] mb-5" />
 
-                <div className="flex flex-col sm:flex-row gap-4">
+                {/* Régimes alimentaires */}
+                <p className="text-[14px] font-bold text-[#303044] mb-4">Régimes alimentaires</p>
+                <div className="flex flex-col gap-3">
                   <label
-                    className={`flex items-center gap-3 p-4 rounded-[12px] cursor-pointer transition-all flex-1 ${
-                      isVegetarian
-                        ? 'bg-green-50 border border-green-200'
-                        : 'bg-[#f2f4fc] border border-transparent hover:border-[#e0e2ef]'
-                    }`}
+                    className="flex items-center gap-2.5 cursor-pointer"
+                    onClick={() => setIsVegetarian(!isVegetarian)}
                   >
-                    <input
-                      type="checkbox"
-                      checked={isVegetarian}
-                      onChange={(e) => setIsVegetarian(e.target.checked)}
-                      className="w-5 h-5 rounded-[4px] border-[#e0e2ef] text-green-500 focus:ring-green-200 cursor-pointer"
-                    />
-                    <span className="text-[14px] font-medium text-[#111125]">Végétarien</span>
+                    <div
+                      className={`w-4 h-4 rounded-[3px] border-2 flex items-center justify-center shrink-0 transition-all ${
+                        isVegetarian
+                          ? 'bg-[#c1a0fd] border-[#c1a0fd]'
+                          : 'bg-white border-[#c0c0cc]'
+                      }`}
+                    >
+                      {isVegetarian && (
+                        <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+                          <path d="M1 3L3.5 5.5L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      )}
+                    </div>
+                    <span className="text-[14px] text-[#303044]">Végétarien</span>
                   </label>
                   <label
-                    className={`flex items-center gap-3 p-4 rounded-[12px] cursor-pointer transition-all flex-1 ${
-                      isVegan
-                        ? 'bg-green-50 border border-green-200'
-                        : 'bg-[#f2f4fc] border border-transparent hover:border-[#e0e2ef]'
-                    }`}
+                    className="flex items-center gap-2.5 cursor-pointer"
+                    onClick={() => setIsVegan(!isVegan)}
                   >
-                    <input
-                      type="checkbox"
-                      checked={isVegan}
-                      onChange={(e) => setIsVegan(e.target.checked)}
-                      className="w-5 h-5 rounded-[4px] border-[#e0e2ef] text-green-500 focus:ring-green-200 cursor-pointer"
-                    />
-                    <span className="text-[14px] font-medium text-[#111125]">Vegan</span>
+                    <div
+                      className={`w-4 h-4 rounded-[3px] border-2 flex items-center justify-center shrink-0 transition-all ${
+                        isVegan
+                          ? 'bg-[#c1a0fd] border-[#c1a0fd]'
+                          : 'bg-white border-[#c0c0cc]'
+                      }`}
+                    >
+                      {isVegan && (
+                        <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+                          <path d="M1 3L3.5 5.5L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      )}
+                    </div>
+                    <span className="text-[14px] text-[#303044]">Vegan</span>
                   </label>
                 </div>
               </div>
@@ -821,20 +905,20 @@ export default function CreateMenuPage() {
           )}
         </div>
 
-        {/* ── Sticky Action Bar ── */}
+        {/* ── Sticky Footer ── */}
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#e0e2ef] z-50">
-          <div className="max-w-[1000px] mx-auto px-4 md:px-8 py-4 flex items-center justify-between gap-4">
+          <div className="max-w-[800px] mx-auto px-4 md:px-8 py-4 flex items-center justify-between gap-4">
             <button
               type="button"
               onClick={() => navigate('/kooker-dashboard')}
-              className="px-6 py-3 text-[14px] font-medium text-[#111125]/50 hover:text-[#111125] bg-white border border-[#e0e2ef] hover:border-[#111125]/20 rounded-[12px] transition-all"
+              className="h-[48px] px-6 text-[14px] font-semibold text-[#303044] bg-white border-2 border-[#e0e2ef] hover:border-[#303044]/30 rounded-[12px] transition-all cursor-pointer"
             >
               Annuler
             </button>
             <button
               type="submit"
-              disabled={!canSubmit || (serviceTypes.includes('KOURS') && serviceTypes.includes('KOOK') && !isKoursComplete)}
-              className="px-8 py-3 text-[14px] font-semibold text-white bg-[#c1a0fd] hover:bg-[#b090ed] rounded-[12px] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+              disabled={!canSubmit}
+              className="h-[48px] px-8 text-[14px] font-semibold text-white bg-[#c1a0fd] hover:bg-[#b090ed] rounded-[12px] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
             >
               {isSubmitting ? (
                 <>

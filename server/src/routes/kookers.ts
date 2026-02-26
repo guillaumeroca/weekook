@@ -26,28 +26,18 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     const limitNum = Math.min(50, Math.max(1, parseInt(limit as string, 10) || 12));
     const skip = (pageNum - 1) * limitNum;
 
-    const where: Prisma.KookerProfileWhereInput = {
-      active: true,
-    };
+    const where: Prisma.KookerProfileWhereInput = { active: true };
 
-    // Search across user names, bio, city, specialties
-    if (q) {
-      const searchTerm = q as string;
-      where.OR = [
-        { user: { firstName: { contains: searchTerm } } },
-        { user: { lastName: { contains: searchTerm } } },
-        { bio: { contains: searchTerm } },
-        { city: { contains: searchTerm } },
-      ];
-    }
-
-    if (city) {
+    // When no text search: apply city filter at DB level for performance
+    if (city && !q) {
       where.city = { contains: city as string };
     }
 
-    // Type and specialty filters require JSON field filtering
-    // We filter in-application after fetching since Prisma JSON filtering varies by DB
-    const [kookers, total] = await Promise.all([
+    // When q is set, fetch all active kookers and filter in JS
+    // (required to search JSON fields: specialties, type)
+    const hasTextSearch = !!q;
+
+    const [kookers, dbTotal] = await Promise.all([
       prisma.kookerProfile.findMany({
         where,
         include: {
@@ -68,16 +58,37 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
             },
           },
         },
-        skip,
-        take: limitNum,
+        skip: hasTextSearch ? undefined : skip,
+        take: hasTextSearch ? undefined : limitNum,
         orderBy: [{ featured: 'desc' }, { rating: 'desc' }],
       }),
       prisma.kookerProfile.count({ where }),
     ]);
 
-    // Post-filter by type and specialty (JSON fields)
     let filtered = kookers;
 
+    // Full-text JS filter: name, bio, city, address, specialties (JSON), type (JSON)
+    if (q) {
+      const searchLower = (q as string).toLowerCase();
+      filtered = filtered.filter((k) => {
+        const fullName = `${k.user.firstName} ${k.user.lastName}`.toLowerCase();
+        const bio = (k.bio || '').toLowerCase();
+        const kCity = (k.city || '').toLowerCase();
+        const address = (k.address || '').toLowerCase();
+        const specialtiesStr = JSON.stringify(k.specialties || []).toLowerCase();
+        const typeStr = JSON.stringify(k.type || []).toLowerCase();
+        return (
+          fullName.includes(searchLower) ||
+          bio.includes(searchLower) ||
+          kCity.includes(searchLower) ||
+          address.includes(searchLower) ||
+          specialtiesStr.includes(searchLower) ||
+          typeStr.includes(searchLower)
+        );
+      });
+    }
+
+    // Post-filter by type (JSON field)
     if (type) {
       const typeFilter = type as string;
       filtered = filtered.filter((k) => {
@@ -86,6 +97,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       });
     }
 
+    // Post-filter by specialty (JSON field)
     if (specialty) {
       const specialtyFilter = specialty as string;
       filtered = filtered.filter((k) => {
@@ -94,7 +106,13 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       });
     }
 
-    // Price filter based on services
+    // Post-filter by city (when text search is active)
+    if (city && hasTextSearch) {
+      const cityLower = (city as string).toLowerCase();
+      filtered = filtered.filter((k) => (k.city || '').toLowerCase().includes(cityLower));
+    }
+
+    // Post-filter by price
     if (minPrice || maxPrice) {
       const min = minPrice ? parseInt(minPrice as string, 10) * 100 : 0;
       const max = maxPrice ? parseInt(maxPrice as string, 10) * 100 : Infinity;
@@ -105,10 +123,14 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       });
     }
 
+    // Paginate filtered results (only needed when text search fetched all)
+    const total = hasTextSearch ? filtered.length : dbTotal;
+    const paginatedKookers = hasTextSearch ? filtered.slice(skip, skip + limitNum) : filtered;
+
     res.json({
       success: true,
       data: {
-        kookers: filtered,
+        kookers: paginatedKookers,
         pagination: {
           page: pageNum,
           limit: limitNum,

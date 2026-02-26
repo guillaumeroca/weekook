@@ -33,7 +33,7 @@ router.post(
         throw new AppError('Cette adresse email est déjà associée à un compte.', 409);
       }
 
-      const hashedPassword = await bcrypt.hash(password, 12);
+      const hashedPassword = await bcrypt.hash(password, 10);
 
       const user = await prisma.user.create({
         data: {

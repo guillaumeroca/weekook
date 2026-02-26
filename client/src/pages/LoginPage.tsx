@@ -46,7 +46,7 @@ const LoginPage = () => {
       await login(loginEmail, loginPassword);
       navigate('/tableau-de-bord');
     } catch (err: any) {
-      setLoginError(err?.response?.data?.error || err?.message || 'Erreur de connexion. Vérifiez vos identifiants.');
+      setLoginError(err?.error || err?.response?.data?.error || err?.message || 'Erreur de connexion. Vérifiez vos identifiants.');
     } finally {
       setLoginLoading(false);
     }
@@ -77,7 +77,7 @@ const LoginPage = () => {
       await register({ email: registerEmail, password: registerPassword, firstName: registerFirstName, lastName: registerLastName });
       navigate('/tableau-de-bord');
     } catch (err: any) {
-      setRegisterError(err?.response?.data?.error || err?.message || 'Erreur lors de l\'inscription.');
+      setRegisterError(err?.error || err?.response?.data?.error || err?.message || 'Erreur lors de l\'inscription.');
     } finally {
       setRegisterLoading(false);
     }

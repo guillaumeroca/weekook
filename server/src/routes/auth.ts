@@ -30,7 +30,7 @@ router.post(
 
       const existing = await prisma.user.findUnique({ where: { email } });
       if (existing) {
-        throw new AppError('Cet email est deja utilise', 409);
+        throw new AppError('Cette adresse email est déjà associée à un compte.', 409);
       }
 
       const hashedPassword = await bcrypt.hash(password, 12);
@@ -85,12 +85,12 @@ router.post(
       });
 
       if (!user) {
-        throw new AppError('Email ou mot de passe incorrect', 401);
+        throw new AppError('Email ou mot de passe incorrect.', 401);
       }
 
       const isValid = await bcrypt.compare(password, user.password);
       if (!isValid) {
-        throw new AppError('Email ou mot de passe incorrect', 401);
+        throw new AppError('Email ou mot de passe incorrect.', 401);
       }
 
       const token = signToken({ userId: user.id, email: user.email });

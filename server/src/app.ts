@@ -1,4 +1,5 @@
 import { env } from './config/env.js';
+import prisma from './lib/prisma.js';
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
@@ -86,8 +87,15 @@ app.use('/api/v1/upload', uploadRoutes);
 app.use(errorHandler);
 
 // ── Start server ──
-app.listen(env.PORT, () => {
+app.listen(env.PORT, async () => {
   console.log(`Server running on http://localhost:${env.PORT}`);
+  // Warmup : établit la connexion MySQL dès le démarrage
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    console.log('Database connection ready');
+  } catch (e) {
+    console.error('Database warmup failed:', e);
+  }
 });
 
 export default app;

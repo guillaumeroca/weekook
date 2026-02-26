@@ -4,8 +4,8 @@ import { PrismaClient } from '@prisma/client';
 // and reduce pool_timeout to fail fast instead of waiting 10s
 const databaseUrl = process.env.DATABASE_URL || '';
 const urlWithPool = databaseUrl.includes('?')
-  ? `${databaseUrl}&connection_limit=10`
-  : `${databaseUrl}?connection_limit=10`;
+  ? `${databaseUrl}&connection_limit=20`
+  : `${databaseUrl}?connection_limit=20`;
 
 const prisma = new PrismaClient({
   datasources: { db: { url: urlWithPool } },

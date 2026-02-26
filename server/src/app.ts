@@ -89,18 +89,18 @@ app.use(errorHandler);
 // ── Start server ──
 app.listen(env.PORT, async () => {
   console.log(`Server running on http://localhost:${env.PORT}`);
-  // Warmup : établit la connexion MySQL dès le démarrage
+  // Warmup : pré-chauffe 5 connexions en parallèle pour remplir le pool
   try {
-    await prisma.$queryRaw`SELECT 1`;
-    console.log('Database connection ready');
+    await Promise.all(Array.from({ length: 5 }, () => prisma.$queryRaw`SELECT 1`));
+    console.log('Database connection pool ready (5 connections)');
   } catch (e) {
     console.error('Database warmup failed:', e);
   }
 
-  // Keepalive : maintient le pool de connexions actif toutes les 30s
+  // Keepalive : maintient le pool actif toutes les 30s
   setInterval(async () => {
     try {
-      await prisma.$queryRaw`SELECT 1`;
+      await Promise.all(Array.from({ length: 5 }, () => prisma.$queryRaw`SELECT 1`));
     } catch (e) {
       console.error('DB keepalive failed:', e);
     }

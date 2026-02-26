@@ -14,6 +14,8 @@ router.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.user!.userId;
+      const t0 = Date.now();
+      console.log(`[bookings/my] userId=${userId} - start`);
 
       const bookings = await prisma.booking.findMany({
         where: { userId },
@@ -42,6 +44,8 @@ router.get(
         },
         orderBy: { date: 'desc' },
       });
+
+      console.log(`[bookings/my] userId=${userId} - query done in ${Date.now() - t0}ms, found ${bookings.length}`);
 
       res.json({
         success: true,

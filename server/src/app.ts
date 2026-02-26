@@ -96,6 +96,15 @@ app.listen(env.PORT, async () => {
   } catch (e) {
     console.error('Database warmup failed:', e);
   }
+
+  // Keepalive : maintient le pool de connexions actif toutes les 30s
+  setInterval(async () => {
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+    } catch (e) {
+      console.error('DB keepalive failed:', e);
+    }
+  }, 30_000);
 });
 
 export default app;

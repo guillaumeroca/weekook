@@ -732,7 +732,7 @@ const KookerDashboardPage = () => {
                 <p className="text-[13px] text-[#111125]/50 mt-1">{services.length} offre{services.length > 1 ? 's' : ''} au total</p>
               </div>
               <button
-                onClick={() => navigate('/create-menu')}
+                onClick={() => navigate('/kooker-dashboard/menu/nouveau')}
                 className="flex items-center gap-2 px-5 py-2.5 bg-[#c1a0fd] hover:bg-[#b090ed] text-white text-[13px] font-semibold rounded-[12px] transition-all self-start sm:self-auto"
               >
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -759,7 +759,7 @@ const KookerDashboardPage = () => {
                     <h4 className="text-[16px] font-semibold text-[#111125] mb-2">Aucune offre</h4>
                     <p className="text-[13px] text-[#111125]/50 mb-6">Créez votre première offre pour commencer à recevoir des réservations.</p>
                     <button
-                      onClick={() => navigate('/create-menu')}
+                      onClick={() => navigate('/kooker-dashboard/menu/nouveau')}
                       className="px-6 py-2.5 bg-[#c1a0fd] hover:bg-[#b090ed] text-white text-[13px] font-semibold rounded-[12px] transition-all"
                     >
                       Créer ma première offre

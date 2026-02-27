@@ -199,8 +199,14 @@ export default function CreateMenuPage() {
       }
       toast.success('Service créé avec succès !');
       navigate('/kooker-dashboard');
-    } catch {
-      toast.error('Erreur lors de la création');
+    } catch (err: unknown) {
+      const e = err as { error?: string; details?: Record<string, string[]> };
+      if (e?.details) {
+        const msgs = Object.entries(e.details).map(([k, v]) => `${k}: ${v.join(', ')}`).join(' | ');
+        toast.error(`Validation: ${msgs}`);
+      } else {
+        toast.error(e?.error || 'Erreur lors de la création');
+      }
     } finally {
       setIsSubmitting(false);
     }

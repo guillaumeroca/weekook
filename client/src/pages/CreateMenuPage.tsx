@@ -182,11 +182,11 @@ export default function CreateMenuPage() {
         const data = {
           title: isKours ? koursTitle : kookTitle,
           description: isKours ? koursDescription : kookDescription,
-          type: JSON.stringify([type]),
+          type: [type],
           priceInCents: Math.round(parseFloat(isKours ? koursPrice : kookPrice) * 100),
           durationMinutes: parseInt(isKours ? koursDuration : kookDuration),
           maxGuests: parseInt(isKours ? koursMaxParticipants : kookMaxParticipants),
-          allergens: JSON.stringify(allergens),
+          allergens: allergens,
           menuItems: (isKours ? koursMenuItems : kookMenuItems).map((item, idx) => ({
             category: 'Plat',
             name: item.name,

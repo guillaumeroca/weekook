@@ -1,11 +1,10 @@
 import { PrismaClient } from '@prisma/client';
 
-// Force connection pool to 10 connections (default = num_cpus*2+1, ~5 on VPS)
-// and reduce pool_timeout to fail fast instead of waiting 10s
+// Limit pool to 5 connections on dev VPS to avoid MySQL max_connections issues
 const databaseUrl = process.env.DATABASE_URL || '';
 const urlWithPool = databaseUrl.includes('?')
-  ? `${databaseUrl}&connection_limit=20`
-  : `${databaseUrl}?connection_limit=20`;
+  ? `${databaseUrl}&connection_limit=5`
+  : `${databaseUrl}?connection_limit=5`;
 
 const prisma = new PrismaClient({
   datasources: { db: { url: urlWithPool } },

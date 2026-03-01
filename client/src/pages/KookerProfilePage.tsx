@@ -108,7 +108,7 @@ function mapApiToProfile(data: any): KookerProfile {
     availabilities: (data.availabilities || [])
       .filter((a: any) => a.isAvailable)
       .map((a: any) => ({
-        date: a.date,
+        date: a.date ? String(a.date).slice(0, 10) : a.date,
         startTime: a.startTime,
         endTime: a.endTime,
       })),
@@ -166,21 +166,50 @@ function formatDate(dateStr: string): string {
 }
 
 // ─── Helper: Calendar ───────────────────────────────────────────────────────────
-function getDaysInMonth(year: number, month: number): number {
-  return new Date(year, month + 1, 0).getDate();
-}
-
-function getFirstDayOfMonth(year: number, month: number): number {
-  const day = new Date(year, month, 1).getDay();
-  // Convert Sunday=0 to Monday-start: Mon=0, Tue=1, ... Sun=6
-  return day === 0 ? 6 : day - 1;
-}
-
 const MONTH_NAMES = [
   'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
   'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
 ];
-const DAY_NAMES = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+const DAY_SHORT_FR = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+
+function toDateStr(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function getWeekStartLabel(weekStart: Date): string {
+  const d = String(weekStart.getDate()).padStart(2, '0');
+  const m = String(weekStart.getMonth() + 1).padStart(2, '0');
+  return `${d}/${m}`;
+}
+
+function buildCalendarWeeks(year: number, month: number): Date[][] {
+  const firstOfMonth = new Date(year, month, 1);
+  const lastOfMonth = new Date(year, month + 1, 0);
+  const dow = firstOfMonth.getDay();
+  const offset = dow === 0 ? 6 : dow - 1;
+  const weekStart = new Date(firstOfMonth);
+  weekStart.setDate(firstOfMonth.getDate() - offset);
+  const weeks: Date[][] = [];
+  const cursor = new Date(weekStart);
+  while (cursor <= lastOfMonth) {
+    const week: Date[] = [];
+    for (let i = 0; i < 7; i++) {
+      week.push(new Date(cursor));
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    weeks.push(week);
+  }
+  return weeks;
+}
+
+function getSlotLabel(startTime: string): string {
+  const h = parseInt(startTime.slice(0, 2));
+  if (h === 8) return 'Matin (8h-12h)';
+  if (h === 12) return 'Après-midi (12h-18h)';
+  if (h === 14) return 'Après-midi (14h-18h)';
+  if (h === 18) return 'Soir (18h-23h)';
+  return startTime;
+}
 
 // ─── Component ──────────────────────────────────────────────────────────────────
 export default function KookerProfilePage() {
@@ -377,15 +406,7 @@ export default function KookerProfilePage() {
   }
 
   // ─── Calendar Rendering ─────────────────────────────────────────────────────
-  const daysInMonth = getDaysInMonth(calendarYear, calendarMonth);
-  const firstDay = getFirstDayOfMonth(calendarYear, calendarMonth);
-  const calendarDays: (number | null)[] = [];
-  for (let i = 0; i < firstDay; i++) calendarDays.push(null);
-  for (let d = 1; d <= daysInMonth; d++) calendarDays.push(d);
-  // Pad to complete last row
-  while (calendarDays.length % 7 !== 0) calendarDays.push(null);
-
-  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const calendarWeeks = buildCalendarWeeks(calendarYear, calendarMonth);
 
   // ─── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -746,12 +767,12 @@ export default function KookerProfilePage() {
               {/* ============================================================= */}
               <section>
                 <h2 className="text-[24px] md:text-[28px] font-semibold text-[#111125] tracking-[-0.56px] mb-6">
-                  Disponibilités
+                  Planning
                 </h2>
 
-                <div className="bg-[#f8f9fc] rounded-[16px] border border-[#e0e0e0] p-5 md:p-6">
+                <div className="bg-[#f8f9fc] rounded-[16px] border border-[#e0e0e0] p-5">
                   {/* Month Navigation */}
-                  <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center justify-between mb-4">
                     <button
                       onClick={goToPrevMonth}
                       className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#f3f4f6] transition-colors"
@@ -773,78 +794,86 @@ export default function KookerProfilePage() {
                     </button>
                   </div>
 
-                  {/* Day Headers */}
-                  <div className="grid grid-cols-7 mb-2">
-                    {DAY_NAMES.map((day) => (
-                      <div
-                        key={day}
-                        className="text-center text-[12px] font-medium text-[#9ca3af] py-1"
-                      >
-                        {day}
+                  {/* Column Headers */}
+                  <div className="flex items-center mb-2">
+                    <div className="w-[62px] shrink-0" />
+                    {DAY_SHORT_FR.map((day, i) => (
+                      <div key={i} className="flex-1 text-center text-[11px] font-medium text-[#9ca3af]">
+                        {day.charAt(0)}
                       </div>
                     ))}
                   </div>
 
-                  {/* Calendar Grid */}
-                  <div className="grid grid-cols-7">
-                    {calendarDays.map((day, idx) => {
-                      if (day === null) {
-                        return <div key={`empty-${idx}`} className="h-10" />;
-                      }
-
-                      const dateStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                      const isToday = dateStr === todayStr;
-                      const slots = availableDatesMap.get(dateStr);
-                      const isAvailable = !!slots && slots.length > 0;
-                      const isPast = dateStr < todayStr;
-
-                      return (
-                        <div
-                          key={dateStr}
-                          className="relative flex items-center justify-center h-10"
-                          onMouseEnter={() => isAvailable ? setTooltipDate(dateStr) : undefined}
-                          onMouseLeave={() => setTooltipDate(null)}
-                        >
-                          <div
-                            className={`w-8 h-8 flex items-center justify-center rounded-full text-[13px] transition-colors ${
-                              isAvailable
-                                ? 'bg-[#c1a0fd] text-white font-semibold cursor-pointer hover:bg-[#b090ed]'
-                                : isToday
-                                  ? 'bg-[#f3f4f6] text-[#111125] font-semibold ring-2 ring-[#c1a0fd]'
-                                  : isPast
-                                    ? 'text-[#d1d5db]'
-                                    : 'text-[#6b7280]'
-                            }`}
-                          >
-                            {day}
-                          </div>
-
-                          {/* Tooltip */}
-                          {isAvailable && tooltipDate === dateStr && slots && (
-                            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-50 bg-[#111125] text-white rounded-[8px] px-3 py-2 text-[12px] whitespace-nowrap shadow-lg pointer-events-none">
-                              {slots.map((s, si) => (
-                                <div key={si}>
-                                  {s.startTime} - {s.endTime}
-                                </div>
-                              ))}
-                              <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#111125]" />
-                            </div>
-                          )}
+                  {/* Week Rows */}
+                  <div className="space-y-1.5">
+                    {calendarWeeks.map((week, wi) => (
+                      <div key={wi} className="flex items-center">
+                        <div className="w-[62px] shrink-0 flex items-center gap-0.5">
+                          <span className="text-[10px] text-[#9ca3af]">Sem.</span>
+                          <span className="text-[11px] font-medium text-[#6b7280]">{getWeekStartLabel(week[0])}</span>
                         </div>
-                      );
-                    })}
+                        {week.map((dayDate, di) => {
+                          const dateStr = toDateStr(dayDate);
+                          const slots = availableDatesMap.get(dateStr);
+                          const isAvailable = !!slots && slots.length > 0;
+                          const isCurrentMonth = dayDate.getMonth() === calendarMonth;
+                          const dayName = DAY_SHORT_FR[di];
+                          const dayDisplay = `${String(dayDate.getDate()).padStart(2, '0')}/${String(dayDate.getMonth() + 1).padStart(2, '0')}`;
+
+                          return (
+                            <div
+                              key={di}
+                              className="flex-1 flex items-center justify-center relative py-1"
+                              onMouseEnter={() => isAvailable ? setTooltipDate(dateStr) : undefined}
+                              onMouseLeave={() => setTooltipDate(null)}
+                            >
+                              <div
+                                className={`w-3 h-3 rounded-full transition-all ${
+                                  !isCurrentMonth
+                                    ? 'bg-[#f0f0f0]'
+                                    : isAvailable
+                                      ? 'bg-green-500 cursor-pointer hover:scale-125'
+                                      : 'bg-[#e5e7eb]'
+                                }`}
+                              />
+
+                              {/* Tooltip */}
+                              {isAvailable && tooltipDate === dateStr && slots && (
+                                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-50 bg-[#111125] text-white rounded-[8px] px-3 py-2 text-[12px] whitespace-nowrap shadow-lg pointer-events-none">
+                                  <div className="font-semibold mb-1">{dayName} {dayDisplay}</div>
+                                  {slots.map((s, si) => (
+                                    <div key={si} className="flex items-center gap-1">
+                                      <span className="text-green-400">✓</span>
+                                      <span>{getSlotLabel(s.startTime)}</span>
+                                    </div>
+                                  ))}
+                                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#111125]" />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
                   </div>
 
                   {/* Legend */}
                   <div className="flex items-center gap-4 mt-4 pt-4 border-t border-[#f0f0f0]">
                     <div className="flex items-center gap-1.5">
-                      <div className="w-3 h-3 rounded-full bg-[#c1a0fd]" />
+                      <div className="w-3 h-3 rounded-full bg-green-500" />
                       <span className="text-[12px] text-[#6b7280]">Disponible</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <div className="w-3 h-3 rounded-full bg-[#f3f4f6] ring-1 ring-[#d1d5db]" />
-                      <span className="text-[12px] text-[#6b7280]">Indisponible</span>
+                      <div className="w-3 h-3 rounded-full bg-[#e5e7eb]" />
+                      <span className="text-[12px] text-[#6b7280]">Occupé</span>
                     </div>
+                  </div>
+
+                  {/* Info box */}
+                  <div className="mt-3 bg-[#f0ebff] rounded-[10px] px-3 py-2.5">
+                    <p className="text-[11px] text-[#7c5cbf] leading-relaxed">
+                      📅 Planning compact : Hover sur une pastille pour voir les créneaux disponibles
+                    </p>
                   </div>
                 </div>
               </section>

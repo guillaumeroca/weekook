@@ -17,8 +17,9 @@ interface Service {
   description: string;
   price: number;       // in euros (converted from centimes)
   duration: number;    // in minutes
-  type: string;
+  types: string[];
   specialties: string[];
+  allergens: string[];
   maxGuests: number;
   images: ServiceImage[];
   isActive: boolean;
@@ -87,8 +88,9 @@ function mapApiToProfile(data: any): KookerProfile {
         description: s.description || '',
         price: (s.priceInCents || 0) / 100,
         duration: s.durationMinutes || 0,
-        type: safeJsonParse<string[]>(s.type, []).join(', '),
+        types: safeJsonParse<string[]>(s.type, []),
         specialties: safeJsonParse<string[]>(s.specialties, []),
+        allergens: safeJsonParse<string[]>(s.allergens, []),
         maxGuests: s.maxGuests || 0,
         images: (s.images || []).map((img: any) => ({
           id: img.id,
@@ -388,17 +390,14 @@ export default function KookerProfilePage() {
   // ─── Loading State ──────────────────────────────────────────────────────────
   if (isLoading || !profile) {
     return (
-      <div className="min-h-screen bg-[#f2f4fc]">
-        {/* Cover Skeleton */}
-        <div className="w-full h-[200px] md:h-[280px] bg-[#e5e7eb] animate-pulse" />
-        <div className="px-4 md:px-8 lg:px-[96px] -mt-16 md:-mt-20">
-          {/* Avatar Skeleton */}
-          <div className="w-[100px] h-[100px] md:w-[130px] md:h-[130px] rounded-full bg-[#d1d5db] border-4 border-white animate-pulse" />
-          <div className="mt-4 space-y-3">
-            <div className="h-8 w-48 bg-[#e5e7eb] rounded animate-pulse" />
+      <div className="min-h-screen bg-[#f2f4fc] px-4 md:px-8 lg:px-[96px] pt-6">
+        <div className="h-5 w-40 bg-[#e5e7eb] rounded animate-pulse mb-4" />
+        <div className="bg-white rounded-[20px] p-6 flex gap-5">
+          <div className="w-[120px] h-[120px] rounded-[16px] bg-[#e5e7eb] animate-pulse flex-shrink-0" />
+          <div className="flex-1 space-y-3">
+            <div className="h-7 w-48 bg-[#e5e7eb] rounded animate-pulse" />
             <div className="h-4 w-32 bg-[#e5e7eb] rounded animate-pulse" />
-            <div className="h-4 w-64 bg-[#e5e7eb] rounded animate-pulse" />
-            <div className="h-20 w-full max-w-[600px] bg-[#e5e7eb] rounded animate-pulse" />
+            <div className="h-16 w-full max-w-[500px] bg-[#e5e7eb] rounded animate-pulse" />
           </div>
         </div>
       </div>
@@ -418,83 +417,70 @@ export default function KookerProfilePage() {
         {/* Back button */}
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 px-3 py-2 bg-white/90 backdrop-blur-sm rounded-[12px] text-[14px] font-medium text-[#111125] hover:bg-white transition-all shadow-sm mb-4"
+          className="flex items-center gap-1.5 text-[14px] font-medium text-[#c1a0fd] hover:text-[#b090ed] transition-colors mb-4"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          Retour
+          Retour aux résultats
         </button>
 
-        <div className="bg-[#f8f9fc] rounded-[20px] p-6 mb-6">
-          <div className="flex flex-col md:flex-row gap-6">
+        <div className="bg-white rounded-[20px] p-5 md:p-6 mb-6 border border-[#e0e0e0] shadow-sm">
+          <div className="flex flex-col sm:flex-row gap-5">
             {/* Avatar */}
-            <div className="w-[140px] h-[140px] rounded-[20px] bg-[#f3ecff] overflow-hidden flex-shrink-0">
+            <div className="w-[110px] h-[110px] md:w-[130px] md:h-[130px] rounded-[16px] bg-[#f3ecff] overflow-hidden flex-shrink-0 self-start">
               {profile.avatarUrl ? (
-                <img
-                  src={profile.avatarUrl}
-                  alt={profile.name}
-                  className="w-full h-full object-cover"
-                />
+                <img src={profile.avatarUrl} alt={profile.name} className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-[#c1a0fd] to-[#8b6fce] flex items-center justify-center text-white font-bold text-[36px] md:text-[48px]">
+                <div className="w-full h-full bg-gradient-to-br from-[#c1a0fd] to-[#8b6fce] flex items-center justify-center text-white font-bold text-[40px]">
                   {profile.name.charAt(0).toUpperCase()}
                 </div>
               )}
             </div>
 
-            {/* Name + Info + Actions */}
+            {/* Info */}
             <div className="flex-1 min-w-0">
-              <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                <div>
-                  <h1 className="text-[28px] md:text-[32px] font-semibold text-[#111125] tracking-[-0.64px]">
-                    {profile.name}
-                  </h1>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-3">
-                    {/* City */}
-                    <span className="flex items-center gap-1 text-[14px] text-[#6b7280]">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <h1 className="text-[24px] md:text-[28px] font-semibold text-[#111125] tracking-[-0.5px]">
+                      {profile.name}
+                    </h1>
+                    <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#ecfdf5] text-[#059669] text-[11px] font-semibold border border-[#a7f3d0]">
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                       </svg>
-                      {profile.city}
+                      PROFIL VÉRIFIÉ
                     </span>
-                    {/* Rating */}
-                    <span className="flex items-center gap-1.5">
-                      <StarRating rating={profile.rating} size={16} />
-                      <span className="text-[14px] font-semibold text-[#111125]">
-                        {profile.rating.toFixed(1)}
-                      </span>
-                      <span className="text-[13px] text-[#6b7280]">
-                        ({profile.reviewCount} avis)
-                      </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-[14px] text-[#6b7280]">
+                    <span className="flex items-center gap-1">
+                      <svg className="w-4 h-4 text-[#facc15]" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                      </svg>
+                      <span className="font-semibold text-[#111125]">{profile.rating.toFixed(1)}</span>
+                      <span>({profile.reviewCount} avis)</span>
                     </span>
-                    {/* Experience */}
-                    {profile.yearsExperience > 0 && (
-                      <span className="text-[13px] text-[#6b7280]">
-                        {profile.yearsExperience} ans d'expérience
+                    {profile.city && (
+                      <span className="flex items-center gap-1">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        {profile.city}
                       </span>
                     )}
-                  </div>
-
-                  {/* Specialty Badges */}
-                  <div className="flex flex-wrap gap-2">
-                    {profile.specialties.map((spec, i) => (
-                      <span
-                        key={i}
-                        className="px-3 py-1.5 rounded-full text-[13px] font-medium bg-[#ede7fb] text-[#7c5cbf]"
-                      >
-                        {spec}
-                      </span>
-                    ))}
+                    {profile.yearsExperience > 0 && (
+                      <span>{profile.yearsExperience} ans d'expérience</span>
+                    )}
                   </div>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="flex gap-3 flex-shrink-0">
+                {/* Action buttons */}
+                <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
                   <button
-                    onClick={() => navigate(`/messages?kooker=${profile.id}`)}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-white border border-[#e5e7eb] rounded-[12px] text-[14px] font-medium text-[#111125] hover:border-[#c1a0fd] hover:text-[#c1a0fd] transition-all shadow-sm"
+                    onClick={() => { if (!user) { navigate('/login'); return; } navigate(`/messages?kooker=${profile.id}`); }}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-[#c1a0fd] text-white rounded-[12px] text-[14px] font-semibold hover:bg-[#b090ed] transition-all"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -503,13 +489,13 @@ export default function KookerProfilePage() {
                   </button>
                   <button
                     onClick={handleToggleFavorite}
-                    className={`flex items-center gap-2 px-5 py-2.5 rounded-[12px] text-[14px] font-semibold transition-all shadow-sm ${
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-[12px] text-[14px] font-semibold border transition-all ${
                       isFavorite
-                        ? 'bg-[#c1a0fd]/10 border border-[#c1a0fd] text-[#c1a0fd] hover:bg-[#c1a0fd]/20'
-                        : 'bg-[#c1a0fd] text-white hover:bg-[#b090ed]'
+                        ? 'bg-[#fdf4ff] border-[#c1a0fd] text-[#c1a0fd]'
+                        : 'bg-white border-[#e5e7eb] text-[#6b7280] hover:border-[#c1a0fd] hover:text-[#c1a0fd]'
                     }`}
                   >
-                    <svg className="w-4 h-4" fill={isFavorite ? '#c1a0fd' : 'none'} stroke={isFavorite ? '#c1a0fd' : 'currentColor'} viewBox="0 0 24 24">
+                    <svg className="w-4 h-4" fill={isFavorite ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                     </svg>
                     {isFavorite ? 'Favori' : 'Favoris'}
@@ -517,11 +503,9 @@ export default function KookerProfilePage() {
                 </div>
               </div>
 
-              {/* Bio with border-top separator */}
-              <div className="pt-3 border-t border-[#e0e0e0] mt-3">
-                <p className="text-[15px] text-[#4b5563] leading-relaxed">
-                  {profile.bio}
-                </p>
+              {/* Bio */}
+              <div className="mt-3 pt-3 border-t border-[#f0f0f0]">
+                <p className="text-[14px] text-[#4b5563] leading-relaxed">{profile.bio}</p>
               </div>
             </div>
           </div>
@@ -529,158 +513,175 @@ export default function KookerProfilePage() {
       </div>
 
       {/* ============================================================= */}
-      {/* 2-COLUMN LAYOUT: Main Content + Calendar Sidebar               */}
+      {/* 2-COLUMN LAYOUT                                                */}
       {/* ============================================================= */}
-      <div className="px-4 md:px-8 lg:px-[96px]">
+      <div className="px-4 md:px-8 lg:px-[96px] pb-12">
         <div className="flex flex-col lg:flex-row gap-8 items-start">
-          {/* ─── Main Content (Services + Reviews) ─── */}
-          <div className="flex-1">
+          {/* ─── Main Column ─── */}
+          <div className="flex-1 min-w-0">
             {/* ============================================================= */}
-            {/* SERVICES ACCORDION                                             */}
+            {/* SERVICES                                                       */}
             {/* ============================================================= */}
-            <section className="mb-10 md:mb-14">
-              <h2 className="text-[24px] md:text-[28px] font-semibold text-[#111125] tracking-[-0.56px] mb-6">
-                Offres & Services
+            <section className="mb-10">
+              <h2 className="text-[22px] md:text-[26px] font-semibold text-[#111125] tracking-[-0.5px] mb-5">
+                Services proposés
               </h2>
 
               {profile.services.length === 0 ? (
-                <div className="py-12 text-center">
-                  <p className="text-[15px] text-[#6b7280]">
-                    Ce kooker n'a pas encore publié de service.
-                  </p>
+                <div className="py-12 text-center bg-white rounded-[16px] border border-[#e0e0e0]">
+                  <p className="text-[15px] text-[#6b7280]">Ce kooker n'a pas encore publié de service.</p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {profile.services.map((service) => {
                     const isOpen = openServiceId === service.id;
+                    const firstImage = service.images[0]?.url;
                     return (
                       <div
                         key={service.id}
-                        className="bg-[#f8f9fc] rounded-[20px] overflow-hidden border-2 border-[#e0e0e0]"
+                        className="bg-white rounded-[20px] overflow-hidden border border-[#e0e0e0] shadow-sm"
                       >
-                        {/* Accordion Header */}
-                        <button
-                          onClick={() =>
-                            setOpenServiceId(isOpen ? null : service.id)
-                          }
-                          className="w-full flex items-center justify-between p-5 md:p-6 text-left hover:bg-[#f0f2fa] transition-colors"
-                        >
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-3 flex-wrap">
-                              <h3 className="text-[16px] md:text-[18px] font-semibold text-[#111125]">
-                                {service.title}
-                              </h3>
-                              <span
-                                className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wide ${
-                                  service.type.includes('KOOK')
-                                    ? 'bg-[#dbeafe] text-[#2563eb]'
-                                    : 'bg-[#fef3c7] text-[#d97706]'
-                                }`}
-                              >
-                                {service.type}
-                              </span>
+                        {/* ── Card row: image + info ── */}
+                        <div className="flex">
+                          {/* Image column */}
+                          <div className="w-[140px] md:w-[170px] flex-shrink-0 flex flex-col">
+                            <div className="relative flex-1 min-h-[145px]">
+                              {firstImage ? (
+                                <img
+                                  src={firstImage}
+                                  alt={service.title}
+                                  className="absolute inset-0 w-full h-full object-cover"
+                                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                />
+                              ) : (
+                                <div className="absolute inset-0 bg-gradient-to-br from-[#f3ecff] to-[#e8d8ff] flex items-center justify-center">
+                                  <svg className="w-10 h-10 text-[#c1a0fd]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                  </svg>
+                                </div>
+                              )}
+                              {/* Type badges */}
+                              <div className="absolute top-2 left-2 flex flex-col gap-1">
+                                {service.types.includes('KOURS') && (
+                                  <span className="px-2 py-0.5 rounded-[5px] text-[10px] font-bold bg-[#c1a0fd] text-white">KOURS</span>
+                                )}
+                                {service.types.includes('KOOK') && (
+                                  <span className="px-2 py-0.5 rounded-[5px] text-[10px] font-bold bg-[#7c5cbf] text-white">KOOK</span>
+                                )}
+                              </div>
+                              {/* Allergen tags overlay */}
+                              {service.allergens.length > 0 && (
+                                <div className="absolute top-2 right-1 flex flex-col gap-1 items-end">
+                                  {service.allergens.slice(0, 2).map((a, i) => (
+                                    <span key={i} className="px-1.5 py-0.5 rounded text-[9px] bg-white/90 text-[#374151] font-medium leading-tight">{a}</span>
+                                  ))}
+                                </div>
+                              )}
                             </div>
-                            <div className="flex items-center gap-4 mt-1.5 text-[13px] text-[#6b7280]">
-                              <span className="flex items-center gap-1">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                {service.price}€ /pers.
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                {formatDuration(service.duration)}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                                </svg>
-                                {service.maxGuests} pers. max
-                              </span>
-                            </div>
-                          </div>
-                          <svg
-                            className={`w-5 h-5 text-[#6b7280] transition-transform duration-300 flex-shrink-0 ml-4 ${
-                              isOpen ? 'rotate-180' : ''
-                            }`}
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </button>
-
-                        {/* Accordion Body */}
-                        {isOpen && (
-                          <div className="px-5 pb-5 md:px-6 md:pb-6 border-t border-[#e0e0e0]">
-                            <div className="pt-5 md:pt-6">
-                              {/* Description */}
-                              <p className="text-[14px] text-[#4b5563] leading-relaxed mb-5">
-                                {service.description}
-                              </p>
-
-                              {/* Specialty Tags */}
-                              <div className="flex flex-wrap gap-2 mb-5">
-                                {service.specialties.map((spec, i) => (
-                                  <span
+                            {/* Thumbnails when expanded */}
+                            {isOpen && service.images.length > 1 && (
+                              <div className="flex gap-1 p-1.5 bg-[#f8f9fc]">
+                                {service.images.slice(1, 4).map((img, i) => (
+                                  <button
                                     key={i}
-                                    className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-[#f3f4f6] text-[#6b7280]"
+                                    onClick={() => openImageViewer(service.images, i + 1)}
+                                    className="flex-1 aspect-square rounded-[6px] overflow-hidden group"
                                   >
-                                    {spec}
+                                    <img
+                                      src={img.url}
+                                      alt={`${service.title} ${i + 2}`}
+                                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-200"
+                                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                    />
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Info column */}
+                          <div className="flex-1 p-4 flex flex-col min-w-0">
+                            {/* Title + chevron */}
+                            <div className="flex items-start gap-2 mb-2">
+                              <button
+                                onClick={() => setOpenServiceId(isOpen ? null : service.id)}
+                                className="flex-1 text-left"
+                              >
+                                <h3 className="text-[15px] md:text-[17px] font-semibold text-[#111125] leading-tight">
+                                  {service.title}
+                                </h3>
+                              </button>
+                              <button
+                                onClick={() => setOpenServiceId(isOpen ? null : service.id)}
+                                className="flex-shrink-0 p-1 rounded-full hover:bg-[#f3f4f6] transition-colors"
+                              >
+                                <svg
+                                  className={`w-5 h-5 text-[#6b7280] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+                                  fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                >
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </button>
+                            </div>
+
+                            {/* Specialty + allergens pills when expanded */}
+                            {isOpen ? (
+                              <div className="flex flex-wrap gap-1.5 mb-2">
+                                {service.specialties[0] && (
+                                  <span className="flex items-center gap-1 px-2.5 py-1 rounded-full border border-[#f59e0b] text-[#d97706] text-[12px] font-medium">
+                                    📍 {service.specialties[0]}
+                                  </span>
+                                )}
+                                {service.allergens.slice(0, 3).map((a, i) => (
+                                  <span key={i} className="px-2.5 py-1 rounded-full border border-[#e5e7eb] text-[#4b5563] text-[12px] font-medium">
+                                    {a}
                                   </span>
                                 ))}
                               </div>
+                            ) : service.specialties[0] ? (
+                              <div className="mb-2">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-[#f59e0b] text-[#d97706] text-[12px] font-medium">
+                                  📍 {service.specialties[0]}
+                                </span>
+                              </div>
+                            ) : null}
 
-                              {/* Image Gallery */}
-                              {service.images.length > 0 && (
-                                <div className="mb-5">
-                                  <h4 className="text-[14px] font-semibold text-[#111125] mb-3">
-                                    Galerie
-                                  </h4>
-                                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                    {service.images.map((img, imgIndex) => (
-                                      <button
-                                        key={img.id}
-                                        onClick={() =>
-                                          openImageViewer(service.images, imgIndex)
-                                        }
-                                        className="relative aspect-[4/3] rounded-[12px] overflow-hidden group/img"
-                                      >
-                                        <img
-                                          src={img.url}
-                                          alt={img.alt}
-                                          className="w-full h-full object-cover transition-transform duration-300 group-hover/img:scale-110"
-                                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                                        />
-                                        <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/20 transition-colors flex items-center justify-center">
-                                          <svg
-                                            className="w-8 h-8 text-white opacity-0 group-hover/img:opacity-100 transition-opacity"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                          >
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-                                          </svg>
-                                        </div>
-                                      </button>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Book CTA */}
+                            {/* Price + Réserver */}
+                            <div className="flex items-center justify-between mt-auto gap-2 pt-1">
+                              <span className="text-[14px] md:text-[15px] font-semibold text-[#111125]">
+                                À partir de {service.price}€
+                              </span>
                               <button
-                                onClick={() =>
-                                  navigate(`/reservation?service=${service.id}&kooker=${profile.id}`)
-                                }
-                                className="w-full md:w-auto px-8 py-3 bg-[#c1a0fd] text-white font-semibold rounded-[12px] hover:bg-[#b090ed] transition-all shadow-sm text-[15px]"
+                                onClick={() => navigate(`/reservation?service=${service.id}&kooker=${profile.id}`)}
+                                className="px-4 py-2 bg-[#c1a0fd] text-white text-[13px] font-semibold rounded-[10px] hover:bg-[#b090ed] transition-all whitespace-nowrap flex-shrink-0"
                               >
-                                Réserver - {service.price}€ /pers.
+                                Réserver
                               </button>
                             </div>
+                          </div>
+                        </div>
+
+                        {/* Expanded detail section */}
+                        {isOpen && (
+                          <div className="px-5 pb-5 pt-4 border-t border-[#f0f0f0]">
+                            <h4 className="text-[13px] font-semibold text-[#111125] mb-1.5">Description</h4>
+                            <p className="text-[13px] text-[#4b5563] leading-relaxed mb-4">
+                              {service.description}
+                            </p>
+                            <div className="grid grid-cols-2 gap-4 mb-3">
+                              <div>
+                                <span className="block text-[11px] font-semibold text-[#9ca3af] uppercase mb-0.5">Durée</span>
+                                <span className="text-[14px] text-[#111125]">{formatDuration(service.duration)}</span>
+                              </div>
+                              <div>
+                                <span className="block text-[11px] font-semibold text-[#9ca3af] uppercase mb-0.5">Participants max</span>
+                                <span className="text-[14px] text-[#111125]">{service.maxGuests} pers.</span>
+                              </div>
+                            </div>
+                            <p className="text-[12px] text-[#9ca3af]">
+                              Type : {service.types.join(' + ')}
+                              {service.allergens.length > 0 && <> • Contraintes : {service.allergens.join(', ')}</>}
+                            </p>
                           </div>
                         )}
                       </div>
@@ -691,71 +692,82 @@ export default function KookerProfilePage() {
             </section>
 
             {/* ============================================================= */}
-            {/* REVIEWS                                                        */}
+            {/* MESSAGERIE                                                     */}
             {/* ============================================================= */}
-            <section className="pb-12 md:pb-16">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-[24px] md:text-[28px] font-semibold text-[#111125] tracking-[-0.56px]">
-                  Avis ({profile.reviewCount})
+            <section className="mb-10 bg-white rounded-[20px] border border-[#c1a0fd]/40 p-5 md:p-6">
+              <h2 className="text-[18px] font-semibold text-[#111125] mb-2">Messagerie</h2>
+              <p className="text-[14px] text-[#6b7280] mb-4">
+                Vous pouvez envoyer un message à ce Kooker pour poser vos questions ou discuter de votre projet.
+              </p>
+              <button
+                onClick={() => { if (!user) { navigate('/login'); return; } navigate(`/messages?kooker=${profile.id}`); }}
+                className="flex items-center gap-2 px-5 py-2.5 bg-[#c1a0fd] text-white text-[14px] font-semibold rounded-[12px] hover:bg-[#b090ed] transition-all"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+                Envoyer un message
+              </button>
+            </section>
+
+            {/* ============================================================= */}
+            {/* AVIS                                                           */}
+            {/* ============================================================= */}
+            <section className="pb-12">
+              <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+                <h2 className="text-[22px] md:text-[26px] font-semibold text-[#111125] tracking-[-0.5px]">
+                  Avis
                 </h2>
-                <div className="flex items-center gap-2">
-                  <StarRating rating={profile.rating} size={18} />
-                  <span className="text-[16px] font-bold text-[#111125]">
-                    {profile.rating.toFixed(1)}
+                <div className="flex items-center gap-3 text-[15px]">
+                  <span className="flex items-center gap-1.5">
+                    <svg className="w-5 h-5 text-[#facc15]" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                    </svg>
+                    <span className="font-bold text-[#111125]">{profile.rating.toFixed(1)}</span>
+                    <span className="text-[#6b7280]">/ 5</span>
                   </span>
+                  <div className="w-px h-5 bg-[#e0e0e0]" />
+                  <span className="text-[#6b7280]">{profile.reviewCount} avis</span>
                 </div>
               </div>
 
               {profile.reviews.length === 0 ? (
-                <div className="py-12 text-center">
-                  <p className="text-[15px] text-[#6b7280]">
-                    Aucun avis pour le moment.
-                  </p>
-                </div>
+                <p className="text-[14px] text-[#6b7280] py-8 text-center">Aucun avis pour le moment.</p>
               ) : (
+                <>
                 <div className="space-y-4">
-                  {profile.reviews.map((review) => (
-                    <div
-                      key={review.id}
-                      className="bg-[#f8f9fc] rounded-[16px] p-6"
-                    >
-                      <div className="flex items-start gap-3">
-                        {/* Reviewer Avatar */}
-                        <div className="bg-[#ece2fe] w-[48px] h-[48px] rounded-full overflow-hidden flex-shrink-0">
-                          {review.userAvatar ? (
-                            <img
-                              src={review.userAvatar}
-                              alt={review.userName}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-white font-semibold text-[14px]">
-                              {review.userName.charAt(0).toUpperCase()}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Review Content */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between flex-wrap gap-2">
-                            <div>
-                              <span className="text-[15px] font-semibold text-[#111125]">
-                                {review.userName}
-                              </span>
-                              <span className="text-[13px] text-[#9ca3af] ml-2">
-                                {formatDate(review.date)}
-                              </span>
-                            </div>
-                            <StarRating rating={review.rating} size={14} />
+                  {profile.reviews.slice(0, 5).map((review) => (
+                    <div key={review.id} className="bg-[#f8f9fc] rounded-[16px] p-5">
+                      <div className="flex items-start justify-between gap-4 mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-[42px] h-[42px] rounded-full bg-[#ece2fe] flex-shrink-0 overflow-hidden">
+                            {review.userAvatar ? (
+                              <img src={review.userAvatar} alt={review.userName} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-[#7c5cbf] font-semibold text-[15px]">
+                                {review.userName.charAt(0).toUpperCase()}
+                              </div>
+                            )}
                           </div>
-                          <p className="mt-2 text-[14px] text-[#4b5563] leading-relaxed">
-                            {review.comment}
-                          </p>
+                          <div>
+                            <div className="text-[14px] font-semibold text-[#111125]">{review.userName}</div>
+                            <div className="text-[12px] text-[#9ca3af]">{formatDate(review.date)}</div>
+                          </div>
                         </div>
+                        <StarRating rating={review.rating} size={14} />
                       </div>
+                      <p className="text-[13px] text-[#4b5563] leading-relaxed">{review.comment}</p>
                     </div>
                   ))}
                 </div>
+                {profile.reviewCount > 5 && (
+                  <div className="text-center mt-6">
+                    <button className="px-6 py-2.5 border border-[#c1a0fd] text-[#c1a0fd] text-[14px] font-semibold rounded-[12px] hover:bg-[#fdf4ff] transition-all">
+                      Voir tous les avis
+                    </button>
+                  </div>
+                )}
+                </>
               )}
             </section>
           </div>
@@ -763,11 +775,8 @@ export default function KookerProfilePage() {
           {/* ─── Calendar Sidebar ─── */}
           <div className="w-full lg:w-[280px] shrink-0">
             <div className="lg:sticky lg:top-24">
-              {/* ============================================================= */}
-              {/* AVAILABILITY CALENDAR                                          */}
-              {/* ============================================================= */}
               <section>
-                <h2 className="text-[24px] md:text-[28px] font-semibold text-[#111125] tracking-[-0.56px] mb-6">
+                <h2 className="text-[22px] md:text-[26px] font-semibold text-[#111125] tracking-[-0.5px] mb-5">
                   Planning
                 </h2>
 

@@ -390,14 +390,17 @@ export default function KookerProfilePage() {
   // ─── Loading State ──────────────────────────────────────────────────────────
   if (isLoading || !profile) {
     return (
-      <div className="min-h-screen bg-[#f2f4fc] px-4 md:px-8 lg:px-[96px] pt-6">
-        <div className="h-5 w-40 bg-[#e5e7eb] rounded animate-pulse mb-4" />
-        <div className="bg-white rounded-[20px] p-6 flex gap-5">
-          <div className="w-[120px] h-[120px] rounded-[16px] bg-[#e5e7eb] animate-pulse flex-shrink-0" />
-          <div className="flex-1 space-y-3">
-            <div className="h-7 w-48 bg-[#e5e7eb] rounded animate-pulse" />
-            <div className="h-4 w-32 bg-[#e5e7eb] rounded animate-pulse" />
-            <div className="h-16 w-full max-w-[500px] bg-[#e5e7eb] rounded animate-pulse" />
+      <div className="min-h-screen bg-[#f2f4fc]">
+        <div className="w-full h-[180px] md:h-[240px] bg-[#e5e7eb] animate-pulse" />
+        <div className="px-4 md:px-8 lg:px-[96px] mt-4">
+          <div className="h-5 w-40 bg-[#e5e7eb] rounded animate-pulse mb-4" />
+          <div className="bg-white rounded-[20px] p-6 flex gap-5 border border-[#e0e0e0]">
+            <div className="w-[120px] h-[120px] rounded-[16px] bg-[#e5e7eb] animate-pulse flex-shrink-0" />
+            <div className="flex-1 space-y-3">
+              <div className="h-7 w-48 bg-[#e5e7eb] rounded animate-pulse" />
+              <div className="h-4 w-32 bg-[#e5e7eb] rounded animate-pulse" />
+              <div className="h-16 w-full max-w-[500px] bg-[#e5e7eb] rounded animate-pulse" />
+            </div>
           </div>
         </div>
       </div>
@@ -411,13 +414,24 @@ export default function KookerProfilePage() {
   return (
     <div className="min-h-screen bg-[#f2f4fc]">
       {/* ============================================================= */}
+      {/* COVER PHOTO                                                    */}
+      {/* ============================================================= */}
+      <div className="w-full h-[180px] md:h-[240px] overflow-hidden relative">
+        {profile.coverUrl ? (
+          <img src={profile.coverUrl} alt="cover" className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-[#c1a0fd] to-[#8b6fce]" />
+        )}
+      </div>
+
+      {/* ============================================================= */}
       {/* PROFILE HEADER                                                 */}
       {/* ============================================================= */}
-      <div className="px-4 md:px-8 lg:px-[96px] pt-6">
+      <div className="px-4 md:px-8 lg:px-[96px]">
         {/* Back button */}
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-[14px] font-medium text-[#c1a0fd] hover:text-[#b090ed] transition-colors mb-4"
+          className="flex items-center gap-1.5 text-[14px] font-medium text-[#c1a0fd] hover:text-[#b090ed] transition-colors mt-4 mb-4"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />

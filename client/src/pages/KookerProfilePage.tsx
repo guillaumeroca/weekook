@@ -848,7 +848,7 @@ export default function KookerProfilePage() {
                             <div
                               key={di}
                               className="flex-1 flex items-center justify-center relative py-1"
-                              onMouseEnter={() => isAvailable ? setTooltipDate(dateStr) : undefined}
+                              onMouseEnter={() => isCurrentMonth ? setTooltipDate(dateStr) : undefined}
                               onMouseLeave={() => setTooltipDate(null)}
                             >
                               <div
@@ -861,7 +861,7 @@ export default function KookerProfilePage() {
                                 }`}
                               />
 
-                              {/* Tooltip */}
+                              {/* Tooltip — disponible */}
                               {isAvailable && tooltipDate === dateStr && slots && (
                                 <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-50 bg-[#111125] text-white rounded-[8px] px-3 py-2 text-[12px] whitespace-nowrap shadow-lg pointer-events-none">
                                   <div className="font-semibold mb-1">{dayName} {dayDisplay}</div>
@@ -872,6 +872,21 @@ export default function KookerProfilePage() {
                                     </div>
                                   ))}
                                   <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#111125]" />
+                                </div>
+                              )}
+
+                              {/* Tooltip — non disponible */}
+                              {!isAvailable && isCurrentMonth && tooltipDate === dateStr && (
+                                <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+                                  <div className="bg-[#111125] text-white rounded-[8px] px-4 py-2 text-[12px] whitespace-nowrap shadow-xl">
+                                    Aucun créneau disponible
+                                  </div>
+                                  {/* Diamond arrow pointing down */}
+                                  <div className="flex justify-center -mt-1">
+                                    <svg width="14" height="10" viewBox="0 0 14 10" fill="none">
+                                      <polygon points="7,10 0,0 14,0" fill="#111125"/>
+                                    </svg>
+                                  </div>
                                 </div>
                               )}
                             </div>

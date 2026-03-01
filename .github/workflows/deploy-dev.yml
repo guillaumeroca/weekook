@@ -18,5 +18,6 @@ jobs:
           script: |
             cd /var/www/weekook-dev
             git pull origin develop
+            npx prisma generate
             npm run build
             pm2 reload weekook-dev

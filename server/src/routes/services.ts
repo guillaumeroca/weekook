@@ -77,9 +77,14 @@ router.post(
         type,
         priceInCents,
         durationMinutes,
+        minGuests,
         maxGuests,
         allergens,
         constraints,
+        specialty,
+        prepTimeMinutes,
+        ingredientsIncluded,
+        equipmentProvided,
         menuItems,
       } = req.body;
 
@@ -91,9 +96,14 @@ router.post(
           type,
           priceInCents,
           durationMinutes,
+          minGuests: minGuests ?? null,
           maxGuests,
           allergens: allergens || null,
           constraints: constraints || null,
+          specialty: specialty || null,
+          prepTimeMinutes: prepTimeMinutes ?? null,
+          ingredientsIncluded: ingredientsIncluded ?? false,
+          equipmentProvided: equipmentProvided ?? false,
           menuItems: menuItems
             ? {
                 create: menuItems.map(
@@ -171,10 +181,15 @@ router.put(
         type,
         priceInCents,
         durationMinutes,
+        minGuests,
         maxGuests,
         active,
         allergens,
         constraints,
+        specialty,
+        prepTimeMinutes,
+        ingredientsIncluded,
+        equipmentProvided,
         menuItems,
       } = req.body;
 
@@ -184,10 +199,15 @@ router.put(
       if (type !== undefined) data.type = type;
       if (priceInCents !== undefined) data.priceInCents = priceInCents;
       if (durationMinutes !== undefined) data.durationMinutes = durationMinutes;
+      if (minGuests !== undefined) data.minGuests = minGuests;
       if (maxGuests !== undefined) data.maxGuests = maxGuests;
       if (active !== undefined) data.active = active;
       if (allergens !== undefined) data.allergens = allergens;
       if (constraints !== undefined) data.constraints = constraints;
+      if (specialty !== undefined) data.specialty = specialty;
+      if (prepTimeMinutes !== undefined) data.prepTimeMinutes = prepTimeMinutes;
+      if (ingredientsIncluded !== undefined) data.ingredientsIncluded = ingredientsIncluded;
+      if (equipmentProvided !== undefined) data.equipmentProvided = equipmentProvided;
 
       // If menuItems provided, replace all
       if (menuItems !== undefined) {

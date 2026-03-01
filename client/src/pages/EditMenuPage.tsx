@@ -97,17 +97,23 @@ export default function EditMenuPage() {
             setKoursDescription(s.description || '');
             setKoursPrice(String(s.priceInCents / 100));
             setKoursDuration(String(s.durationMinutes || ''));
+            setKoursMinParticipants(s.minGuests ? String(s.minGuests) : '');
             setKoursMaxParticipants(String(s.maxGuests || ''));
+            setKoursEquipmentProvided(s.equipmentProvided || false);
           }
           if (types.includes('KOOK')) {
             setKookTitle(s.title || '');
             setKookDescription(s.description || '');
             setKookPrice(String(s.priceInCents / 100));
             setKookDuration(String(s.durationMinutes || ''));
+            setKookMinConvives(s.minGuests ? String(s.minGuests) : '');
             setKookMaxParticipants(String(s.maxGuests || ''));
+            setKookPrepTime(s.prepTimeMinutes ? String(s.prepTimeMinutes) : '');
+            setKookIngredientsIncluded(s.ingredientsIncluded || false);
           }
 
           setAllergens(Array.isArray(s.allergens) ? s.allergens : JSON.parse(s.allergens || '[]'));
+          setSpecialties(Array.isArray(s.specialty) ? s.specialty : (s.specialty ? JSON.parse(s.specialty) : []));
 
           // Load existing images
           if (s.images && Array.isArray(s.images) && s.images.length > 0) {
@@ -272,8 +278,15 @@ export default function EditMenuPage() {
         type: serviceTypes,
         priceInCents: Math.round(parseFloat(isKours ? koursPrice : kookPrice) * 100),
         durationMinutes: parseInt(isKours ? koursDuration : kookDuration),
+        minGuests: isKours
+          ? (koursMinParticipants ? parseInt(koursMinParticipants) : undefined)
+          : (kookMinConvives ? parseInt(kookMinConvives) : undefined),
         maxGuests: parseInt(isKours ? koursMaxParticipants : kookMaxParticipants),
         allergens: allergens,
+        specialty: specialties.length > 0 ? specialties : [],
+        prepTimeMinutes: !isKours && kookPrepTime ? parseInt(kookPrepTime) : undefined,
+        ingredientsIncluded: !isKours ? kookIngredientsIncluded : undefined,
+        equipmentProvided: isKours ? koursEquipmentProvided : undefined,
         menuItems: (isKours ? koursMenuItems : kookMenuItems).map((item, idx) => ({
           category: 'Plat',
           name: item.name,

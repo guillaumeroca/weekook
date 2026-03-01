@@ -73,10 +73,15 @@ model Service {
   type            Json
   priceInCents    Int       @map("price_in_cents")
   durationMinutes Int       @map("duration_minutes")
-  maxGuests       Int       @default(1) @map("max_guests")
-  active          Boolean   @default(true)
-  allergens       Json?
-  constraints     Json?
+  minGuests           Int?      @map("min_guests")
+  maxGuests           Int       @default(1) @map("max_guests")
+  active              Boolean   @default(true)
+  allergens           Json?
+  constraints         Json?
+  specialty           Json?
+  prepTimeMinutes     Int?      @map("prep_time_minutes")
+  ingredientsIncluded Boolean   @default(false) @map("ingredients_included")
+  equipmentProvided   Boolean   @default(false) @map("equipment_provided")
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 

@@ -219,8 +219,15 @@ export default function CreateMenuPage() {
           type: [type],
           priceInCents: Math.round(parseFloat(isKours ? koursPrice : kookPrice) * 100),
           durationMinutes: parseInt(isKours ? koursDuration : kookDuration),
+          minGuests: isKours
+            ? (koursMinParticipants ? parseInt(koursMinParticipants) : undefined)
+            : (kookMinConvives ? parseInt(kookMinConvives) : undefined),
           maxGuests: parseInt(isKours ? koursMaxParticipants : kookMaxParticipants),
           allergens: allergens,
+          specialty: specialties.length > 0 ? specialties : undefined,
+          prepTimeMinutes: !isKours && kookPrepTime ? parseInt(kookPrepTime) : undefined,
+          ingredientsIncluded: !isKours ? kookIngredientsIncluded : undefined,
+          equipmentProvided: isKours ? koursEquipmentProvided : undefined,
           menuItems: (isKours ? koursMenuItems : kookMenuItems).map((item, idx) => ({
             category: 'Plat',
             name: item.name,

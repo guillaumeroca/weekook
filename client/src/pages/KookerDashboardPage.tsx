@@ -846,7 +846,7 @@ const KookerDashboardPage = () => {
 
                             <div className="flex items-center gap-2 mt-4 pt-4 border-t border-[#e0e2ef]">
                               <button
-                                onClick={() => navigate(`/edit-menu/${service.id}`)}
+                                onClick={() => navigate(`/kooker-dashboard/menu/${service.id}/editer`)}
                                 className="flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium text-[#111125]/60 hover:text-[#c1a0fd] bg-[#f2f4fc] hover:bg-[#c1a0fd]/10 rounded-[10px] transition-all"
                               >
                                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">

@@ -88,7 +88,7 @@ export default function EditMenuPage() {
         const res = await api.get<any>(`/services/${id}`);
         if (res.success && res.data) {
           const s = res.data;
-          const types = JSON.parse(s.type || '[]');
+          const types: string[] = Array.isArray(s.type) ? s.type : JSON.parse(s.type || '[]');
           setServiceTypes(types);
 
           // Populate KOURS or KOOK fields based on type
@@ -107,7 +107,7 @@ export default function EditMenuPage() {
             setKookMaxParticipants(String(s.maxGuests || ''));
           }
 
-          setAllergens(JSON.parse(s.allergens || '[]'));
+          setAllergens(Array.isArray(s.allergens) ? s.allergens : JSON.parse(s.allergens || '[]'));
 
           // Load existing images
           if (s.images && Array.isArray(s.images) && s.images.length > 0) {

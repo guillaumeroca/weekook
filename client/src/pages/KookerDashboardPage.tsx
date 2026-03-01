@@ -32,7 +32,8 @@ interface Service {
   id: number;
   title: string;
   description?: string;
-  type: string;
+  type: string | string[];
+  allergens?: unknown;
   priceInCents: number;
   durationMinutes: number;
   maxGuests: number;
@@ -192,6 +193,7 @@ const KookerDashboardPage = () => {
   const [availabilitiesLoading, setAvailabilitiesLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileSaving, setProfileSaving] = useState(false);
+  const [expandedServiceId, setExpandedServiceId] = useState<number | null>(null);
 
   const kookerProfileId = user?.kookerProfileId;
 
@@ -768,108 +770,149 @@ const KookerDashboardPage = () => {
                 ) : (
                   services.map(service => {
                     const serviceTypes = safeParseJson(service.type);
-                    const typeLabel = serviceTypes[0] || service.type;
-                    const imageUrl = service.images && service.images.length > 0 ? service.images[0].url : '';
+                    const allergens = safeParseJson(service.allergens);
+                    const isKook = serviceTypes.includes('KOOK');
+                    const isKours = serviceTypes.includes('KOURS');
+                    const typeLabel = serviceTypes[0] || '';
+                    const allImages = service.images || [];
+                    const mainImage = allImages[0]?.url || '';
+                    const thumbImages = allImages.slice(1);
+                    const isExpanded = expandedServiceId === service.id;
 
                     return (
                       <div
                         key={service.id}
-                        className={`bg-white rounded-[20px] p-5 md:p-6 shadow-sm transition-all hover:shadow-md ${
-                          service.active ? '' : 'opacity-70'
-                        }`}
+                        className="bg-white rounded-[20px] shadow-sm overflow-hidden"
                       >
-                        <div className="flex flex-col md:flex-row gap-5">
-                          {/* Image placeholder */}
-                          <div className="w-full md:w-[160px] h-[120px] md:h-[120px] rounded-[14px] bg-gradient-to-br from-[#c1a0fd]/15 to-[#c1a0fd]/5 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                            {imageUrl ? (
-                              <img src={imageUrl} alt={service.title} className="w-full h-full object-cover" />
-                            ) : (
-                              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M4 24L11.3333 16.6667L16 21.3333L21.3333 16L28 22.6667" stroke="#c1a0fd" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.4"/>
-                                <circle cx="11" cy="11" r="3" stroke="#c1a0fd" strokeWidth="1.5" opacity="0.4"/>
-                              </svg>
+                        {/* ── Header row (always visible, clickable) ── */}
+                        <div
+                          className="flex items-stretch cursor-pointer"
+                          onClick={() => setExpandedServiceId(isExpanded ? null : service.id)}
+                        >
+                          {/* Image */}
+                          <div className="relative w-[130px] md:w-[160px] flex-shrink-0 min-h-[130px]">
+                            <div className="w-full h-full bg-gradient-to-br from-[#c1a0fd]/15 to-[#c1a0fd]/5 overflow-hidden">
+                              {mainImage ? (
+                                <img
+                                  src={mainImage}
+                                  alt={service.title}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M4 24L11.3333 16.6667L16 21.3333L21.3333 16L28 22.6667" stroke="#c1a0fd" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.4"/>
+                                    <circle cx="11" cy="11" r="3" stroke="#c1a0fd" strokeWidth="1.5" opacity="0.4"/>
+                                  </svg>
+                                </div>
+                              )}
+                            </div>
+                            {/* KOOK/KOURS badges */}
+                            <div className="absolute top-2 left-2 flex gap-1">
+                              {isKook && <span className="px-2 py-0.5 bg-[#c1a0fd] text-white text-[10px] font-bold rounded-[6px]">KOOK</span>}
+                              {isKours && <span className="px-2 py-0.5 bg-[#c1a0fd] text-white text-[10px] font-bold rounded-[6px]">KOURS</span>}
+                            </div>
+                            {/* Allergen overlay */}
+                            {allergens.length > 0 && (
+                              <div className="absolute bottom-2 left-1 right-1 flex flex-wrap gap-1">
+                                {allergens.map((a: string) => (
+                                  <span key={a} className="px-1.5 py-0.5 bg-green-500 text-white text-[9px] font-medium rounded-[4px]">✓ {a}</span>
+                                ))}
+                              </div>
+                            )}
+                            {/* Inactif overlay */}
+                            {!service.active && (
+                              <div className="absolute inset-0 bg-black/25 flex items-center justify-center">
+                                <span className="px-2 py-1 bg-[#828294] text-white text-[11px] font-semibold rounded-[6px]">Inactif</span>
+                              </div>
                             )}
                           </div>
 
-                          <div className="flex-1 min-w-0">
-                            <div className="flex flex-wrap items-start justify-between gap-3 mb-2">
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <h4 className="text-[16px] font-semibold text-[#111125]">{service.title}</h4>
-                                  <span className={`px-2 py-0.5 rounded-[6px] text-[11px] font-medium ${
-                                    service.active
-                                      ? 'bg-green-50 text-green-600'
-                                      : 'bg-[#f2f4fc] text-[#111125]/40'
-                                  }`}>
-                                    {service.active ? 'Active' : 'Inactive'}
-                                  </span>
-                                </div>
-                                <span className="text-[12px] text-[#c1a0fd] bg-[#c1a0fd]/10 px-2 py-0.5 rounded-[6px] font-medium">{typeLabel}</span>
-                              </div>
-
-                              <div className="flex items-center gap-2">
-                                {/* Toggle Active */}
-                                <button
-                                  onClick={() => handleToggleService(service.id)}
-                                  className={`relative w-[44px] h-[24px] rounded-full transition-colors ${
-                                    service.active ? 'bg-green-500' : 'bg-[#e0e2ef]'
-                                  }`}
-                                >
-                                  <div className={`absolute top-[2px] w-[20px] h-[20px] bg-white rounded-full shadow-sm transition-transform ${
-                                    service.active ? 'left-[22px]' : 'left-[2px]'
-                                  }`} />
-                                </button>
+                          {/* Content */}
+                          <div className="flex-1 flex items-center justify-between gap-3 px-4 py-4 min-w-0">
+                            <div className="min-w-0">
+                              <h4 className="text-[15px] font-semibold text-[#111125] mb-1 truncate">{service.title}</h4>
+                              {typeLabel && (
+                                <span className="text-[11px] text-[#c1a0fd] bg-[#c1a0fd]/10 px-2 py-0.5 rounded-[6px] font-medium">{typeLabel}</span>
+                              )}
+                              <p className="text-[14px] font-semibold text-[#111125] mt-2">
+                                À partir de {Math.round(service.priceInCents / 100)}€
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); navigate(`/kooker-dashboard/menu/${service.id}/editer`); }}
+                                className="px-3 py-2 bg-[#c1a0fd] hover:bg-[#b090ed] text-white text-[12px] font-semibold rounded-[10px] transition-all"
+                              >
+                                Modifier
+                              </button>
+                              <div className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>
+                                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                  <path d="M5 7.5L10 12.5L15 7.5" stroke="#111125" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.4"/>
+                                </svg>
                               </div>
                             </div>
+                          </div>
+                        </div>
 
-                            {service.description && (
-                              <p className="text-[13px] text-[#111125]/60 leading-relaxed mb-3 line-clamp-2">{service.description}</p>
+                        {/* ── Expanded content ── */}
+                        {isExpanded && (
+                          <div className="border-t border-[#e0e2ef]">
+                            {/* Thumbnails */}
+                            {thumbImages.length > 0 && (
+                              <div className="flex gap-2 px-4 pt-4">
+                                {thumbImages.map((img, i) => (
+                                  <div key={i} className="w-[60px] h-[60px] rounded-[10px] overflow-hidden flex-shrink-0 bg-[#f2f4fc]">
+                                    <img
+                                      src={img.url}
+                                      alt=""
+                                      className="w-full h-full object-cover"
+                                      onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
                             )}
 
-                            <div className="flex flex-wrap items-center gap-4 text-[13px]">
-                              <span className="font-bold text-[#111125]">{formatPrice(service.priceInCents)}<span className="font-normal text-[#111125]/40"> / pers.</span></span>
-                              <span className="text-[#111125]/50 flex items-center gap-1">
-                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <circle cx="7" cy="7" r="5.25" stroke="currentColor" strokeWidth="1.1"/>
-                                  <path d="M7 4.08337V7.00004L8.75 8.75004" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
-                                </svg>
-                                {service.durationMinutes} min
-                              </span>
-                              <span className="text-[#111125]/50 flex items-center gap-1">
-                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <path d="M9.91667 12.25V11.0833C9.91667 10.4645 9.67083 9.871 9.23325 9.43342C8.79567 8.99583 8.20217 8.75 7.58333 8.75H3.5C2.88116 8.75 2.28767 8.99583 1.85008 9.43342C1.4125 9.871 1.16667 10.4645 1.16667 11.0833V12.25" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
-                                  <circle cx="5.54167" cy="4.08333" r="2.33333" stroke="currentColor" strokeWidth="1.1"/>
-                                </svg>
-                                Max {service.maxGuests} convive{service.maxGuests > 1 ? 's' : ''}
-                              </span>
+                            {/* Details */}
+                            <div className="px-4 pt-4 pb-2">
+                              {service.description && (
+                                <p className="text-[13px] text-[#111125]/60 leading-relaxed mb-4">{service.description}</p>
+                              )}
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <p className="text-[11px] text-[#111125]/40 font-medium mb-0.5">Durée</p>
+                                  <p className="text-[13px] font-semibold text-[#111125]">{service.durationMinutes} min</p>
+                                </div>
+                                <div>
+                                  <p className="text-[11px] text-[#111125]/40 font-medium mb-0.5">Convives max</p>
+                                  <p className="text-[13px] font-semibold text-[#111125]">{service.maxGuests} pers.</p>
+                                </div>
+                              </div>
                             </div>
 
-                            <div className="flex items-center gap-2 mt-4 pt-4 border-t border-[#e0e2ef]">
+                            {/* Bottom action bar */}
+                            <div className="flex items-center gap-2 px-4 pb-4 pt-3 mt-2 border-t border-[#e0e2ef]">
                               <button
-                                onClick={() => navigate(`/kooker-dashboard/menu/${service.id}/editer`)}
-                                className="flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium text-[#111125]/60 hover:text-[#c1a0fd] bg-[#f2f4fc] hover:bg-[#c1a0fd]/10 rounded-[10px] transition-all"
+                                onClick={() => handleToggleService(service.id)}
+                                className={`flex-1 h-[40px] text-[13px] font-semibold rounded-[10px] border transition-all ${
+                                  service.active
+                                    ? 'border-orange-400 text-orange-500 hover:bg-orange-50'
+                                    : 'border-green-500 text-green-600 hover:bg-green-50'
+                                }`}
                               >
-                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <path d="M10.0833 1.75L12.25 3.91667L4.66667 11.5H2.5V9.33333L10.0833 1.75Z" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"/>
-                                </svg>
-                                Modifier
+                                {service.active ? 'Désactiver' : 'Activer'}
                               </button>
                               <button
                                 onClick={() => handleDeleteService(service.id)}
-                                className="flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100 rounded-[10px] transition-all"
+                                className="h-[40px] px-4 text-[13px] font-semibold text-red-500 border border-red-400 hover:bg-red-50 rounded-[10px] transition-all flex-shrink-0"
                               >
-                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <path d="M1.75 3.5H12.25" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
-                                  <path d="M4.66667 3.5V2.33333C4.66667 1.96514 4.96514 1.66667 5.33333 1.66667H8.66667C9.03486 1.66667 9.33333 1.96514 9.33333 2.33333V3.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
-                                  <path d="M11.0833 3.5V11.6667C11.0833 12.0349 10.7849 12.3333 10.4167 12.3333H3.58333C3.21514 12.3333 2.91667 12.0349 2.91667 11.6667V3.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
-                                  <path d="M5.83333 6.41663V9.91663" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
-                                  <path d="M8.16667 6.41663V9.91663" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
-                                </svg>
                                 Supprimer
                               </button>
                             </div>
                           </div>
-                        </div>
+                        )}
                       </div>
                     );
                   })

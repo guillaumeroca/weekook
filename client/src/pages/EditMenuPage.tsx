@@ -197,21 +197,53 @@ export default function EditMenuPage() {
 
   // ────────────────────────── Photo Helpers ──────────────────────────
 
+  const compressImage = (file: File): Promise<File> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (e) => {
+        const img = new Image();
+        img.src = e.target?.result as string;
+        img.onload = () => {
+          const MAX_WIDTH = 1200;
+          let w = img.width;
+          let h = img.height;
+          if (w > MAX_WIDTH) { h = Math.round((h * MAX_WIDTH) / w); w = MAX_WIDTH; }
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) { reject(new Error('canvas')); return; }
+          ctx.drawImage(img, 0, 0, w, h);
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) { reject(new Error('blob')); return; }
+              resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }));
+            },
+            'image/jpeg', 0.82
+          );
+        };
+        img.onerror = reject;
+      };
+      reader.onerror = reject;
+    });
+
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    e.target.value = '';
     try {
+      const compressed = await compressImage(file);
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', compressed);
       const res = await api.upload<{ url: string }>('/upload', formData);
       if (res.success && res.data?.url) {
         setPhotos((prev) => [...prev, res.data!.url]);
+      } else {
+        toast.error('Erreur lors de l\'upload de la photo');
       }
     } catch {
-      const url = URL.createObjectURL(file);
-      setPhotos((prev) => [...prev, url]);
+      toast.error('Impossible d\'uploader la photo. Réessayez.');
     }
-    e.target.value = '';
   };
 
   const removePhoto = (idx: number) => {
@@ -237,11 +269,11 @@ export default function EditMenuPage() {
       const data = {
         title: isKours ? koursTitle : kookTitle,
         description: isKours ? koursDescription : kookDescription,
-        type: JSON.stringify(serviceTypes),
+        type: serviceTypes,
         priceInCents: Math.round(parseFloat(isKours ? koursPrice : kookPrice) * 100),
         durationMinutes: parseInt(isKours ? koursDuration : kookDuration),
         maxGuests: parseInt(isKours ? koursMaxParticipants : kookMaxParticipants),
-        allergens: JSON.stringify(allergens),
+        allergens: allergens,
         menuItems: (isKours ? koursMenuItems : kookMenuItems).map((item, idx) => ({
           category: 'Plat',
           name: item.name,
@@ -253,8 +285,14 @@ export default function EditMenuPage() {
       await api.put(`/services/${id}`, data);
       toast.success('Service modifié avec succès !');
       navigate('/kooker-dashboard');
-    } catch {
-      toast.error('Erreur lors de la modification');
+    } catch (err: unknown) {
+      const e = err as { error?: string; details?: Record<string, string[]> };
+      if (e?.details) {
+        const msgs = Object.entries(e.details).map(([k, v]) => `${k}: ${v.join(', ')}`).join(' | ');
+        toast.error(`Validation: ${msgs}`);
+      } else {
+        toast.error(e?.error || 'Erreur lors de la modification');
+      }
     } finally {
       setIsSubmitting(false);
     }

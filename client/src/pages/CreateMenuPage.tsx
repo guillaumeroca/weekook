@@ -142,21 +142,55 @@ export default function CreateMenuPage() {
 
   // ────────────────────────── Photo Helpers ──────────────────────────
 
+  const compressImage = (file: File): Promise<File> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (e) => {
+        const img = new Image();
+        img.src = e.target?.result as string;
+        img.onload = () => {
+          const MAX_WIDTH = 1200;
+          let w = img.width;
+          let h = img.height;
+          if (w > MAX_WIDTH) { h = Math.round((h * MAX_WIDTH) / w); w = MAX_WIDTH; }
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) { reject(new Error('canvas')); return; }
+          ctx.drawImage(img, 0, 0, w, h);
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) { reject(new Error('blob')); return; }
+              resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }));
+            },
+            'image/jpeg',
+            0.82
+          );
+        };
+        img.onerror = reject;
+      };
+      reader.onerror = reject;
+    });
+
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    e.target.value = '';
     try {
+      const compressed = await compressImage(file);
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', compressed);
       const res = await api.upload<{ url: string }>('/upload', formData);
       if (res.success && res.data?.url) {
         setPhotos((prev) => [...prev, res.data!.url]);
+      } else {
+        toast.error('Erreur lors de l\'upload de la photo');
       }
     } catch {
-      const url = URL.createObjectURL(file);
-      setPhotos((prev) => [...prev, url]);
+      toast.error('Impossible d\'uploader la photo. Réessayez.');
     }
-    e.target.value = '';
   };
 
   const removePhoto = (idx: number) => {

@@ -653,6 +653,7 @@ export default function KookerProfilePage() {
                                           src={img.url}
                                           alt={img.alt}
                                           className="w-full h-full object-cover transition-transform duration-300 group-hover/img:scale-110"
+                                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                                         />
                                         <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/20 transition-colors flex items-center justify-center">
                                           <svg

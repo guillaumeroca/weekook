@@ -391,7 +391,6 @@ export default function KookerProfilePage() {
   if (isLoading || !profile) {
     return (
       <div className="min-h-screen bg-[#f2f4fc]">
-        <div className="w-full h-[180px] md:h-[240px] bg-[#e5e7eb] animate-pulse" />
         <div className="px-4 md:px-8 lg:px-[96px] mt-4">
           <div className="h-5 w-40 bg-[#e5e7eb] rounded animate-pulse mb-4" />
           <div className="bg-white rounded-[20px] p-6 flex gap-5 border border-[#e0e0e0]">
@@ -413,17 +412,6 @@ export default function KookerProfilePage() {
   // ─── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#f2f4fc]">
-      {/* ============================================================= */}
-      {/* COVER PHOTO                                                    */}
-      {/* ============================================================= */}
-      <div className="w-full h-[180px] md:h-[240px] overflow-hidden relative">
-        {profile.coverUrl ? (
-          <img src={profile.coverUrl} alt="cover" className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full bg-gradient-to-br from-[#c1a0fd] to-[#8b6fce]" />
-        )}
-      </div>
-
       {/* ============================================================= */}
       {/* PROFILE HEADER                                                 */}
       {/* ============================================================= */}

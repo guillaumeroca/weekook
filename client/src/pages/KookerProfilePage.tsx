@@ -863,30 +863,33 @@ export default function KookerProfilePage() {
 
                               {/* Tooltip — disponible */}
                               {isAvailable && tooltipDate === dateStr && slots && (
-                                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-50 bg-[#111125] text-white rounded-[8px] px-3 py-2 text-[12px] whitespace-nowrap shadow-lg pointer-events-none">
-                                  <div className="font-semibold mb-1">{dayName} {dayDisplay}</div>
-                                  {slots.map((s, si) => (
-                                    <div key={si} className="flex items-center gap-1">
-                                      <span className="text-green-400">✓</span>
-                                      <span>{getSlotLabel(s.startTime)}</span>
-                                    </div>
-                                  ))}
-                                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#111125]" />
+                                <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col items-center">
+                                  <div className="bg-white border border-[#e5e7eb] rounded-[10px] px-4 py-3 text-[13px] whitespace-nowrap shadow-lg text-[#111125]">
+                                    <div className="font-bold mb-2">{dayName} {dayDisplay}</div>
+                                    {slots.map((s, si) => (
+                                      <div key={si} className="flex items-center gap-2 text-[#374151]">
+                                        <span className="text-[#111125]">✓</span>
+                                        <span>{getSlotLabel(s.startTime)}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  {/* Diamond arrow */}
+                                  <svg width="16" height="10" viewBox="0 0 16 10" className="-mt-px">
+                                    <polygon points="8,10 0,0 16,0" fill="white"/>
+                                    <polyline points="0,0 8,10 16,0" fill="none" stroke="#e5e7eb" strokeWidth="1"/>
+                                  </svg>
+                                  <div className="w-2.5 h-2.5 bg-[#111125] rotate-45 -mt-[18px]" />
                                 </div>
                               )}
 
                               {/* Tooltip — non disponible */}
                               {!isAvailable && isCurrentMonth && tooltipDate === dateStr && (
-                                <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
-                                  <div className="bg-[#111125] text-white rounded-[8px] px-4 py-2 text-[12px] whitespace-nowrap shadow-xl">
+                                <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col items-center">
+                                  <div className="bg-white border border-[#e5e7eb] rounded-[10px] px-4 py-2.5 text-[13px] whitespace-nowrap shadow-lg text-[#111125]">
                                     Aucun créneau disponible
                                   </div>
-                                  {/* Diamond arrow pointing down */}
-                                  <div className="flex justify-center -mt-1">
-                                    <svg width="14" height="10" viewBox="0 0 14 10" fill="none">
-                                      <polygon points="7,10 0,0 14,0" fill="#111125"/>
-                                    </svg>
-                                  </div>
+                                  {/* Diamond arrow */}
+                                  <div className="w-2.5 h-2.5 bg-[#111125] rotate-45 -mt-[5px]" />
                                 </div>
                               )}
                             </div>

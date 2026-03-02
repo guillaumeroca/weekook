@@ -155,6 +155,9 @@ export default function PlanningTab({ availabilities, availabilitiesLoading, onS
   const [showConfirmAvail, setShowConfirmAvail] = useState(false);
   const [showConfirmUnavail, setShowConfirmUnavail] = useState(false);
 
+  // ── Tooltip survol calendrier vue
+  const [tooltipDate, setTooltipDate] = useState<string | null>(null);
+
   // ── Construit Map<dateKey, Set<slotIndex>> depuis les données API
   const initFromApi = useMemo(() => {
     const map = new Map<string, Set<number>>();
@@ -353,8 +356,17 @@ export default function PlanningTab({ availabilities, availabilitiesLoading, onS
             const tod = isToday(viewY, viewM, day);
             const key = dateKey(viewY, viewM, day);
             const available = apiAvailableDates.has(key);
+            const daySlots = initFromApi.get(key);
+            const dayDate = new Date(viewY, viewM, day);
+            const dayName = DAYS_FULL_FR[dayDate.getDay()];
+            const monthName = MONTHS_FR[viewM].toLowerCase();
             return (
-              <div key={day} className="h-[68px] border-b border-[#e0e2ef]/40 flex flex-col items-center justify-center gap-1.5">
+              <div
+                key={day}
+                className="h-[68px] border-b border-[#e0e2ef]/40 flex flex-col items-center justify-center gap-1.5 relative"
+                onMouseEnter={() => setTooltipDate(key)}
+                onMouseLeave={() => setTooltipDate(null)}
+              >
                 <span className={`text-[14px] font-medium leading-none ${
                   past ? 'text-[#111125]/30' : tod ? 'text-[#c1a0fd] font-bold' : 'text-[#111125]'
                 }`}>{day}</span>
@@ -362,6 +374,28 @@ export default function PlanningTab({ availabilities, availabilitiesLoading, onS
                   ? <div className="w-[16px] h-[16px] rounded-full bg-green-500" />
                   : <div className={`w-[16px] h-[16px] rounded-full ${past ? 'bg-[#e9eaec]' : 'bg-[#d1d5db]'}`} />
                 }
+
+                {/* Tooltip survol */}
+                {tooltipDate === key && !past && (
+                  <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col items-center">
+                    <div className="bg-white border border-[#e5e7eb] rounded-[10px] px-4 py-3 text-[13px] whitespace-nowrap shadow-lg text-[#111125]">
+                      {available && daySlots ? (
+                        <>
+                          <div className="font-bold mb-2 capitalize">{dayName} {day} {monthName}</div>
+                          {Array.from(daySlots).sort().map(idx => (
+                            <div key={idx} className="flex items-center gap-2 text-[#374151]">
+                              <span className="text-[#111125]">✓</span>
+                              <span>{SLOTS[idx].label} ({SLOTS[idx].startTime}-{SLOTS[idx].endTime})</span>
+                            </div>
+                          ))}
+                        </>
+                      ) : (
+                        <span>Aucun créneau disponible</span>
+                      )}
+                    </div>
+                    <div className="w-2.5 h-2.5 bg-[#111125] rotate-45 -mt-[5px]" />
+                  </div>
+                )}
               </div>
             );
           })}

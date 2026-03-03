@@ -55,6 +55,12 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
               id: true,
               priceInCents: true,
               type: true,
+              title: true,
+              description: true,
+              specialties: true,
+              menuItems: {
+                select: { name: true, description: true },
+              },
             },
           },
         },
@@ -77,13 +83,22 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
         const address = (k.address || '').toLowerCase();
         const specialtiesStr = JSON.stringify(k.specialties || []).toLowerCase();
         const typeStr = JSON.stringify(k.type || []).toLowerCase();
+        const servicesStr = k.services.map((s: any) =>
+          [
+            s.title || '',
+            s.description || '',
+            JSON.stringify(s.specialties || []),
+            (s.menuItems || []).map((m: any) => `${m.name || ''} ${m.description || ''}`).join(' '),
+          ].join(' ')
+        ).join(' ').toLowerCase();
         return (
           fullName.includes(searchLower) ||
           bio.includes(searchLower) ||
           kCity.includes(searchLower) ||
           address.includes(searchLower) ||
           specialtiesStr.includes(searchLower) ||
-          typeStr.includes(searchLower)
+          typeStr.includes(searchLower) ||
+          servicesStr.includes(searchLower)
         );
       });
     }

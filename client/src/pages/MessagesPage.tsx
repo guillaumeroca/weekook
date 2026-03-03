@@ -95,9 +95,10 @@ export default function MessagesPage() {
   const [sending, setSending] = useState(false);
   // Pour les kookers : filtre de contexte
   const [kookerFilter, setKookerFilter] = useState<'user' | 'kooker'>('user');
-  // Hover pour afficher les actions
-  const [hoveredMsgId, setHoveredMsgId] = useState<number | null>(null);
-  const [hoveredConvId, setHoveredConvId] = useState<number | null>(null);
+  // Confirmation suppression
+  const [pendingDelete, setPendingDelete] = useState<
+    { type: 'message'; id: number } | { type: 'conversation'; id: number } | null
+  >(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -223,26 +224,33 @@ export default function MessagesPage() {
     }
   };
 
-  // ── Supprimer un message
-  const handleDeleteMessage = async (messageId: number) => {
-    try {
-      await api.delete(`/messages/${messageId}`);
-      setMessages(prev => prev.filter(m => m.id !== messageId));
-      fetchConversations();
-    } catch (err: any) {
-      toast.error(err?.error || 'Erreur lors de la suppression');
-    }
+  // ── Demander confirmation avant suppression
+  const handleDeleteMessage = (messageId: number) => {
+    setPendingDelete({ type: 'message', id: messageId });
   };
 
-  // ── Supprimer une conversation entière
-  const handleDeleteConversation = async (partnerId: number) => {
+  const handleDeleteConversation = (partnerId: number) => {
+    setPendingDelete({ type: 'conversation', id: partnerId });
+  };
+
+  // ── Confirmer et exécuter la suppression
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
     try {
-      await api.delete(`/messages/conversation/${partnerId}`);
-      setConversations(prev => prev.filter(c => c.user.id !== partnerId));
-      if (activeConv?.user.id === partnerId) setActiveConv(null);
-      refreshUnread();
+      if (pendingDelete.type === 'message') {
+        await api.delete(`/messages/${pendingDelete.id}`);
+        setMessages(prev => prev.filter(m => m.id !== pendingDelete.id));
+        fetchConversations();
+      } else {
+        await api.delete(`/messages/conversation/${pendingDelete.id}`);
+        setConversations(prev => prev.filter(c => c.user.id !== pendingDelete.id));
+        if (activeConv?.user.id === pendingDelete.id) setActiveConv(null);
+        refreshUnread();
+      }
     } catch (err: any) {
       toast.error(err?.error || 'Erreur lors de la suppression');
+    } finally {
+      setPendingDelete(null);
     }
   };
 
@@ -326,11 +334,9 @@ export default function MessagesPage() {
                 filteredConversations.map(conv => (
                   <div
                     key={conv.user.id}
-                    className={`relative flex items-center gap-3 px-4 py-3.5 border-b border-[#f0f0f0] last:border-0 transition-colors ${
+                    className={`group relative flex items-center gap-3 px-4 py-3.5 border-b border-[#f0f0f0] last:border-0 transition-colors ${
                       activeConv?.user.id === conv.user.id ? 'bg-[#f3ecff]' : 'hover:bg-[#fafafa]'
                     }`}
-                    onMouseEnter={() => setHoveredConvId(conv.user.id)}
-                    onMouseLeave={() => setHoveredConvId(null)}
                   >
                     <button
                       onClick={() => openConversation(conv)}
@@ -363,7 +369,7 @@ export default function MessagesPage() {
                     </button>
                     <button
                       onClick={e => { e.stopPropagation(); handleDeleteConversation(conv.user.id); }}
-                      className={`flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#fee2e2] text-[#9ca3af] hover:text-[#ef4444] transition-colors ${hoveredConvId === conv.user.id ? 'opacity-100' : 'lg:opacity-0 lg:pointer-events-none'}`}
+                      className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#fee2e2] text-[#9ca3af] hover:text-[#ef4444] transition-all opacity-100 lg:opacity-0 lg:pointer-events-none lg:group-hover:opacity-100 lg:group-hover:pointer-events-auto"
                       title="Supprimer la conversation"
                     >
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -440,16 +446,12 @@ export default function MessagesPage() {
                                 <div className="flex-1 h-px bg-[#e5e7eb]" />
                               </div>
                             )}
-                            <div
-                              className={`flex items-end gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}
-                              onMouseEnter={() => isMe && setHoveredMsgId(msg.id)}
-                              onMouseLeave={() => setHoveredMsgId(null)}
-                            >
+                            <div className={`group flex items-end gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
                               {!isMe && <Avatar user={msg.sender} size={28} />}
                               {isMe && (
                                 <button
                                   onClick={() => handleDeleteMessage(msg.id)}
-                                  className={`flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full hover:bg-[#fee2e2] text-[#9ca3af] hover:text-[#ef4444] transition-all mb-5 ${hoveredMsgId === msg.id ? 'opacity-100' : 'lg:opacity-0 lg:pointer-events-none'}`}
+                                  className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full hover:bg-[#fee2e2] text-[#9ca3af] hover:text-[#ef4444] transition-all mb-5 opacity-100 lg:opacity-0 lg:pointer-events-none lg:group-hover:opacity-100 lg:group-hover:pointer-events-auto"
                                   title="Supprimer"
                                 >
                                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -540,6 +542,41 @@ export default function MessagesPage() {
 
         </div>
       </div>
+
+      {/* ════════ MODAL CONFIRMATION SUPPRESSION ════════ */}
+      {pendingDelete && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-[20px] p-6 w-full max-w-sm shadow-xl">
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-[#fee2e2] mx-auto mb-4">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+              </svg>
+            </div>
+            <h3 className="text-[17px] font-bold text-[#111125] text-center mb-2">
+              {pendingDelete.type === 'message' ? 'Supprimer ce message ?' : 'Supprimer cette conversation ?'}
+            </h3>
+            <p className="text-[13px] text-[#6b7280] text-center mb-6">
+              {pendingDelete.type === 'message'
+                ? 'Ce message sera définitivement supprimé.'
+                : 'Tous les messages de cette conversation seront définitivement supprimés.'}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setPendingDelete(null)}
+                className="flex-1 py-2.5 rounded-[12px] border border-[#e5e7eb] text-[14px] font-semibold text-[#374151] hover:bg-[#f9fafb] transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="flex-1 py-2.5 rounded-[12px] bg-[#ef4444] text-white text-[14px] font-semibold hover:bg-[#dc2626] transition-colors"
+              >
+                Supprimer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -96,6 +96,7 @@ export default function MessagesPage() {
   const [kookerFilter, setKookerFilter] = useState<'user' | 'kooker'>('user');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -133,9 +134,10 @@ export default function MessagesPage() {
     }
   }, [toUserId, conversations]);
 
-  // ── Scroll automatique vers le bas
+  // ── Scroll automatique vers le bas (dans le conteneur uniquement)
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const container = messagesContainerRef.current;
+    if (container) container.scrollTop = container.scrollHeight;
   };
 
   useEffect(() => {
@@ -363,7 +365,7 @@ export default function MessagesPage() {
                 </div>
 
                 {/* Messages */}
-                <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-2">
+                <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-2">
                   {msgLoading ? (
                     <div className="flex-1 flex items-center justify-center">
                       <div className="w-6 h-6 border-2 border-[#c1a0fd] border-t-transparent rounded-full animate-spin" />

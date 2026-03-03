@@ -100,23 +100,14 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Messagerie — corbeilles visibles uniquement au survol sur desktop */
+/* Messagerie — corbeilles */
 .msg-delete-btn,
 .conv-delete-btn {
-  opacity: 1; /* toujours visible sur mobile */
+  opacity: 0.35;
   transition: opacity 0.15s, background-color 0.15s, color 0.15s;
 }
 
-@media (min-width: 1024px) {
-  .msg-delete-btn,
-  .conv-delete-btn {
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  .msg-row:hover .msg-delete-btn,
-  .conv-row:hover .conv-delete-btn {
-    opacity: 1;
-    pointer-events: auto;
-  }
+.msg-delete-btn:hover,
+.conv-delete-btn:hover {
+  opacity: 1;
 }

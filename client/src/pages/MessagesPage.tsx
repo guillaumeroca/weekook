@@ -361,17 +361,15 @@ export default function MessagesPage() {
                         </span>
                       )}
                     </button>
-                    {hoveredConvId === conv.user.id && (
-                      <button
-                        onClick={e => { e.stopPropagation(); handleDeleteConversation(conv.user.id); }}
-                        className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#fee2e2] text-[#9ca3af] hover:text-[#ef4444] transition-colors"
-                        title="Supprimer la conversation"
-                      >
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
-                        </svg>
-                      </button>
-                    )}
+                    <button
+                      onClick={e => { e.stopPropagation(); handleDeleteConversation(conv.user.id); }}
+                      className={`flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#fee2e2] text-[#9ca3af] hover:text-[#ef4444] transition-colors ${hoveredConvId === conv.user.id ? 'opacity-100' : 'lg:opacity-0 lg:pointer-events-none'}`}
+                      title="Supprimer la conversation"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                      </svg>
+                    </button>
                   </div>
                 ))
               )}
@@ -451,7 +449,7 @@ export default function MessagesPage() {
                               {isMe && (
                                 <button
                                   onClick={() => handleDeleteMessage(msg.id)}
-                                  className={`flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full hover:bg-[#fee2e2] text-[#9ca3af] hover:text-[#ef4444] transition-all mb-5 ${hoveredMsgId === msg.id ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                                  className={`flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full hover:bg-[#fee2e2] text-[#9ca3af] hover:text-[#ef4444] transition-all mb-5 ${hoveredMsgId === msg.id ? 'opacity-100' : 'lg:opacity-0 lg:pointer-events-none'}`}
                                   title="Supprimer"
                                 >
                                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

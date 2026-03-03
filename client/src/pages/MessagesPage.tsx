@@ -449,17 +449,15 @@ export default function MessagesPage() {
                             )}
                             <div className={`msg-row flex items-end gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
                               {!isMe && <Avatar user={msg.sender} size={28} />}
-                              {isMe && (
-                                <button
-                                  onClick={() => handleDeleteMessage(msg.id)}
-                                  className="msg-delete-btn flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full hover:bg-[#fee2e2] text-[#9ca3af] hover:text-[#ef4444] mb-5"
-                                  title="Supprimer"
-                                >
-                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
-                                  </svg>
-                                </button>
-                              )}
+                              <button
+                                onClick={() => handleDeleteMessage(msg.id)}
+                                className="msg-delete-btn flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full hover:bg-[#fee2e2] text-[#d1d5db] hover:text-[#ef4444] mb-5"
+                                title="Supprimer"
+                              >
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                                </svg>
+                              </button>
                               <div className="max-w-[70%]">
                                 <div className={`px-4 py-2.5 rounded-[16px] text-[14px] leading-relaxed ${
                                   isMe

@@ -248,7 +248,7 @@ router.delete(
 
       const message = await prisma.message.findUnique({ where: { id: messageId } });
       if (!message) throw new AppError('Message introuvable', 404);
-      if (message.senderId !== userId) throw new AppError('Non autorisé', 403);
+      if (message.senderId !== userId && message.receiverId !== userId) throw new AppError('Non autorisé', 403);
 
       await prisma.message.delete({ where: { id: messageId } });
       res.json({ success: true });

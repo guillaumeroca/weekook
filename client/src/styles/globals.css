@@ -103,11 +103,20 @@ html {
 /* Messagerie — corbeilles */
 .msg-delete-btn,
 .conv-delete-btn {
-  opacity: 0.35;
+  opacity: 0;
   transition: opacity 0.15s, background-color 0.15s, color 0.15s;
 }
 
-.msg-delete-btn:hover,
-.conv-delete-btn:hover {
+.msg-row:hover .msg-delete-btn,
+.conv-row:hover .conv-delete-btn,
+.msg-delete-btn:focus,
+.conv-delete-btn:focus {
   opacity: 1;
+}
+
+@media (max-width: 1023px) {
+  .msg-delete-btn,
+  .conv-delete-btn {
+    opacity: 1;
+  }
 }

@@ -370,7 +370,7 @@ export default function MessagesPage() {
                     </button>
                     <button
                       onClick={e => { e.stopPropagation(); handleDeleteConversation(conv.user.id); }}
-                      className="conv-delete-btn flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#fee2e2] text-[#9ca3af] hover:text-[#ef4444]"
+                      className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#fee2e2] text-[#9ca3af] hover:text-[#ef4444]"
                       title="Supprimer la conversation"
                     >
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -451,7 +451,7 @@ export default function MessagesPage() {
                               {!isMe && <Avatar user={msg.sender} size={28} />}
                               <button
                                 onClick={() => handleDeleteMessage(msg.id)}
-                                className="msg-delete-btn flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full hover:bg-[#fee2e2] text-[#6b7280] hover:text-[#ef4444] mb-5"
+                                className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full hover:bg-[#fee2e2] text-[#9ca3af] hover:text-[#ef4444] mb-5"
                                 title="Supprimer"
                               >
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

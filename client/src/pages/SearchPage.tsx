@@ -402,8 +402,11 @@ export default function SearchPage() {
       {/* Results Section */}
       <section className="px-4 md:px-8 lg:px-[96px] pb-8 md:pb-12">
         {/* Active filter tags */}
-        {!isLoading && hasActiveFilters && (
+        {!isLoading && (
           <div className="flex items-center gap-2 flex-wrap mb-4">
+            {!hasActiveFilters && (
+              <span className="text-[13px] text-[#9ca3af] italic">Aucun filtre actif</span>
+            )}
             {type && type !== 'BOTH' && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] border border-[#c1a0fd] text-[#c1a0fd] rounded-[8px] text-[12px] font-medium">
                 {type === 'KOOK' ? 'KOOK (Repas)' : 'KOURS (Cours)'}

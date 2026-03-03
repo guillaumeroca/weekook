@@ -334,7 +334,7 @@ export default function MessagesPage() {
                 filteredConversations.map(conv => (
                   <div
                     key={conv.user.id}
-                    className={`group relative flex items-center gap-3 px-4 py-3.5 border-b border-[#f0f0f0] last:border-0 transition-colors ${
+                    className={`conv-row relative flex items-center gap-3 px-4 py-3.5 border-b border-[#f0f0f0] last:border-0 transition-colors ${
                       activeConv?.user.id === conv.user.id ? 'bg-[#f3ecff]' : 'hover:bg-[#fafafa]'
                     }`}
                   >
@@ -369,7 +369,7 @@ export default function MessagesPage() {
                     </button>
                     <button
                       onClick={e => { e.stopPropagation(); handleDeleteConversation(conv.user.id); }}
-                      className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#fee2e2] text-[#9ca3af] hover:text-[#ef4444] transition-all opacity-100 lg:opacity-0 lg:pointer-events-none lg:group-hover:opacity-100 lg:group-hover:pointer-events-auto"
+                      className="conv-delete-btn flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#fee2e2] text-[#9ca3af] hover:text-[#ef4444]"
                       title="Supprimer la conversation"
                     >
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -446,12 +446,12 @@ export default function MessagesPage() {
                                 <div className="flex-1 h-px bg-[#e5e7eb]" />
                               </div>
                             )}
-                            <div className={`group flex items-end gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
+                            <div className={`msg-row flex items-end gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
                               {!isMe && <Avatar user={msg.sender} size={28} />}
                               {isMe && (
                                 <button
                                   onClick={() => handleDeleteMessage(msg.id)}
-                                  className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full hover:bg-[#fee2e2] text-[#9ca3af] hover:text-[#ef4444] transition-all mb-5 opacity-100 lg:opacity-0 lg:pointer-events-none lg:group-hover:opacity-100 lg:group-hover:pointer-events-auto"
+                                  className="msg-delete-btn flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full hover:bg-[#fee2e2] text-[#9ca3af] hover:text-[#ef4444] mb-5"
                                   title="Supprimer"
                                 >
                                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

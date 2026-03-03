@@ -99,3 +99,24 @@ html {
   font-size: var(--font-size);
   scroll-behavior: smooth;
 }
+
+/* Messagerie — corbeilles visibles uniquement au survol sur desktop */
+.msg-delete-btn,
+.conv-delete-btn {
+  opacity: 1; /* toujours visible sur mobile */
+  transition: opacity 0.15s, background-color 0.15s, color 0.15s;
+}
+
+@media (min-width: 1024px) {
+  .msg-delete-btn,
+  .conv-delete-btn {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .msg-row:hover .msg-delete-btn,
+  .conv-row:hover .conv-delete-btn {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}

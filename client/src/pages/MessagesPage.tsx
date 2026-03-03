@@ -133,6 +133,7 @@ export default function MessagesPage() {
         user: { id: toUserId, firstName: '...', lastName: '', avatar: null },
         lastMessage: {} as Message,
         unreadCount: 0,
+        kookerRecipientId: null,
       };
       setActiveConv(ghost);
       setMessages([]);
@@ -361,7 +362,7 @@ export default function MessagesPage() {
                           {conv.lastMessage?.content || ''}
                         </p>
                       </div>
-                      {conv.unreadCount > 0 && hoveredConvId !== conv.user.id && (
+                      {conv.unreadCount > 0 && (
                         <span className="min-w-[20px] h-[20px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 flex-shrink-0">
                           {conv.unreadCount}
                         </span>

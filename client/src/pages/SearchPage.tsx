@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import KookerCard from '@/components/common/KookerCard';
 import { api } from '@/lib/api';
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
-type ServiceType = 'KOOK' | 'KOURS' | '';
+type ServiceType = 'KOOK' | 'KOURS' | 'BOTH' | '';
 type SortOption = 'pertinence' | 'prix-asc' | 'prix-desc' | 'note';
 
 interface Kooker {
@@ -69,17 +69,8 @@ const CITIES = [
   'La Ciotat',
 ];
 
-const PRICE_RANGES = [
-  { label: 'Tous les prix', min: 0, max: 99999 },
-  { label: 'Moins de 30€', min: 0, max: 29 },
-  { label: '30€ - 40€', min: 30, max: 40 },
-  { label: '40€ - 50€', min: 40, max: 50 },
-  { label: 'Plus de 50€', min: 50, max: 99999 },
-];
-
 // ─── Component ──────────────────────────────────────────────────────────────────
 export default function SearchPage() {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Read initial values from URL params
@@ -87,20 +78,32 @@ export default function SearchPage() {
   const initialType = (searchParams.get('type') || '') as ServiceType;
   const initialSpecialty = searchParams.get('specialty') || 'Toutes';
   const initialCity = searchParams.get('city') || 'Toutes';
-  const initialPriceIndex = parseInt(searchParams.get('price') || '0', 10);
+  const initialMinPrice = searchParams.get('minPrice') || '';
+  const initialMaxPrice = searchParams.get('maxPrice') || '';
   const initialSort = (searchParams.get('sort') || 'pertinence') as SortOption;
 
-  // State
+  // Immediate state
   const [query, setQuery] = useState(initialQuery);
+  const [showFilters, setShowFilters] = useState(true);
+  const [sort] = useState<SortOption>(initialSort);
+
+  // Pending filter state (inside the filter panel, not yet applied)
+  const [pendingType, setPendingType] = useState<ServiceType>(initialType);
+  const [pendingSpecialty, setPendingSpecialty] = useState(initialSpecialty);
+  const [pendingCity, setPendingCity] = useState(initialCity);
+  const [pendingMinPrice, setPendingMinPrice] = useState(initialMinPrice);
+  const [pendingMaxPrice, setPendingMaxPrice] = useState(initialMaxPrice);
+
+  // Applied filter state (sent to API)
   const [type, setType] = useState<ServiceType>(initialType);
   const [specialty, setSpecialty] = useState(initialSpecialty);
   const [city, setCity] = useState(initialCity);
-  const [priceRangeIndex, setPriceRangeIndex] = useState(initialPriceIndex);
-  const [sort, setSort] = useState<SortOption>(initialSort);
+  const [minPrice, setMinPrice] = useState(initialMinPrice);
+  const [maxPrice, setMaxPrice] = useState(initialMaxPrice);
+
   const [isLoading, setIsLoading] = useState(true);
   const [results, setResults] = useState<Kooker[]>([]);
   const [totalResults, setTotalResults] = useState(0);
-  const [showMobileFilters, setShowMobileFilters] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   // Map API kooker to local Kooker format
@@ -138,18 +141,12 @@ export default function SearchPage() {
     try {
       const params = new URLSearchParams();
       if (query.trim()) params.set('q', query.trim());
-      if (type) params.set('type', type);
+      // BOTH means no type filter (all types)
+      if (type && type !== 'BOTH') params.set('type', type);
       if (specialty !== 'Toutes') params.set('specialty', specialty);
       if (city !== 'Toutes') params.set('city', city);
-
-      const range = PRICE_RANGES[priceRangeIndex];
-      if (range && priceRangeIndex > 0) {
-        params.set('minPrice', String(range.min * 100));
-        if (range.max < 99999) {
-          params.set('maxPrice', String(range.max * 100));
-        }
-      }
-
+      if (minPrice) params.set('minPrice', minPrice);
+      if (maxPrice) params.set('maxPrice', maxPrice);
       if (sort !== 'pertinence') params.set('sort', sort);
       params.set('limit', '12');
 
@@ -170,9 +167,9 @@ export default function SearchPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [query, type, specialty, city, priceRangeIndex, sort]);
+  }, [query, type, specialty, city, minPrice, maxPrice, sort]);
 
-  // Debounce API calls (300ms for text input, immediate for filter changes)
+  // Debounce API calls
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
@@ -183,29 +180,38 @@ export default function SearchPage() {
     };
   }, [fetchKookers]);
 
-  // Sync filters to URL
-  const syncParams = useCallback(() => {
+  // Sync applied filters to URL
+  useEffect(() => {
     const params = new URLSearchParams();
     if (query) params.set('q', query);
     if (type) params.set('type', type);
     if (specialty !== 'Toutes') params.set('specialty', specialty);
     if (city !== 'Toutes') params.set('city', city);
-    if (priceRangeIndex > 0) params.set('price', String(priceRangeIndex));
-    if (sort !== 'pertinence') params.set('sort', sort);
+    if (minPrice) params.set('minPrice', minPrice);
+    if (maxPrice) params.set('maxPrice', maxPrice);
     setSearchParams(params, { replace: true });
-  }, [query, type, specialty, city, priceRangeIndex, sort, setSearchParams]);
+  }, [query, type, specialty, city, minPrice, maxPrice, setSearchParams]);
 
-  useEffect(() => {
-    syncParams();
-  }, [syncParams]);
+  const applyFilters = () => {
+    setType(pendingType);
+    setSpecialty(pendingSpecialty);
+    setCity(pendingCity);
+    setMinPrice(pendingMinPrice);
+    setMaxPrice(pendingMaxPrice);
+  };
 
   const resetFilters = () => {
-    setQuery('');
+    setPendingType('');
+    setPendingSpecialty('Toutes');
+    setPendingCity('Toutes');
+    setPendingMinPrice('');
+    setPendingMaxPrice('');
     setType('');
     setSpecialty('Toutes');
     setCity('Toutes');
-    setPriceRangeIndex(0);
-    setSort('pertinence');
+    setMinPrice('');
+    setMaxPrice('');
+    setQuery('');
   };
 
   const hasActiveFilters =
@@ -213,325 +219,179 @@ export default function SearchPage() {
     type !== '' ||
     specialty !== 'Toutes' ||
     city !== 'Toutes' ||
-    priceRangeIndex !== 0;
+    minPrice !== '' ||
+    maxPrice !== '';
 
   // ─── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#f2f4fc]">
-      {/* Hero Search Bar */}
       <section className="bg-[#f2f4fc]">
         <div className="px-4 md:px-8 lg:px-[96px] py-6 md:py-8">
-          {/* Section Label */}
-          <p className="text-[#cdb3fd] text-[16px] font-semibold tracking-[2.56px] uppercase leading-[1.5] mb-4">RÉSULTATS DE RECHERCHE</p>
-          {/* Title */}
-          <h1 className="text-[32px] md:text-[40px] tracking-[-0.8px] font-bold text-[#111125] mb-6">
-            Trouvez votre Kooker
-          </h1>
-          <p className="text-[16px] text-[#5c5c6f] tracking-[-0.32px] mt-2 mb-6">Découvrez nos talents culinaires disponibles</p>
 
-          {/* Search Input */}
-          <div className="relative mb-6">
-            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-              <svg
-                className="w-5 h-5 text-[#9ca3af]"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-            </div>
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Rechercher par nom, ville ou spécialité..."
-              className="w-full h-[52px] pl-12 pr-4 bg-white border-2 border-[#c1a0fd] rounded-[12px] text-[15px] text-[#111125] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd] focus:border-transparent transition-all"
-            />
-            {query && (
-              <button
-                onClick={() => setQuery('')}
-                className="absolute inset-y-0 right-4 flex items-center text-[#9ca3af] hover:text-[#111125] transition-colors"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            )}
-          </div>
-
-          {/* Type Toggle */}
+          {/* Search bar + Masquer les filtres */}
           <div className="flex items-center gap-3 mb-6">
-            <span className="text-[14px] font-medium text-[#6b7280]">
-              Type :
-            </span>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setType(type === 'KOOK' ? '' : 'KOOK')}
-                className={`px-4 py-2 rounded-[12px] text-[14px] font-medium transition-all duration-200 ${
-                  type === 'KOOK'
-                    ? 'bg-[#c1a0fd] text-white shadow-sm'
-                    : 'bg-[#f8f9fc] text-[#6b7280] border border-[#e5e7eb] hover:border-[#c1a0fd] hover:text-[#c1a0fd]'
-                }`}
-              >
-                Kook
-              </button>
-              <button
-                onClick={() => setType(type === 'KOURS' ? '' : 'KOURS')}
-                className={`px-4 py-2 rounded-[12px] text-[14px] font-medium transition-all duration-200 ${
-                  type === 'KOURS'
-                    ? 'bg-[#c1a0fd] text-white shadow-sm'
-                    : 'bg-[#f8f9fc] text-[#6b7280] border border-[#e5e7eb] hover:border-[#c1a0fd] hover:text-[#c1a0fd]'
-                }`}
-              >
-                Kours
-              </button>
-            </div>
-          </div>
-
-          {/* Desktop Filters */}
-          <div className="hidden md:block">
-            <div className="bg-white rounded-[20px] p-6 shadow-sm mt-6">
-              <div className="flex items-center gap-4 flex-wrap">
-                {/* Specialty Select */}
-                <div className="flex flex-col gap-1">
-                  <label className="text-[14px] font-medium text-[#303044] mb-2 block">
-                    Spécialité
-                  </label>
-                  <select
-                    value={specialty}
-                    onChange={(e) => setSpecialty(e.target.value)}
-                    className="h-[48px] px-3 bg-white border-2 border-[#e0e0e6] hover:border-[#c1a0fd] rounded-[12px] text-[14px] text-[#111125] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd] focus:border-transparent cursor-pointer min-w-[180px]"
-                  >
-                    {SPECIALTIES.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* City Select */}
-                <div className="flex flex-col gap-1">
-                  <label className="text-[14px] font-medium text-[#303044] mb-2 block">
-                    Ville
-                  </label>
-                  <select
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    className="h-[48px] px-3 bg-white border-2 border-[#e0e0e6] hover:border-[#c1a0fd] rounded-[12px] text-[14px] text-[#111125] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd] focus:border-transparent cursor-pointer min-w-[180px]"
-                  >
-                    {CITIES.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Price Range Select */}
-                <div className="flex flex-col gap-1">
-                  <label className="text-[14px] font-medium text-[#303044] mb-2 block">
-                    Prix
-                  </label>
-                  <select
-                    value={priceRangeIndex}
-                    onChange={(e) => setPriceRangeIndex(Number(e.target.value))}
-                    className="h-[48px] px-3 bg-white border-2 border-[#e0e0e6] hover:border-[#c1a0fd] rounded-[12px] text-[14px] text-[#111125] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd] focus:border-transparent cursor-pointer min-w-[180px]"
-                  >
-                    {PRICE_RANGES.map((r, i) => (
-                      <option key={i} value={i}>
-                        {r.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Sort Select */}
-                <div className="flex flex-col gap-1">
-                  <label className="text-[14px] font-medium text-[#303044] mb-2 block">
-                    Trier par
-                  </label>
-                  <select
-                    value={sort}
-                    onChange={(e) => setSort(e.target.value as SortOption)}
-                    className="h-[48px] px-3 bg-white border-2 border-[#e0e0e6] hover:border-[#c1a0fd] rounded-[12px] text-[14px] text-[#111125] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd] focus:border-transparent cursor-pointer min-w-[160px]"
-                  >
-                    <option value="pertinence">Pertinence</option>
-                    <option value="prix-asc">Prix croissant</option>
-                    <option value="prix-desc">Prix décroissant</option>
-                    <option value="note">Meilleures notes</option>
-                  </select>
-                </div>
-
-                {/* Reset Filters */}
-                {hasActiveFilters && (
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[14px] font-medium text-transparent mb-2 block">
-                      &nbsp;
-                    </label>
-                    <button
-                      onClick={resetFilters}
-                      className="h-[48px] px-4 text-[14px] font-medium text-[#ef4444] hover:text-[#dc2626] hover:bg-[#fef2f2] rounded-[12px] transition-all"
-                    >
-                      Réinitialiser
-                    </button>
-                  </div>
-                )}
+            <div className="relative flex-1">
+              <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                <svg className="w-5 h-5 text-[#9ca3af]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
               </div>
-            </div>
-          </div>
-
-          {/* Mobile Filter Toggle */}
-          <div className="md:hidden">
-            <button
-              onClick={() => setShowMobileFilters(!showMobileFilters)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-[#f8f9fc] border border-[#e5e7eb] rounded-[12px] text-[14px] font-medium text-[#111125] hover:border-[#c1a0fd] transition-all w-full justify-center"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-                />
-              </svg>
-              Filtres
-              {hasActiveFilters && (
-                <span className="w-5 h-5 flex items-center justify-center bg-[#c1a0fd] text-white text-[11px] font-bold rounded-full">
-                  {[
-                    type !== '',
-                    specialty !== 'Toutes',
-                    city !== 'Toutes',
-                    priceRangeIndex !== 0,
-                  ].filter(Boolean).length}
-                </span>
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Rechercher par nom, ville ou spécialité..."
+                className="w-full h-[52px] pl-12 pr-10 bg-white border-2 border-[#c1a0fd] rounded-[12px] text-[15px] text-[#111125] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd] focus:border-transparent transition-all"
+              />
+              {query && (
+                <button
+                  onClick={() => setQuery('')}
+                  className="absolute inset-y-0 right-4 flex items-center text-[#9ca3af] hover:text-[#111125] transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               )}
+            </div>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex-shrink-0 flex items-center gap-2 h-[52px] px-4 bg-white border-2 border-[#e0e0e6] hover:border-[#c1a0fd] rounded-[12px] text-[14px] font-medium text-[#303044] transition-all whitespace-nowrap"
+            >
+              <svg className="w-4 h-4 text-[#c1a0fd]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
+              <span className="hidden sm:inline">{showFilters ? 'Masquer les filtres' : 'Afficher les filtres'}</span>
               <svg
-                className={`w-4 h-4 transition-transform duration-200 ${showMobileFilters ? 'rotate-180' : ''}`}
+                className={`w-4 h-4 transition-transform duration-200 ${showFilters ? 'rotate-180' : ''}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
-                />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </button>
           </div>
 
-          {/* Mobile Filters Panel */}
-          {showMobileFilters && (
-            <div className="md:hidden mt-4 p-4 bg-white rounded-[20px] shadow-sm space-y-4 animate-in slide-in-from-top-2 duration-200">
-              {/* Mobile Specialty */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[12px] font-medium text-[#6b7280] uppercase tracking-wide">
-                  Spécialité
-                </label>
-                <select
-                  value={specialty}
-                  onChange={(e) => setSpecialty(e.target.value)}
-                  className="h-[48px] px-3 border-2 border-[#e0e0e6] hover:border-[#c1a0fd] rounded-[12px] text-[14px] text-[#111125] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd]"
-                >
-                  {SPECIALTIES.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              </div>
+          {/* Results count title */}
+          <h1 className="text-[24px] md:text-[28px] font-bold text-[#111125] mb-4 tracking-[-0.5px]">
+            {isLoading ? (
+              <span className="inline-block w-48 h-7 bg-[#e5e7eb] rounded animate-pulse" />
+            ) : (
+              <>{totalResults} Kooker{totalResults !== 1 ? 's' : ''} trouvé{totalResults !== 1 ? 's' : ''}</>
+            )}
+          </h1>
 
-              {/* Mobile City */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[12px] font-medium text-[#6b7280] uppercase tracking-wide">
-                  Ville
-                </label>
-                <select
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  className="h-[48px] px-3 border-2 border-[#e0e0e6] hover:border-[#c1a0fd] rounded-[12px] text-[14px] text-[#111125] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd]"
-                >
-                  {CITIES.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Mobile Price */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[12px] font-medium text-[#6b7280] uppercase tracking-wide">
-                  Prix
-                </label>
-                <select
-                  value={priceRangeIndex}
-                  onChange={(e) => setPriceRangeIndex(Number(e.target.value))}
-                  className="h-[48px] px-3 border-2 border-[#e0e0e6] hover:border-[#c1a0fd] rounded-[12px] text-[14px] text-[#111125] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd]"
-                >
-                  {PRICE_RANGES.map((r, i) => (
-                    <option key={i} value={i}>
-                      {r.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Mobile Sort */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[12px] font-medium text-[#6b7280] uppercase tracking-wide">
-                  Trier par
-                </label>
-                <select
-                  value={sort}
-                  onChange={(e) => setSort(e.target.value as SortOption)}
-                  className="h-[48px] px-3 border-2 border-[#e0e0e6] hover:border-[#c1a0fd] rounded-[12px] text-[14px] text-[#111125] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd]"
-                >
-                  <option value="pertinence">Pertinence</option>
-                  <option value="prix-asc">Prix croissant</option>
-                  <option value="prix-desc">Prix décroissant</option>
-                  <option value="note">Meilleures notes</option>
-                </select>
-              </div>
-
-              {/* Mobile Reset + Apply */}
-              <div className="flex gap-3 pt-2">
+          {/* Filter Panel */}
+          {showFilters && (
+            <div className="bg-white rounded-[20px] p-5 md:p-6 shadow-sm">
+              {/* Panel header */}
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-[16px] font-semibold text-[#111125]">Filtres</h2>
                 {hasActiveFilters && (
                   <button
                     onClick={resetFilters}
-                    className="flex-1 h-[48px] text-[14px] font-medium text-[#ef4444] border border-[#fecaca] rounded-[12px] hover:bg-[#fef2f2] transition-all"
+                    className="flex items-center gap-1.5 text-[13px] font-medium text-[#6b7280] hover:text-[#ef4444] transition-colors"
                   >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
                     Réinitialiser
                   </button>
                 )}
+              </div>
+
+              {/* Filter fields grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+
+                {/* Type de service */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[13px] font-medium text-[#303044]">Type de service</label>
+                  <select
+                    value={pendingType}
+                    onChange={(e) => setPendingType(e.target.value as ServiceType)}
+                    className="h-[48px] px-3 bg-white border-2 border-[#e0e0e6] hover:border-[#c1a0fd] rounded-[12px] text-[14px] text-[#111125] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd] focus:border-transparent cursor-pointer"
+                  >
+                    <option value="">Tous les types</option>
+                    <option value="KOURS">KOURS (Cours)</option>
+                    <option value="KOOK">KOOK (Repas)</option>
+                    <option value="BOTH">Les deux</option>
+                  </select>
+                </div>
+
+                {/* Spécialités */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[13px] font-medium text-[#303044]">Spécialités</label>
+                  <select
+                    value={pendingSpecialty}
+                    onChange={(e) => setPendingSpecialty(e.target.value)}
+                    className="h-[48px] px-3 bg-white border-2 border-[#e0e0e6] hover:border-[#c1a0fd] rounded-[12px] text-[14px] text-[#111125] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd] focus:border-transparent cursor-pointer"
+                  >
+                    {SPECIALTIES.map((s) => (
+                      <option key={s} value={s}>
+                        {s === 'Toutes' ? 'Toutes les spécialités' : s}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Prix par personne */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[13px] font-medium text-[#303044]">Prix par personne</label>
+                  <div className="flex items-center gap-2 h-[48px]">
+                    <div className="relative flex-1">
+                      <input
+                        type="number"
+                        min="0"
+                        value={pendingMinPrice}
+                        onChange={(e) => setPendingMinPrice(e.target.value)}
+                        placeholder="Min"
+                        className="w-full h-[48px] pl-3 pr-7 bg-white border-2 border-[#e0e0e6] hover:border-[#c1a0fd] rounded-[12px] text-[14px] text-[#111125] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd] focus:border-transparent"
+                      />
+                      <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[13px] text-[#6b7280] pointer-events-none">€</span>
+                    </div>
+                    <span className="text-[#9ca3af] text-[14px] flex-shrink-0">—</span>
+                    <div className="relative flex-1">
+                      <input
+                        type="number"
+                        min="0"
+                        value={pendingMaxPrice}
+                        onChange={(e) => setPendingMaxPrice(e.target.value)}
+                        placeholder="Max"
+                        className="w-full h-[48px] pl-3 pr-7 bg-white border-2 border-[#e0e0e6] hover:border-[#c1a0fd] rounded-[12px] text-[14px] text-[#111125] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd] focus:border-transparent"
+                      />
+                      <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[13px] text-[#6b7280] pointer-events-none">€</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Ville */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[13px] font-medium text-[#303044]">Ville</label>
+                  <select
+                    value={pendingCity}
+                    onChange={(e) => setPendingCity(e.target.value)}
+                    className="h-[48px] px-3 bg-white border-2 border-[#e0e0e6] hover:border-[#c1a0fd] rounded-[12px] text-[14px] text-[#111125] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd] focus:border-transparent cursor-pointer"
+                  >
+                    {CITIES.map((c) => (
+                      <option key={c} value={c}>
+                        {c === 'Toutes' ? 'Toutes les villes' : c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Apply button */}
+              <div className="flex justify-end">
                 <button
-                  onClick={() => setShowMobileFilters(false)}
-                  className="flex-1 h-[48px] text-[14px] font-semibold text-white bg-[#c1a0fd] rounded-[12px] hover:bg-[#b090ed] transition-all"
+                  onClick={applyFilters}
+                  className="flex items-center gap-2 px-6 py-3 bg-[#c1a0fd] text-white text-[14px] font-semibold rounded-[12px] hover:bg-[#b090ed] transition-all shadow-sm"
                 >
-                  Appliquer
+                  Appliquer les filtres
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
                 </button>
               </div>
             </div>
@@ -540,43 +400,26 @@ export default function SearchPage() {
       </section>
 
       {/* Results Section */}
-      <section className="px-4 md:px-8 lg:px-[96px] py-8 md:py-12">
-        {/* Results Count */}
-        <div className="flex items-center justify-between mb-6">
-          <p className="text-[15px] text-[#6b7280]">
-            {isLoading ? (
-              <span className="inline-block w-32 h-4 bg-[#e5e7eb] rounded animate-pulse" />
-            ) : (
-              <>
-                <span className="font-semibold text-[18px] text-[#111125]">
-                  {results.length}
-                </span>{' '}
-                {results.length === 1 ? 'résultat' : 'résultats'} trouvés
-              </>
-            )}
-          </p>
-
-          {/* Active Filter Tags (desktop) */}
-          <div className="hidden md:flex items-center gap-2 flex-wrap">
-            {type && (
+      <section className="px-4 md:px-8 lg:px-[96px] pb-8 md:pb-12">
+        {/* Active filter tags */}
+        {!isLoading && hasActiveFilters && (
+          <div className="flex items-center gap-2 flex-wrap mb-4">
+            {type && type !== 'BOTH' && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] border border-[#c1a0fd] text-[#c1a0fd] rounded-[8px] text-[12px] font-medium">
-                {type === 'KOOK' ? 'Kook' : 'Kours'}
-                <button
-                  onClick={() => setType('')}
-                  className="hover:text-[#111125] transition-colors"
-                >
-                  <svg
-                    className="w-3.5 h-3.5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
+                {type === 'KOOK' ? 'KOOK (Repas)' : 'KOURS (Cours)'}
+                <button onClick={() => { setType(''); setPendingType(''); }} className="hover:text-[#111125] transition-colors">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </span>
+            )}
+            {type === 'BOTH' && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] border border-[#c1a0fd] text-[#c1a0fd] rounded-[8px] text-[12px] font-medium">
+                Les deux
+                <button onClick={() => { setType(''); setPendingType(''); }} className="hover:text-[#111125] transition-colors">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </span>
@@ -584,22 +427,9 @@ export default function SearchPage() {
             {specialty !== 'Toutes' && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] border border-[#c1a0fd] text-[#c1a0fd] rounded-[8px] text-[12px] font-medium">
                 {specialty}
-                <button
-                  onClick={() => setSpecialty('Toutes')}
-                  className="hover:text-[#111125] transition-colors"
-                >
-                  <svg
-                    className="w-3.5 h-3.5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
+                <button onClick={() => { setSpecialty('Toutes'); setPendingSpecialty('Toutes'); }} className="hover:text-[#111125] transition-colors">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </span>
@@ -607,60 +437,31 @@ export default function SearchPage() {
             {city !== 'Toutes' && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] border border-[#c1a0fd] text-[#c1a0fd] rounded-[8px] text-[12px] font-medium">
                 {city}
-                <button
-                  onClick={() => setCity('Toutes')}
-                  className="hover:text-[#111125] transition-colors"
-                >
-                  <svg
-                    className="w-3.5 h-3.5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
+                <button onClick={() => { setCity('Toutes'); setPendingCity('Toutes'); }} className="hover:text-[#111125] transition-colors">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </span>
             )}
-            {priceRangeIndex > 0 && (
+            {(minPrice || maxPrice) && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] border border-[#c1a0fd] text-[#c1a0fd] rounded-[8px] text-[12px] font-medium">
-                {PRICE_RANGES[priceRangeIndex].label}
-                <button
-                  onClick={() => setPriceRangeIndex(0)}
-                  className="hover:text-[#111125] transition-colors"
-                >
-                  <svg
-                    className="w-3.5 h-3.5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
+                {minPrice && maxPrice ? `${minPrice}€ – ${maxPrice}€` : minPrice ? `Dès ${minPrice}€` : `Jusqu'à ${maxPrice}€`}
+                <button onClick={() => { setMinPrice(''); setMaxPrice(''); setPendingMinPrice(''); setPendingMaxPrice(''); }} className="hover:text-[#111125] transition-colors">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </span>
             )}
           </div>
-        </div>
+        )}
 
         {/* Loading State */}
         {isLoading && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 justify-items-center">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div
-                key={i}
-                className="w-full max-w-[286px] h-[429px] bg-white rounded-[20px] overflow-hidden animate-pulse"
-              >
+              <div key={i} className="w-full max-w-[286px] h-[429px] bg-white rounded-[20px] overflow-hidden animate-pulse">
                 <div className="p-3">
                   <div className="w-full h-[200px] bg-[#e5e7eb] rounded-[24px]" />
                 </div>
@@ -708,26 +509,13 @@ export default function SearchPage() {
         {!isLoading && results.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 md:py-24">
             <div className="w-[80px] h-[80px] mb-6 rounded-full bg-[#f8f9fc] flex items-center justify-center">
-              <svg
-                className="w-10 h-10 text-[#c1a0fd]"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
+              <svg className="w-10 h-10 text-[#c1a0fd]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
-            <h3 className="text-[20px] font-semibold text-[#111125] mb-2">
-              Aucun résultat
-            </h3>
+            <h3 className="text-[20px] font-semibold text-[#111125] mb-2">Aucun résultat</h3>
             <p className="text-[15px] text-[#6b7280] text-center max-w-[400px] mb-6">
-              Nous n'avons trouvé aucun kooker correspondant à vos critères.
-              Essayez de modifier vos filtres.
+              Nous n'avons trouvé aucun kooker correspondant à vos critères. Essayez de modifier vos filtres.
             </p>
             <button
               onClick={resetFilters}

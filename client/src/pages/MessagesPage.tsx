@@ -95,6 +95,9 @@ export default function MessagesPage() {
   const [sending, setSending] = useState(false);
   // Pour les kookers : filtre de contexte
   const [kookerFilter, setKookerFilter] = useState<'user' | 'kooker'>('user');
+  // Hover pour afficher les actions
+  const [hoveredMsgId, setHoveredMsgId] = useState<number | null>(null);
+  const [hoveredConvId, setHoveredConvId] = useState<number | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -231,6 +234,18 @@ export default function MessagesPage() {
     }
   };
 
+  // ── Supprimer une conversation entière
+  const handleDeleteConversation = async (partnerId: number) => {
+    try {
+      await api.delete(`/messages/conversation/${partnerId}`);
+      setConversations(prev => prev.filter(c => c.user.id !== partnerId));
+      if (activeConv?.user.id === partnerId) setActiveConv(null);
+      refreshUnread();
+    } catch (err: any) {
+      toast.error(err?.error || 'Erreur lors de la suppression');
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -309,40 +324,55 @@ export default function MessagesPage() {
                 </div>
               ) : (
                 filteredConversations.map(conv => (
-                  <button
+                  <div
                     key={conv.user.id}
-                    onClick={() => openConversation(conv)}
-                    className={`w-full flex items-center gap-3 px-4 py-3.5 border-b border-[#f0f0f0] last:border-0 transition-colors text-left ${
-                      activeConv?.user.id === conv.user.id
-                        ? 'bg-[#f3ecff]'
-                        : 'hover:bg-[#fafafa]'
+                    className={`relative flex items-center gap-3 px-4 py-3.5 border-b border-[#f0f0f0] last:border-0 transition-colors ${
+                      activeConv?.user.id === conv.user.id ? 'bg-[#f3ecff]' : 'hover:bg-[#fafafa]'
                     }`}
+                    onMouseEnter={() => setHoveredConvId(conv.user.id)}
+                    onMouseLeave={() => setHoveredConvId(null)}
                   >
-                    <div className="relative flex-shrink-0">
-                      <Avatar user={conv.user} size={44} />
-                      {conv.unreadCount > 0 && (
-                        <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 rounded-full border-2 border-white" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className={`text-[14px] truncate ${conv.unreadCount > 0 ? 'font-bold text-[#111125]' : 'font-semibold text-[#111125]'}`}>
-                          {conv.user.firstName} {conv.user.lastName}
-                        </span>
-                        <span className="text-[11px] text-[#9ca3af] flex-shrink-0">
-                          {conv.lastMessage?.createdAt ? formatTime(conv.lastMessage.createdAt) : ''}
-                        </span>
+                    <button
+                      onClick={() => openConversation(conv)}
+                      className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                    >
+                      <div className="relative flex-shrink-0">
+                        <Avatar user={conv.user} size={44} />
+                        {conv.unreadCount > 0 && (
+                          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 rounded-full border-2 border-white" />
+                        )}
                       </div>
-                      <p className={`text-[13px] truncate mt-0.5 ${conv.unreadCount > 0 ? 'font-medium text-[#374151]' : 'text-[#6b7280]'}`}>
-                        {conv.lastMessage?.content || ''}
-                      </p>
-                    </div>
-                    {conv.unreadCount > 0 && (
-                      <span className="min-w-[20px] h-[20px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 flex-shrink-0">
-                        {conv.unreadCount}
-                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className={`text-[14px] truncate ${conv.unreadCount > 0 ? 'font-bold text-[#111125]' : 'font-semibold text-[#111125]'}`}>
+                            {conv.user.firstName} {conv.user.lastName}
+                          </span>
+                          <span className="text-[11px] text-[#9ca3af] flex-shrink-0">
+                            {conv.lastMessage?.createdAt ? formatTime(conv.lastMessage.createdAt) : ''}
+                          </span>
+                        </div>
+                        <p className={`text-[13px] truncate mt-0.5 ${conv.unreadCount > 0 ? 'font-medium text-[#374151]' : 'text-[#6b7280]'}`}>
+                          {conv.lastMessage?.content || ''}
+                        </p>
+                      </div>
+                      {conv.unreadCount > 0 && hoveredConvId !== conv.user.id && (
+                        <span className="min-w-[20px] h-[20px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 flex-shrink-0">
+                          {conv.unreadCount}
+                        </span>
+                      )}
+                    </button>
+                    {hoveredConvId === conv.user.id && (
+                      <button
+                        onClick={e => { e.stopPropagation(); handleDeleteConversation(conv.user.id); }}
+                        className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#fee2e2] text-[#9ca3af] hover:text-[#ef4444] transition-colors"
+                        title="Supprimer la conversation"
+                      >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                        </svg>
+                      </button>
                     )}
-                  </button>
+                  </div>
                 ))
               )}
             </div>
@@ -412,9 +442,24 @@ export default function MessagesPage() {
                                 <div className="flex-1 h-px bg-[#e5e7eb]" />
                               </div>
                             )}
-                            <div className={`flex items-end gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
+                            <div
+                              className={`flex items-end gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}
+                              onMouseEnter={() => isMe && setHoveredMsgId(msg.id)}
+                              onMouseLeave={() => setHoveredMsgId(null)}
+                            >
                               {!isMe && <Avatar user={msg.sender} size={28} />}
-                              <div className={`max-w-[70%] group flex items-end gap-1.5 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
+                              {isMe && (
+                                <button
+                                  onClick={() => handleDeleteMessage(msg.id)}
+                                  className={`flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full hover:bg-[#fee2e2] text-[#9ca3af] hover:text-[#ef4444] transition-all mb-5 ${hoveredMsgId === msg.id ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                                  title="Supprimer"
+                                >
+                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                                  </svg>
+                                </button>
+                              )}
+                              <div className="max-w-[70%]">
                                 <div className={`px-4 py-2.5 rounded-[16px] text-[14px] leading-relaxed ${
                                   isMe
                                     ? 'bg-[#c1a0fd] text-white rounded-br-[4px]'
@@ -422,30 +467,12 @@ export default function MessagesPage() {
                                 }`}>
                                   {msg.content}
                                 </div>
-                                {isMe && (
-                                  <button
-                                    onClick={() => handleDeleteMessage(msg.id)}
-                                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-[#fee2e2] text-[#9ca3af] hover:text-[#ef4444] flex-shrink-0 mb-5"
-                                    title="Supprimer"
-                                  >
-                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                      <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
-                                    </svg>
-                                  </button>
-                                )}
+                                <p className={`text-[10px] text-[#9ca3af] mt-1 ${isMe ? 'text-right' : 'text-left'}`}>
+                                  {formatFullTime(msg.createdAt)}
+                                  {isMe && <span className="ml-1">{msg.read ? '✓✓' : '✓'}</span>}
+                                </p>
                               </div>
                             </div>
-                            {isMe && (
-                              <p className="text-[10px] text-[#9ca3af] mt-0.5 text-right pr-1">
-                                {formatFullTime(msg.createdAt)}
-                                <span className="ml-1">{msg.read ? '✓✓' : '✓'}</span>
-                              </p>
-                            )}
-                            {!isMe && (
-                              <p className="text-[10px] text-[#9ca3af] mt-0.5 pl-9">
-                                {formatFullTime(msg.createdAt)}
-                              </p>
-                            )}
                           </div>
                         );
                       })}

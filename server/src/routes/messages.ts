@@ -208,6 +208,33 @@ router.post(
   }
 );
 
+// DELETE /conversation/:userId — Supprimer toute la conversation avec un utilisateur
+router.delete(
+  '/conversation/:userId',
+  authenticate,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const currentUserId = req.user!.userId;
+      const otherUserId = parseInt(req.params.userId, 10);
+
+      if (isNaN(otherUserId)) throw new AppError('ID invalide', 400);
+
+      await prisma.message.deleteMany({
+        where: {
+          OR: [
+            { senderId: currentUserId, receiverId: otherUserId },
+            { senderId: otherUserId, receiverId: currentUserId },
+          ],
+        },
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 // DELETE /:id — Supprimer un message (expéditeur uniquement)
 router.delete(
   '/:id',

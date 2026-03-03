@@ -30,6 +30,7 @@ interface Conversation {
   user: MessageUser;
   lastMessage: Message;
   unreadCount: number;
+  kookerRecipientId: number | null;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -229,9 +230,8 @@ export default function MessagesPage() {
   // ── Filtrage conversations pour les kookers
   const filteredConversations = user?.kookerProfileId
     ? conversations.filter(c => {
-        const isKookerMsg =
-          c.lastMessage?.kookerRecipientId === user.kookerProfileId;
-        return kookerFilter === 'kooker' ? isKookerMsg : !isKookerMsg;
+        const isKookerConv = c.kookerRecipientId === user.kookerProfileId;
+        return kookerFilter === 'kooker' ? isKookerConv : !isKookerConv;
       })
     : conversations;
 

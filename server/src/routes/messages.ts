@@ -55,6 +55,7 @@ router.get(
           user: { id: number; firstName: string; lastName: string; avatar: string | null };
           lastMessage: (typeof messages)[0];
           unreadCount: number;
+          kookerRecipientId: number | null;
         }
       >();
 
@@ -67,7 +68,14 @@ router.get(
             user: partner,
             lastMessage: msg,
             unreadCount: 0,
+            kookerRecipientId: msg.kookerRecipientId ?? null,
           });
+        } else {
+          // Propager kookerRecipientId si un message de la conversation le porte
+          const conv = conversationMap.get(partnerId)!;
+          if (!conv.kookerRecipientId && msg.kookerRecipientId) {
+            conv.kookerRecipientId = msg.kookerRecipientId;
+          }
         }
 
         if (msg.receiverId === userId && !msg.read) {

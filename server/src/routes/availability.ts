@@ -13,10 +13,13 @@ router.get('/kooker/:id', async (req: Request, res: Response, next: NextFunction
       throw new AppError('ID invalide', 400);
     }
 
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+
     const availabilities = await prisma.availability.findMany({
       where: {
         kookerProfileId,
-        date: { gte: new Date() },
+        date: { gte: today },
       },
       orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
     });
@@ -45,10 +48,12 @@ router.put(
       }
 
       // Delete all existing future availabilities for this kooker
+      const todayUtc = new Date();
+      todayUtc.setUTCHours(0, 0, 0, 0);
       await prisma.availability.deleteMany({
         where: {
           kookerProfileId,
-          date: { gte: new Date() },
+          date: { gte: todayUtc },
         },
       });
 
@@ -68,10 +73,12 @@ router.put(
       }
 
       // Return the newly created availabilities
+      const nowUtc = new Date();
+      nowUtc.setUTCHours(0, 0, 0, 0);
       const updated = await prisma.availability.findMany({
         where: {
           kookerProfileId,
-          date: { gte: new Date() },
+          date: { gte: nowUtc },
         },
         orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
       });

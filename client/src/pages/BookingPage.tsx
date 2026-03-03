@@ -170,11 +170,13 @@ export default function BookingPage() {
     const map = new Map<string, Availability[]>();
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     for (const av of availabilities) {
+      // Normalize ISO datetime ("2026-03-10T00:00:00.000Z") to "2026-03-10"
+      const dateKey = av.date.substring(0, 10);
       // Only future dates
-      if (av.date < todayStr) continue;
-      const existing = map.get(av.date) || [];
+      if (dateKey < todayStr) continue;
+      const existing = map.get(dateKey) || [];
       existing.push(av);
-      map.set(av.date, existing);
+      map.set(dateKey, existing);
     }
     return map;
   }, [availabilities]);

@@ -23,10 +23,20 @@ interface KookerBooking {
   guests: number;
   totalPriceInCents: number;
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
-  user: { firstName: string; lastName: string; email: string };
+  user: { id: number; firstName: string; lastName: string; email: string };
   service: { title: string };
   message?: string;
 }
+
+const REFUSAL_REASONS = [
+  { id: 'unavailable',    label: 'Indisponible à cette date',            message: 'Je suis malheureusement indisponible à cette date.' },
+  { id: 'guests',         label: 'Nombre de convives incompatible',       message: "Le nombre de convives n'est pas compatible avec ce service." },
+  { id: 'distance',       label: 'Lieu trop éloigné',                    message: 'Le lieu de prestation est en dehors de ma zone de déplacement.' },
+  { id: 'delay',          label: 'Délai trop court',                     message: 'Le délai est insuffisant pour préparer cette prestation dans les meilleures conditions.' },
+  { id: 'menu',           label: 'Menu / ingrédients non disponibles',   message: 'Je ne suis pas en mesure de proposer ce service à cette date.' },
+  { id: 'other_booking',  label: 'Autre engagement professionnel',        message: "J'ai déjà un engagement professionnel à cette date." },
+  { id: 'custom',         label: 'Autre raison (préciser)',               message: '' },
+];
 
 interface Service {
   id: number;
@@ -195,6 +205,11 @@ const KookerDashboardPage = () => {
   const [profileSaving, setProfileSaving] = useState(false);
   const [expandedServiceId, setExpandedServiceId] = useState<number | null>(null);
 
+  // ── Refusal modal state ──
+  const [pendingRefusal, setPendingRefusal] = useState<{ bookingId: number; userId: number } | null>(null);
+  const [refusalReasonId, setRefusalReasonId] = useState('unavailable');
+  const [refusalCustom, setRefusalCustom] = useState('');
+
   const kookerProfileId = user?.kookerProfileId;
 
   // ── Fetch Stats ──
@@ -328,6 +343,34 @@ const KookerDashboardPage = () => {
       fetchStats();
     } catch (err: any) {
       toast.error(err?.error || 'Erreur lors de la mise à jour');
+    }
+  };
+
+  const handleConfirmRefusal = async () => {
+    if (!pendingRefusal) return;
+    const reason = REFUSAL_REASONS.find((r) => r.id === refusalReasonId);
+    const messageContent = refusalReasonId === 'custom'
+      ? refusalCustom.trim()
+      : reason?.message || '';
+    if (!messageContent) {
+      toast.error('Veuillez préciser la raison du refus.');
+      return;
+    }
+    try {
+      await api.put(`/bookings/${pendingRefusal.bookingId}/status`, { status: 'cancelled' });
+      await api.post('/messages', {
+        receiverId: pendingRefusal.userId,
+        content: `Votre réservation a été refusée.\n\nRaison : ${messageContent}`,
+      });
+      toast.success('Réservation refusée — le client a été notifié par message.');
+      fetchBookings();
+      fetchStats();
+    } catch (err: any) {
+      toast.error(err?.error || 'Erreur lors du refus');
+    } finally {
+      setPendingRefusal(null);
+      setRefusalReasonId('unavailable');
+      setRefusalCustom('');
     }
   };
 
@@ -688,7 +731,7 @@ const KookerDashboardPage = () => {
                                   Accepter
                                 </button>
                                 <button
-                                  onClick={() => handleUpdateBookingStatus(booking.id, 'cancelled')}
+                                  onClick={() => setPendingRefusal({ bookingId: booking.id, userId: booking.user.id })}
                                   className="px-4 py-2 text-[13px] font-semibold text-red-600 bg-red-50 hover:bg-red-100 rounded-[10px] transition-all flex items-center gap-1.5"
                                 >
                                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1128,6 +1171,72 @@ const KookerDashboardPage = () => {
         )}
       </div>
     </div>
+
+    {/* ── Refusal modal ── */}
+    {pendingRefusal && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+        <div className="bg-white rounded-[20px] p-6 w-full max-w-[480px] shadow-xl">
+          <h3 className="text-[18px] font-bold text-[#111125] mb-1">Refuser la réservation</h3>
+          <p className="text-[13px] text-[#6b7280] mb-5">
+            Choisissez une raison — un message sera automatiquement envoyé au client.
+          </p>
+
+          <div className="space-y-2.5 mb-5">
+            {REFUSAL_REASONS.map((reason) => (
+              <label
+                key={reason.id}
+                className={`flex items-start gap-3 p-3 rounded-[12px] border cursor-pointer transition-all ${
+                  refusalReasonId === reason.id
+                    ? 'border-[#c1a0fd] bg-[#f3ecff]'
+                    : 'border-[#e5e7eb] hover:border-[#c1a0fd]'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="refusalReason"
+                  value={reason.id}
+                  checked={refusalReasonId === reason.id}
+                  onChange={() => setRefusalReasonId(reason.id)}
+                  className="mt-0.5 accent-[#c1a0fd] flex-shrink-0"
+                />
+                <div>
+                  <p className="text-[14px] font-medium text-[#111125]">{reason.label}</p>
+                  {reason.id !== 'custom' && (
+                    <p className="text-[12px] text-[#6b7280] mt-0.5 italic">"{reason.message}"</p>
+                  )}
+                </div>
+              </label>
+            ))}
+          </div>
+
+          {refusalReasonId === 'custom' && (
+            <textarea
+              value={refusalCustom}
+              onChange={(e) => setRefusalCustom(e.target.value)}
+              placeholder="Expliquez la raison du refus..."
+              rows={3}
+              className="w-full rounded-[12px] border border-[#e5e7eb] px-4 py-3 text-[14px] text-[#111125] placeholder-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd] focus:border-transparent resize-none mb-5"
+            />
+          )}
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => { setPendingRefusal(null); setRefusalReasonId('unavailable'); setRefusalCustom(''); }}
+              className="flex-1 h-[48px] rounded-[12px] border border-[#e5e7eb] text-[14px] font-medium text-[#6b7280] hover:border-[#c1a0fd] hover:text-[#111125] transition-all"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={handleConfirmRefusal}
+              disabled={refusalReasonId === 'custom' && !refusalCustom.trim()}
+              className="flex-1 h-[48px] rounded-[12px] bg-red-500 text-white text-[14px] font-semibold hover:bg-red-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Confirmer le refus
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
   );
 };
 

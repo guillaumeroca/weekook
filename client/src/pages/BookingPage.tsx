@@ -11,6 +11,7 @@ interface ServiceDetail {
   description: string;
   priceInCents: number;
   durationMinutes: number;
+  minGuests: number;
   maxGuests: number;
   type: string;
   specialties: string[];
@@ -137,16 +138,19 @@ export default function BookingPage() {
       .then(([serviceRes, availRes]) => {
         if (serviceRes.success && serviceRes.data) {
           const s = serviceRes.data;
+          const min = s.minGuests ?? 1;
           setService({
             id: s.id,
             title: s.title || '',
             description: s.description || '',
             priceInCents: s.priceInCents || 0,
             durationMinutes: s.durationMinutes || 0,
+            minGuests: min,
             maxGuests: s.maxGuests || 1,
             type: safeJsonParse<string[]>(s.type, []).join(', '),
             specialties: safeJsonParse<string[]>(s.specialties, []),
           });
+          setGuests(min);
         } else {
           setLoadError(true);
         }
@@ -250,7 +254,14 @@ export default function BookingPage() {
 
   // ─── Derived values ────────────────────────────────────────────────────────
   const totalPriceCents = service ? service.priceInCents * guests : 0;
-  const canConfirm = !!selectedDate && !!selectedTime && guests >= 1 && !!service;
+  const guestsError = service
+    ? guests < service.minGuests
+      ? `Minimum ${service.minGuests} convive${service.minGuests > 1 ? 's' : ''} requis pour ce service.`
+      : guests > service.maxGuests
+        ? `Maximum ${service.maxGuests} convive${service.maxGuests > 1 ? 's' : ''} pour ce service.`
+        : null
+    : null;
+  const canConfirm = !!selectedDate && !!selectedTime && !guestsError && !!service;
 
   // ─── Error state ──────────────────────────────────────────────────────────
   if (!isLoading && loadError) {
@@ -628,9 +639,13 @@ export default function BookingPage() {
                   value={guests}
                   onChange={(e) => {
                     const v = parseInt(e.target.value, 10);
-                    if (!isNaN(v) && v >= 1 && v <= service.maxGuests) setGuests(v);
+                    if (!isNaN(v) && v >= 1) setGuests(v);
                   }}
-                  className="w-16 h-10 text-center rounded-[12px] border border-[#e5e7eb] text-[16px] font-semibold text-[#111125] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd] focus:border-transparent"
+                  className={`w-16 h-10 text-center rounded-[12px] border text-[16px] font-semibold text-[#111125] focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
+                    guestsError
+                      ? 'border-[#ef4444] focus:ring-[#ef4444]'
+                      : 'border-[#e5e7eb] focus:ring-[#c1a0fd]'
+                  }`}
                 />
                 <button
                   onClick={() => setGuests((g) => Math.min(service.maxGuests, g + 1))}
@@ -642,9 +657,17 @@ export default function BookingPage() {
                   </svg>
                 </button>
                 <span className="text-[13px] text-[#6b7280]">
-                  / {service.maxGuests} max
+                  {service.minGuests > 1 ? `${service.minGuests} min` : ''}{service.minGuests > 1 && ' · '}{service.maxGuests} max
                 </span>
               </div>
+              {guestsError && (
+                <p className="mt-2 text-[13px] text-[#ef4444] flex items-center gap-1.5">
+                  <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                  </svg>
+                  {guestsError}
+                </p>
+              )}
             </div>
 
             {/* Notes */}

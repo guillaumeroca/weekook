@@ -382,6 +382,63 @@ export default function SearchPage() {
                 </div>
               </div>
 
+              {/* Active filter tags / Aucun filtre actif */}
+              <div className="flex items-center gap-2 flex-wrap mt-2 mb-2 min-h-[28px]">
+                {!hasActiveFilters && (
+                  <span className="text-[13px] text-[#9ca3af] italic">Aucun filtre actif</span>
+                )}
+                {type && type !== 'BOTH' && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] border border-[#c1a0fd] text-[#c1a0fd] rounded-[8px] text-[12px] font-medium">
+                    {type === 'KOOK' ? 'KOOK (Repas)' : 'KOURS (Cours)'}
+                    <button onClick={() => { setType(''); setPendingType(''); }} className="hover:text-[#111125] transition-colors">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </span>
+                )}
+                {type === 'BOTH' && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] border border-[#c1a0fd] text-[#c1a0fd] rounded-[8px] text-[12px] font-medium">
+                    Les deux
+                    <button onClick={() => { setType(''); setPendingType(''); }} className="hover:text-[#111125] transition-colors">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </span>
+                )}
+                {specialty !== 'Toutes' && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] border border-[#c1a0fd] text-[#c1a0fd] rounded-[8px] text-[12px] font-medium">
+                    {specialty}
+                    <button onClick={() => { setSpecialty('Toutes'); setPendingSpecialty('Toutes'); }} className="hover:text-[#111125] transition-colors">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </span>
+                )}
+                {city !== 'Toutes' && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] border border-[#c1a0fd] text-[#c1a0fd] rounded-[8px] text-[12px] font-medium">
+                    {city}
+                    <button onClick={() => { setCity('Toutes'); setPendingCity('Toutes'); }} className="hover:text-[#111125] transition-colors">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </span>
+                )}
+                {(minPrice || maxPrice) && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] border border-[#c1a0fd] text-[#c1a0fd] rounded-[8px] text-[12px] font-medium">
+                    {minPrice && maxPrice ? `${minPrice}€ – ${maxPrice}€` : minPrice ? `Dès ${minPrice}€` : `Jusqu'à ${maxPrice}€`}
+                    <button onClick={() => { setMinPrice(''); setMaxPrice(''); setPendingMinPrice(''); setPendingMaxPrice(''); }} className="hover:text-[#111125] transition-colors">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </span>
+                )}
+              </div>
+
               {/* Apply button */}
               <div className="flex justify-end">
                 <button
@@ -401,65 +458,6 @@ export default function SearchPage() {
 
       {/* Results Section */}
       <section className="px-4 md:px-8 lg:px-[96px] pb-8 md:pb-12">
-        {/* Active filter tags */}
-        {!isLoading && (
-          <div className="flex items-center gap-2 flex-wrap mb-4">
-            {!hasActiveFilters && (
-              <span className="text-[13px] text-[#9ca3af] italic">Aucun filtre actif</span>
-            )}
-            {type && type !== 'BOTH' && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] border border-[#c1a0fd] text-[#c1a0fd] rounded-[8px] text-[12px] font-medium">
-                {type === 'KOOK' ? 'KOOK (Repas)' : 'KOURS (Cours)'}
-                <button onClick={() => { setType(''); setPendingType(''); }} className="hover:text-[#111125] transition-colors">
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </span>
-            )}
-            {type === 'BOTH' && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] border border-[#c1a0fd] text-[#c1a0fd] rounded-[8px] text-[12px] font-medium">
-                Les deux
-                <button onClick={() => { setType(''); setPendingType(''); }} className="hover:text-[#111125] transition-colors">
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </span>
-            )}
-            {specialty !== 'Toutes' && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] border border-[#c1a0fd] text-[#c1a0fd] rounded-[8px] text-[12px] font-medium">
-                {specialty}
-                <button onClick={() => { setSpecialty('Toutes'); setPendingSpecialty('Toutes'); }} className="hover:text-[#111125] transition-colors">
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </span>
-            )}
-            {city !== 'Toutes' && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] border border-[#c1a0fd] text-[#c1a0fd] rounded-[8px] text-[12px] font-medium">
-                {city}
-                <button onClick={() => { setCity('Toutes'); setPendingCity('Toutes'); }} className="hover:text-[#111125] transition-colors">
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </span>
-            )}
-            {(minPrice || maxPrice) && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] border border-[#c1a0fd] text-[#c1a0fd] rounded-[8px] text-[12px] font-medium">
-                {minPrice && maxPrice ? `${minPrice}€ – ${maxPrice}€` : minPrice ? `Dès ${minPrice}€` : `Jusqu'à ${maxPrice}€`}
-                <button onClick={() => { setMinPrice(''); setMaxPrice(''); setPendingMinPrice(''); setPendingMaxPrice(''); }} className="hover:text-[#111125] transition-colors">
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </span>
-            )}
-          </div>
-        )}
-
         {/* Loading State */}
         {isLoading && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 justify-items-center">

@@ -208,4 +208,27 @@ router.post(
   }
 );
 
+// DELETE /:id — Supprimer un message (expéditeur uniquement)
+router.delete(
+  '/:id',
+  authenticate,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.user!.userId;
+      const messageId = parseInt(req.params.id, 10);
+
+      if (isNaN(messageId)) throw new AppError('ID invalide', 400);
+
+      const message = await prisma.message.findUnique({ where: { id: messageId } });
+      if (!message) throw new AppError('Message introuvable', 404);
+      if (message.senderId !== userId) throw new AppError('Non autorisé', 403);
+
+      await prisma.message.delete({ where: { id: messageId } });
+      res.json({ success: true });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 export default router;

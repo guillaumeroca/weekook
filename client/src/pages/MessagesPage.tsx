@@ -220,6 +220,17 @@ export default function MessagesPage() {
     }
   };
 
+  // ── Supprimer un message
+  const handleDeleteMessage = async (messageId: number) => {
+    try {
+      await api.delete(`/messages/${messageId}`);
+      setMessages(prev => prev.filter(m => m.id !== messageId));
+      fetchConversations();
+    } catch (err: any) {
+      toast.error(err?.error || 'Erreur lors de la suppression');
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -403,7 +414,7 @@ export default function MessagesPage() {
                             )}
                             <div className={`flex items-end gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
                               {!isMe && <Avatar user={msg.sender} size={28} />}
-                              <div className={`max-w-[70%] group`}>
+                              <div className={`max-w-[70%] group flex items-end gap-1.5 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
                                 <div className={`px-4 py-2.5 rounded-[16px] text-[14px] leading-relaxed ${
                                   isMe
                                     ? 'bg-[#c1a0fd] text-white rounded-br-[4px]'
@@ -411,14 +422,30 @@ export default function MessagesPage() {
                                 }`}>
                                   {msg.content}
                                 </div>
-                                <p className={`text-[10px] text-[#9ca3af] mt-1 ${isMe ? 'text-right' : 'text-left'}`}>
-                                  {formatFullTime(msg.createdAt)}
-                                  {isMe && (
-                                    <span className="ml-1">{msg.read ? '✓✓' : '✓'}</span>
-                                  )}
-                                </p>
+                                {isMe && (
+                                  <button
+                                    onClick={() => handleDeleteMessage(msg.id)}
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-[#fee2e2] text-[#9ca3af] hover:text-[#ef4444] flex-shrink-0 mb-5"
+                                    title="Supprimer"
+                                  >
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                      <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                                    </svg>
+                                  </button>
+                                )}
                               </div>
                             </div>
+                            {isMe && (
+                              <p className="text-[10px] text-[#9ca3af] mt-0.5 text-right pr-1">
+                                {formatFullTime(msg.createdAt)}
+                                <span className="ml-1">{msg.read ? '✓✓' : '✓'}</span>
+                              </p>
+                            )}
+                            {!isMe && (
+                              <p className="text-[10px] text-[#9ca3af] mt-0.5 pl-9">
+                                {formatFullTime(msg.createdAt)}
+                              </p>
+                            )}
                           </div>
                         );
                       })}

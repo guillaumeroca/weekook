@@ -244,6 +244,11 @@ export default function KookerProfilePage() {
   // Not found state
   const [notFound, setNotFound] = useState(false);
 
+  // Message modal
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [messageContent, setMessageContent] = useState('');
+  const [messageSending, setMessageSending] = useState(false);
+
   // Load profile from API
   useEffect(() => {
     if (!id) return;
@@ -408,6 +413,26 @@ export default function KookerProfilePage() {
     );
   }
 
+  // ─── Send message ────────────────────────────────────────────────────────────
+  const handleSendMessage = async () => {
+    if (!messageContent.trim() || !profile) return;
+    setMessageSending(true);
+    try {
+      await api.post('/messages', {
+        receiverId: profile.userId,
+        content: messageContent.trim(),
+        kookerRecipientId: profile.id,
+      });
+      toast.success(`Message envoyé à ${profile.name}`);
+      setMessageContent('');
+      setShowMessageModal(false);
+    } catch (err: any) {
+      toast.error(err?.error || 'Erreur lors de l\'envoi');
+    } finally {
+      setMessageSending(false);
+    }
+  };
+
   // ─── Calendar Rendering ─────────────────────────────────────────────────────
   const calendarWeeks = buildCalendarWeeks(calendarYear, calendarMonth);
 
@@ -483,7 +508,7 @@ export default function KookerProfilePage() {
                 {/* Action buttons */}
                 <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
                   <button
-                    onClick={() => { if (!user) { navigate('/login'); return; } navigate(`/messages?to=${profile.userId}&kookerContext=${profile.id}`); }}
+                    onClick={() => { if (!user) { navigate('/login'); return; } setShowMessageModal(true); }}
                     className="flex items-center gap-2 px-4 py-2.5 bg-[#c1a0fd] text-white rounded-[12px] text-[14px] font-semibold hover:bg-[#b090ed] transition-all"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -704,7 +729,7 @@ export default function KookerProfilePage() {
                 Vous pouvez envoyer un message à ce Kooker pour poser vos questions ou discuter de votre projet.
               </p>
               <button
-                onClick={() => { if (!user) { navigate('/login'); return; } navigate(`/messages?to=${profile.userId}&kookerContext=${profile.id}`); }}
+                onClick={() => { if (!user) { navigate('/login'); return; } setShowMessageModal(true); }}
                 className="flex items-center gap-2 px-5 py-2.5 bg-[#c1a0fd] text-white text-[14px] font-semibold rounded-[12px] hover:bg-[#b090ed] transition-all"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -986,6 +1011,78 @@ export default function KookerProfilePage() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================= */}
+      {/* MODAL ENVOYER UN MESSAGE                                       */}
+      {/* ============================================================= */}
+      {showMessageModal && profile && (
+        <div
+          className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          onClick={() => { setShowMessageModal(false); setMessageContent(''); }}
+        >
+          <div
+            className="bg-white rounded-[20px] w-full max-w-[520px] shadow-xl p-6 md:p-8"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#c1a0fd] to-[#8b6fce] flex items-center justify-center text-white font-bold text-[16px] flex-shrink-0">
+                  {profile.name.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <h2 className="text-[18px] font-bold text-[#111125]">Contacter {profile.name}</h2>
+                  <p className="text-[12px] text-[#6b7280]">Kooker à {profile.city || 'votre service'}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => { setShowMessageModal(false); setMessageContent(''); }}
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#f3f4f6] transition-colors flex-shrink-0"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#111125" strokeWidth="2" strokeLinecap="round">
+                  <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
+
+            {/* Textarea */}
+            <textarea
+              value={messageContent}
+              onChange={e => setMessageContent(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSendMessage(); }}
+              placeholder={`Bonjour ${profile.name}, je suis intéressé(e) par vos services...`}
+              rows={5}
+              autoFocus
+              className="w-full bg-[#f3f4f6] rounded-[12px] px-4 py-3 text-[14px] text-[#111125] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd] resize-none mb-2"
+            />
+            <p className="text-[11px] text-[#9ca3af] mb-5">Cmd/Ctrl + Entrée pour envoyer</p>
+
+            {/* Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowMessageModal(false); setMessageContent(''); }}
+                className="flex-1 h-[48px] border-2 border-[#e0e2ef] text-[#111125] font-semibold rounded-[12px] hover:bg-[#f3f4f6] transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleSendMessage}
+                disabled={!messageContent.trim() || messageSending}
+                className="flex-1 h-[48px] bg-[#c1a0fd] hover:bg-[#b090ed] disabled:opacity-40 text-white font-semibold rounded-[12px] transition-all flex items-center justify-center gap-2"
+              >
+                {messageSending ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                  </svg>
+                )}
+                Envoyer
+              </button>
+            </div>
           </div>
         </div>
       )}

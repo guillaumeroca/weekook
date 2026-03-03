@@ -451,7 +451,7 @@ export default function MessagesPage() {
                               {!isMe && <Avatar user={msg.sender} size={28} />}
                               <button
                                 onClick={() => handleDeleteMessage(msg.id)}
-                                className="msg-delete-btn flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full hover:bg-[#fee2e2] text-[#d1d5db] hover:text-[#ef4444] mb-5"
+                                className="msg-delete-btn flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full hover:bg-[#fee2e2] text-[#6b7280] hover:text-[#ef4444] mb-5"
                                 title="Supprimer"
                               >
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

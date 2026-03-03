@@ -4,10 +4,28 @@ import { authenticate } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { sendMessageSchema } from '../schemas/message.js';
 import { AppError } from '../utils/errors.js';
+import { sendNewMessageNotification } from '../lib/email.js';
 
 const router = Router();
 
-// GET /conversations - Get list of conversations with last message and unread count
+// GET /unread-count — Nombre total de messages non lus
+router.get(
+  '/unread-count',
+  authenticate,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.user!.userId;
+      const count = await prisma.message.count({
+        where: { receiverId: userId, read: false },
+      });
+      res.json({ success: true, data: { count } });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// GET /conversations — Liste des conversations avec dernier message et nb non lus
 router.get(
   '/conversations',
   authenticate,
@@ -15,7 +33,6 @@ router.get(
     try {
       const userId = req.user!.userId;
 
-      // Get all messages where user is sender or receiver
       const messages = await prisma.message.findMany({
         where: {
           OR: [{ senderId: userId }, { receiverId: userId }],
@@ -31,12 +48,12 @@ router.get(
         orderBy: { createdAt: 'desc' },
       });
 
-      // Group by conversation partner
+      // Group par partenaire de conversation
       const conversationMap = new Map<
         number,
         {
           user: { id: number; firstName: string; lastName: string; avatar: string | null };
-          lastMessage: typeof messages[0];
+          lastMessage: (typeof messages)[0];
           unreadCount: number;
         }
       >();
@@ -53,10 +70,8 @@ router.get(
           });
         }
 
-        // Count unread messages from this partner
         if (msg.receiverId === userId && !msg.read) {
-          const conv = conversationMap.get(partnerId)!;
-          conv.unreadCount += 1;
+          conversationMap.get(partnerId)!.unreadCount += 1;
         }
       }
 
@@ -66,17 +81,14 @@ router.get(
           new Date(a.lastMessage.createdAt).getTime()
       );
 
-      res.json({
-        success: true,
-        data: conversations,
-      });
+      res.json({ success: true, data: conversations });
     } catch (error) {
       next(error);
     }
   }
 );
 
-// GET /conversation/:userId - Get messages with specific user, mark unread as read
+// GET /conversation/:userId — Messages avec un utilisateur, marque comme lus
 router.get(
   '/conversation/:userId',
   authenticate,
@@ -89,7 +101,6 @@ router.get(
         throw new AppError('ID utilisateur invalide', 400);
       }
 
-      // Get all messages between the two users
       const messages = await prisma.message.findMany({
         where: {
           OR: [
@@ -108,7 +119,7 @@ router.get(
         orderBy: { createdAt: 'asc' },
       });
 
-      // Mark unread messages from other user as read
+      // Marquer les messages reçus comme lus
       await prisma.message.updateMany({
         where: {
           senderId: otherUserId,
@@ -118,17 +129,14 @@ router.get(
         data: { read: true },
       });
 
-      res.json({
-        success: true,
-        data: messages,
-      });
+      res.json({ success: true, data: messages });
     } catch (error) {
       next(error);
     }
   }
 );
 
-// POST / - Send message
+// POST / — Envoyer un message
 router.post(
   '/',
   authenticate,
@@ -136,13 +144,12 @@ router.post(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const senderId = req.user!.userId;
-      const { receiverId, content } = req.body;
+      const { receiverId, content, kookerRecipientId } = req.body;
 
       if (senderId === receiverId) {
         throw new AppError('Vous ne pouvez pas vous envoyer un message a vous-meme', 400);
       }
 
-      // Check receiver exists
       const receiver = await prisma.user.findUnique({
         where: { id: receiverId },
       });
@@ -156,6 +163,7 @@ router.post(
           senderId,
           receiverId,
           content,
+          ...(kookerRecipientId ? { kookerRecipientId } : {}),
         },
         include: {
           sender: {
@@ -167,10 +175,25 @@ router.post(
         },
       });
 
-      res.status(201).json({
-        success: true,
-        data: message,
+      // Notification email async (ne bloque pas la réponse)
+      const sender = await prisma.user.findUnique({
+        where: { id: senderId },
+        select: { firstName: true, lastName: true },
       });
+      const senderName = sender
+        ? `${sender.firstName} ${sender.lastName}`.trim()
+        : 'Un utilisateur';
+      const receiverName = `${receiver.firstName} ${receiver.lastName}`.trim();
+
+      sendNewMessageNotification(
+        receiverId,
+        receiver.email,
+        receiverName,
+        senderName,
+        content
+      );
+
+      res.status(201).json({ success: true, data: message });
     } catch (error) {
       next(error);
     }

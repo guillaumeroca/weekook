@@ -19,6 +19,7 @@ const CreateMenuPage = lazy(() => import('@/pages/CreateMenuPage').then(m => ({ 
 const EditMenuPage = lazy(() => import('@/pages/EditMenuPage').then(m => ({ default: m.default })));
 const BookingPage = lazy(() => import('@/pages/BookingPage').then(m => ({ default: m.default })));
 const FaqPage = lazy(() => import('@/pages/FaqPage').then(m => ({ default: m.default })));
+const MessagesPage = lazy(() => import('@/pages/MessagesPage').then(m => ({ default: m.default })));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage').then(m => ({ default: m.default })));
 
 export function AppRouter() {
@@ -51,6 +52,9 @@ export function AppRouter() {
           } />
           <Route path="/reservation" element={
             <ProtectedRoute><BookingPage /></ProtectedRoute>
+          } />
+          <Route path="/messages" element={
+            <ProtectedRoute><MessagesPage /></ProtectedRoute>
           } />
           <Route path="*" element={<NotFoundPage />} />
         </Route>

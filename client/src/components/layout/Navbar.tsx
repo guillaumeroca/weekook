@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ChefHat, Menu, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNotification } from '@/contexts/NotificationContext';
 
 const navLinks = [
   { label: 'Accueil', path: '/' },
@@ -15,6 +16,7 @@ export function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const { unreadCount } = useNotification();
 
   // Auto-close mobile menu on navigation
   useEffect(() => {
@@ -86,6 +88,26 @@ export function Navbar() {
                     <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="#111125" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                     <path d="M12 11C14.2091 11 16 9.20914 16 7C16 4.79086 14.2091 3 12 3C9.79086 3 8 4.79086 8 7C8 9.20914 9.79086 11 12 11Z" stroke="#111125" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
+                </button>
+
+                {/* Messages icon with unread badge */}
+                <button
+                  onClick={() => navigate('/messages')}
+                  className={`relative w-[48px] h-[48px] rounded-full flex items-center justify-center cursor-pointer transition-colors ${
+                    location.pathname === '/messages'
+                      ? 'bg-[#c1a0fd] ring-2 ring-[#c1a0fd] ring-offset-2'
+                      : 'bg-[#e8deff] hover:bg-[#c1a0fd]'
+                  }`}
+                  aria-label="Messages"
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111125" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                  </svg>
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
                 </button>
 
                 {/* Kooker or Become Kooker button */}
@@ -166,6 +188,20 @@ export function Navbar() {
                   }`}
                 >
                   Mon Profil
+                </button>
+
+                <button
+                  onClick={() => navigate('/messages')}
+                  className={`p-4 rounded-lg font-medium text-[18px] transition-colors text-left cursor-pointer flex items-center justify-between ${
+                    location.pathname === '/messages' ? 'bg-[#c1a0fd] text-[#111125]' : 'bg-white hover:bg-[#f3ecff] text-[#303044]'
+                  }`}
+                >
+                  <span>Messages</span>
+                  {unreadCount > 0 && (
+                    <span className="min-w-[22px] h-[22px] bg-red-500 text-white text-[11px] font-bold rounded-full flex items-center justify-center px-1">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
                 </button>
 
                 {user.kookerProfileId ? (

@@ -9,4 +9,6 @@ export const env = {
   NODE_ENV: process.env.NODE_ENV || 'development',
   CORS_ORIGIN: process.env.CORS_ORIGIN || 'http://localhost:5173',
   COOKIE_DOMAIN: process.env.COOKIE_DOMAIN || 'localhost',
+  RESEND_API_KEY: process.env.RESEND_API_KEY || '',
+  APP_URL: process.env.APP_URL || 'https://dev.weekook.com',
 };

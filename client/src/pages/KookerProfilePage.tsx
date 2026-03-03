@@ -42,6 +42,7 @@ interface Availability {
 
 interface KookerProfile {
   id: number;
+  userId: number;
   name: string;
   avatarUrl: string;
   coverUrl: string;
@@ -71,6 +72,7 @@ function safeJsonParse<T>(value: unknown, fallback: T): T {
 function mapApiToProfile(data: any): KookerProfile {
   return {
     id: data.id,
+    userId: data.user?.id || 0,
     name: `${data.user?.firstName || ''} ${data.user?.lastName || ''}`.trim() || 'Kooker',
     avatarUrl: data.user?.avatar || '',
     coverUrl: '',
@@ -481,7 +483,7 @@ export default function KookerProfilePage() {
                 {/* Action buttons */}
                 <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
                   <button
-                    onClick={() => { if (!user) { navigate('/login'); return; } navigate(`/messages?kooker=${profile.id}`); }}
+                    onClick={() => { if (!user) { navigate('/login'); return; } navigate(`/messages?to=${profile.userId}&kookerContext=${profile.id}`); }}
                     className="flex items-center gap-2 px-4 py-2.5 bg-[#c1a0fd] text-white rounded-[12px] text-[14px] font-semibold hover:bg-[#b090ed] transition-all"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -702,7 +704,7 @@ export default function KookerProfilePage() {
                 Vous pouvez envoyer un message à ce Kooker pour poser vos questions ou discuter de votre projet.
               </p>
               <button
-                onClick={() => { if (!user) { navigate('/login'); return; } navigate(`/messages?kooker=${profile.id}`); }}
+                onClick={() => { if (!user) { navigate('/login'); return; } navigate(`/messages?to=${profile.userId}&kookerContext=${profile.id}`); }}
                 className="flex items-center gap-2 px-5 py-2.5 bg-[#c1a0fd] text-white text-[14px] font-semibold rounded-[12px] hover:bg-[#b090ed] transition-all"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

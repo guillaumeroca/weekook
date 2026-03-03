@@ -57,10 +57,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
               type: true,
               title: true,
               description: true,
-              specialties: true,
-              menuItems: {
-                select: { name: true, description: true },
-              },
+              specialty: true,
             },
           },
         },
@@ -84,12 +81,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
         const specialtiesStr = JSON.stringify(k.specialties || []).toLowerCase();
         const typeStr = JSON.stringify(k.type || []).toLowerCase();
         const servicesStr = k.services.map((s: any) =>
-          [
-            s.title || '',
-            s.description || '',
-            JSON.stringify(s.specialties || []),
-            (s.menuItems || []).map((m: any) => `${m.name || ''} ${m.description || ''}`).join(' '),
-          ].join(' ')
+          `${s.title || ''} ${s.description || ''} ${JSON.stringify(s.specialty || [])}`
         ).join(' ').toLowerCase();
         return (
           fullName.includes(searchLower) ||

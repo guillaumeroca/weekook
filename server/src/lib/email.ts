@@ -1,7 +1,13 @@
 import { Resend } from 'resend';
 import { env } from '../config/env.js';
 
-const resend = new Resend(env.RESEND_API_KEY);
+// Initialisation lazy — ne pas créer le client si pas de clé API
+let _resend: Resend | null = null;
+function getResend(): Resend | null {
+  if (!env.RESEND_API_KEY) return null;
+  if (!_resend) _resend = new Resend(env.RESEND_API_KEY);
+  return _resend;
+}
 
 // Cooldown en mémoire : userId → timestamp dernier email envoyé
 const emailCooldown = new Map<number, number>();
@@ -14,7 +20,8 @@ export async function sendNewMessageNotification(
   senderName: string,
   messagePreview: string
 ): Promise<void> {
-  if (!env.RESEND_API_KEY) return;
+  const resend = getResend();
+  if (!resend) return;
 
   const lastSent = emailCooldown.get(receiverId);
   if (lastSent && Date.now() - lastSent < COOLDOWN_MS) return;

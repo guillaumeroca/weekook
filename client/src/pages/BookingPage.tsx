@@ -529,7 +529,7 @@ export default function BookingPage() {
                           isSelected
                             ? 'bg-[#111125] text-white font-bold ring-2 ring-[#c1a0fd]'
                             : isAvailable
-                              ? 'bg-[#c1a0fd] text-white font-semibold cursor-pointer hover:bg-[#b090ed]'
+                              ? 'bg-green-500 text-white font-semibold cursor-pointer hover:bg-green-600'
                               : isToday
                                 ? 'bg-[#f3f4f6] text-[#111125] font-semibold ring-2 ring-[#c1a0fd]'
                                 : isPast
@@ -547,7 +547,7 @@ export default function BookingPage() {
               {/* Legend */}
               <div className="flex items-center gap-4 mt-4 pt-4 border-t border-[#f0f0f0]">
                 <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded-full bg-[#c1a0fd]" />
+                  <div className="w-3 h-3 rounded-full bg-green-500" />
                   <span className="text-[12px] text-[#6b7280]">Disponible</span>
                 </div>
                 <div className="flex items-center gap-1.5">

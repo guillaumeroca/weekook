@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import KookerCard from '@/components/common/KookerCard';
 import { api } from '@/lib/api';
-import { useAuth } from '@/contexts/AuthContext';
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 type ServiceType = 'KOOK' | 'KOURS' | 'BOTH' | '';
@@ -72,7 +71,6 @@ const CITIES = [
 
 // ─── Component ──────────────────────────────────────────────────────────────────
 export default function SearchPage() {
-  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Read initial values from URL params
@@ -157,11 +155,8 @@ export default function SearchPage() {
       const res = await api.get<KookersResponse>(path);
 
       if (res.success && res.data) {
-        const mapped = res.data.kookers
-          .map(mapKooker)
-          .filter((k) => k.id !== user?.kookerProfileId);
-        setResults(mapped);
-        setTotalResults(res.data.total - (mapped.length < res.data.kookers.length ? 1 : 0));
+        setResults(res.data.kookers.map(mapKooker));
+        setTotalResults(res.data.total);
       } else {
         setResults([]);
         setTotalResults(0);

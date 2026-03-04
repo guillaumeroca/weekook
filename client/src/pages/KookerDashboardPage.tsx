@@ -507,6 +507,7 @@ const KookerDashboardPage = () => {
   }
 
   return (
+    <>
     <div className="min-h-screen bg-[#f2f4fc]">
       <div className="max-w-[1200px] mx-auto px-4 md:px-8 lg:px-[96px] py-8 md:py-12">
         {/* Header */}
@@ -1173,6 +1174,7 @@ const KookerDashboardPage = () => {
     </div>
 
     {/* ── Refusal modal ── */}
+
     {pendingRefusal && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
         <div className="bg-white rounded-[20px] p-6 w-full max-w-[480px] shadow-xl">
@@ -1237,6 +1239,7 @@ const KookerDashboardPage = () => {
         </div>
       </div>
     )}
+    </>
   );
 };
 

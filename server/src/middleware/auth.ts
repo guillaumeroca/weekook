@@ -10,6 +10,7 @@ declare global {
       user?: {
         userId: number;
         email: string;
+        role: string;
         kookerProfileId?: number | null;
       };
     }
@@ -36,6 +37,7 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
     req.user = {
       userId: user.id,
       email: user.email,
+      role: user.role,
       kookerProfileId: user.kookerProfile?.id || null,
     };
 
@@ -52,6 +54,13 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
 export function requireKooker(req: Request, _res: Response, next: NextFunction) {
   if (!req.user?.kookerProfileId) {
     return next(new UnauthorizedError('Acces reserve aux kookers'));
+  }
+  next();
+}
+
+export function requireAdmin(req: Request, _res: Response, next: NextFunction) {
+  if (req.user?.role !== 'admin') {
+    return next(new UnauthorizedError('Acces reserve aux administrateurs'));
   }
   next();
 }

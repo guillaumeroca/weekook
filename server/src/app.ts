@@ -17,6 +17,7 @@ import messagesRoutes from './routes/messages.js';
 import testimonialsRoutes from './routes/testimonials.js';
 import usersRoutes from './routes/users.js';
 import uploadRoutes from './routes/upload.js';
+import adminRoutes from './routes/admin.js';
 
 import { errorHandler } from './middleware/errorHandler.js';
 
@@ -82,9 +83,28 @@ app.use('/api/v1/messages', messagesRoutes);
 app.use('/api/v1/testimonials', testimonialsRoutes);
 app.use('/api/v1/users', usersRoutes);
 app.use('/api/v1/upload', uploadRoutes);
+app.use('/api/v1/admin', adminRoutes);
 
 // ── Error handler ──
 app.use(errorHandler);
+
+// ── Config seed defaults ──
+const CONFIG_DEFAULTS: Record<string, string[]> = {
+  specialties: ['Provençale', 'Méditerranéenne', 'Pâtisserie', 'Grillades', 'Végétarien', 'Fruits de mer', 'Italienne', 'Asiatique'],
+  cities: ['Marseille', 'Aix-en-Provence', 'Cassis', 'La Ciotat', 'Toulon', 'Nice', 'Arles', 'Avignon'],
+  allergens: ['Gluten', 'Crustacés', 'Œufs', 'Poisson', 'Arachides', 'Soja', 'Lait', 'Fruits à coque', 'Céleri', 'Moutarde', 'Sésame', 'Sulfites', 'Lupin', 'Mollusques'],
+  serviceTypes: ['KOOK', 'KOURS'],
+};
+
+async function seedConfig() {
+  for (const [key, value] of Object.entries(CONFIG_DEFAULTS)) {
+    await prisma.config.upsert({
+      where: { key },
+      update: {},
+      create: { key, value: JSON.stringify(value) },
+    });
+  }
+}
 
 // ── Start server ──
 app.listen(env.PORT, async () => {
@@ -93,6 +113,7 @@ app.listen(env.PORT, async () => {
   try {
     await prisma.$queryRaw`SELECT 1`;
     console.log('Database connection ready');
+    await seedConfig();
   } catch (e) {
     console.error('Database connection failed:', e);
   }

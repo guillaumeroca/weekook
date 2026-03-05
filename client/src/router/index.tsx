@@ -1,8 +1,9 @@
 import { lazy, Suspense } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { ProtectedRoute } from '@/components/common/ProtectedRoute';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { useAuth } from '@/contexts/AuthContext';
 
 const HomePage = lazy(() => import('@/pages/HomePage').then(m => ({ default: m.default })));
 const SearchPage = lazy(() => import('@/pages/SearchPage').then(m => ({ default: m.default })));
@@ -21,6 +22,22 @@ const BookingPage = lazy(() => import('@/pages/BookingPage').then(m => ({ defaul
 const FaqPage = lazy(() => import('@/pages/FaqPage').then(m => ({ default: m.default })));
 const MessagesPage = lazy(() => import('@/pages/MessagesPage').then(m => ({ default: m.default })));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage').then(m => ({ default: m.default })));
+const AdminLayout = lazy(() => import('@/pages/admin/AdminLayout').then(m => ({ default: m.default })));
+const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboardPage').then(m => ({ default: m.default })));
+const AdminUsersPage = lazy(() => import('@/pages/admin/AdminUsersPage').then(m => ({ default: m.default })));
+const AdminKookersPage = lazy(() => import('@/pages/admin/AdminKookersPage').then(m => ({ default: m.default })));
+const AdminBookingsPage = lazy(() => import('@/pages/admin/AdminBookingsPage').then(m => ({ default: m.default })));
+const AdminTestimonialsPage = lazy(() => import('@/pages/admin/AdminTestimonialsPage').then(m => ({ default: m.default })));
+const AdminConfigPage = lazy(() => import('@/pages/admin/AdminConfigPage').then(m => ({ default: m.default })));
+const AdminServicesPage = lazy(() => import('@/pages/admin/AdminServicesPage').then(m => ({ default: m.default })));
+
+function AdminProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, isLoading } = useAuth();
+  if (isLoading) return <LoadingSpinner />;
+  if (!user) return <Navigate to="/connexion" replace />;
+  if (user.role !== 'admin') return <Navigate to="/tableau-de-bord" replace />;
+  return <>{children}</>;
+}
 
 export function AppRouter() {
   return (
@@ -56,9 +73,18 @@ export function AppRouter() {
           <Route path="/messages" element={
             <ProtectedRoute><MessagesPage /></ProtectedRoute>
           } />
-          <Route path="*" element={<NotFoundPage />} />
+            <Route path="*" element={<NotFoundPage />} />
         </Route>
         <Route path="/connexion" element={<LoginPage />} />
+        <Route path="/admin" element={<AdminProtectedRoute><AdminLayout /></AdminProtectedRoute>}>
+          <Route index element={<AdminDashboardPage />} />
+          <Route path="utilisateurs" element={<AdminUsersPage />} />
+          <Route path="kookers" element={<AdminKookersPage />} />
+          <Route path="reservations" element={<AdminBookingsPage />} />
+          <Route path="services" element={<AdminServicesPage />} />
+          <Route path="temoignages" element={<AdminTestimonialsPage />} />
+          <Route path="configuration" element={<AdminConfigPage />} />
+        </Route>
       </Routes>
     </Suspense>
   );

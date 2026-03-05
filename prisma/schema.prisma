@@ -41,6 +41,7 @@ model KookerProfile {
   rating          Float     @default(0)
   reviewCount     Int       @default(0) @map("review_count")
   featured        Boolean   @default(false)
+  verified        Boolean   @default(false)
   active          Boolean   @default(true)
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
@@ -195,6 +196,15 @@ model Message {
   receiver        User      @relation("ReceivedMessages", fields: [receiverId], references: [id])
 
   @@map("messages")
+}
+
+model Config {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("configs")
 }
 
 model Testimonial {

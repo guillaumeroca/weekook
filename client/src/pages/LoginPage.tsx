@@ -43,8 +43,8 @@ const LoginPage = () => {
     setLoginLoading(true);
 
     try {
-      await login(loginEmail, loginPassword);
-      navigate('/tableau-de-bord');
+      const loggedUser = await login(loginEmail, loginPassword);
+      navigate(loggedUser.role === 'admin' ? '/admin' : '/tableau-de-bord');
     } catch (err: any) {
       setLoginError(err?.error || err?.response?.data?.error || err?.message || 'Erreur de connexion. Vérifiez vos identifiants.');
     } finally {

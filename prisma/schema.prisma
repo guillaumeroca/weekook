@@ -20,6 +20,7 @@ model User {
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
   kookerProfile   KookerProfile?
+  userProfile     UserProfile?
   bookings        Booking[]       @relation("UserBookings")
   reviews         Review[]
   favorites       Favorite[]
@@ -55,6 +56,44 @@ model KookerProfile {
   testimonials    Testimonial[]
 
   @@map("kooker_profiles")
+}
+
+model UserProfile {
+  id                  Int       @id @default(autoincrement())
+  userId              Int       @unique @map("user_id")
+
+  // Adresse
+  address             String?
+  addressComplement   String?   @map("address_complement")
+  city                String?
+  postalCode          String?   @map("postal_code")
+  country             String?   @default("France")
+
+  // Accès
+  accessCode          String?   @map("access_code")
+  floor               String?
+  intercom            String?
+  parkingInfo         String?   @db.Text @map("parking_info")
+
+  // Cuisine
+  stoveType           String?   @map("stove_type")
+  hasOven             Boolean   @default(false) @map("has_oven")
+  hasDishwasher       Boolean   @default(false) @map("has_dishwasher")
+  tableCapacity       Int?      @map("table_capacity")
+  kitchenNotes        String?   @db.Text @map("kitchen_notes")
+
+  // Préférences alimentaires
+  dietaryRestrictions Json?     @map("dietary_restrictions")
+  allergies           Json?
+
+  // Notes libres pour le kooker
+  hostingNotes        String?   @db.Text @map("hosting_notes")
+
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
 }
 
 model KookerSpecialty {

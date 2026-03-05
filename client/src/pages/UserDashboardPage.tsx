@@ -266,16 +266,13 @@ const mapApiFavoriteToKooker = (f: ApiFavorite): FavoriteKooker => {
 
 const UserDashboardPage = () => {
   const navigate = useNavigate();
-  const { user, logout, refreshUser } = useAuth();
+  const { user, logout, refreshUser } = useAuth(); // refreshUser used for avatar upload
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<'upcoming' | 'history' | 'favorites'>('upcoming');
   const [upcomingBookings, setUpcomingBookings] = useState<Booking[]>([]);
   const [historyBookings, setHistoryBookings] = useState<Booking[]>([]);
   const [favorites, setFavorites] = useState<FavoriteKooker[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editProfileOpen, setEditProfileOpen] = useState(false);
-  const [editForm, setEditForm] = useState({ firstName: '', lastName: '', phone: '' });
-  const [editLoading, setEditLoading] = useState(false);
 
   useEffect(() => {
     document.title = 'Mon Espace - Weekook';
@@ -352,30 +349,6 @@ const UserDashboardPage = () => {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleOpenEditProfile = () => {
-    setEditForm({
-      firstName: user?.firstName || '',
-      lastName: user?.lastName || '',
-      phone: user?.phone || '',
-    });
-    setEditProfileOpen(true);
-  };
-
-  const handleSaveProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setEditLoading(true);
-    try {
-      await api.put('/users/profile', editForm);
-      await refreshUser();
-      setEditProfileOpen(false);
-      toast.success('Profil mis à jour');
-    } catch {
-      toast.error('Erreur lors de la mise à jour');
-    } finally {
-      setEditLoading(false);
-    }
-  };
-
   const handleCancelBooking = async (id: number) => {
     try {
       await api.put('/bookings/' + id + '/cancel');
@@ -411,7 +384,6 @@ const UserDashboardPage = () => {
   }
 
   return (
-    <>
     <div className="min-h-screen bg-[#f2f4fc]">
       <div className="max-w-[1200px] mx-auto px-4 md:px-8 lg:px-[96px] py-8 md:py-12">
         {/* Heading */}
@@ -469,7 +441,7 @@ const UserDashboardPage = () => {
                 </button>
               )}
               <button
-                onClick={handleOpenEditProfile}
+                onClick={() => navigate('/mon-profil')}
                 className="px-5 py-2.5 border border-[#c1a0fd] text-[#c1a0fd] hover:bg-[#c1a0fd]/5 rounded-[8px] h-[44px] text-[14px] font-medium transition-all"
               >
                 Modifier le profil
@@ -596,77 +568,6 @@ const UserDashboardPage = () => {
         )}
       </div>
     </div>
-
-    {/* Modal modifier le profil */}
-
-    {editProfileOpen && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-black/40" onClick={() => setEditProfileOpen(false)} />
-        <div className="relative bg-white rounded-[20px] p-8 w-full max-w-[480px] shadow-xl">
-          <h2 className="text-[22px] font-semibold text-[#111125] mb-6">Modifier le profil</h2>
-          <form onSubmit={handleSaveProfile} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-[13px] font-medium text-[#111125] mb-1.5">Prénom</label>
-                <input
-                  type="text"
-                  value={editForm.firstName}
-                  onChange={e => setEditForm(f => ({ ...f, firstName: e.target.value }))}
-                  required
-                  className="w-full h-[44px] px-4 border border-[#e0e2ef] rounded-[12px] text-[14px] focus:outline-none focus:border-[#c1a0fd]"
-                />
-              </div>
-              <div>
-                <label className="block text-[13px] font-medium text-[#111125] mb-1.5">Nom</label>
-                <input
-                  type="text"
-                  value={editForm.lastName}
-                  onChange={e => setEditForm(f => ({ ...f, lastName: e.target.value }))}
-                  required
-                  className="w-full h-[44px] px-4 border border-[#e0e2ef] rounded-[12px] text-[14px] focus:outline-none focus:border-[#c1a0fd]"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-[13px] font-medium text-[#111125] mb-1.5">Téléphone</label>
-              <input
-                type="tel"
-                value={editForm.phone}
-                onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))}
-                placeholder="+33 6 00 00 00 00"
-                className="w-full h-[44px] px-4 border border-[#e0e2ef] rounded-[12px] text-[14px] focus:outline-none focus:border-[#c1a0fd]"
-              />
-            </div>
-            <div>
-              <label className="block text-[13px] font-medium text-[#111125] mb-1.5">Email</label>
-              <input
-                type="email"
-                value={user?.email}
-                disabled
-                className="w-full h-[44px] px-4 border border-[#e0e2ef] rounded-[12px] text-[14px] bg-gray-50 text-[#828294] cursor-not-allowed"
-              />
-            </div>
-            <div className="flex gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setEditProfileOpen(false)}
-                className="flex-1 h-[44px] border border-[#e0e2ef] rounded-[12px] text-[14px] font-medium text-[#828294] hover:border-[#c1a0fd] transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                type="submit"
-                disabled={editLoading}
-                className="flex-1 h-[44px] bg-[#c1a0fd] hover:bg-[#b090ed] rounded-[12px] text-[14px] font-semibold text-[#111125] transition-colors disabled:opacity-50"
-              >
-                {editLoading ? 'Enregistrement...' : 'Enregistrer'}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    )}
-    </>
   );
 };
 

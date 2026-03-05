@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import { Search, ChevronLeft, ChevronRight, Star, Quote } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import KookerCard from '@/components/common/KookerCard';
@@ -137,6 +138,7 @@ function useTypewriter(words: string[], typingSpeed = 100, deletingSpeed = 60, p
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
   const [testimonialIndex, setTestimonialIndex] = useState(0);
@@ -522,12 +524,14 @@ export default function HomePage() {
               >
                 S'inscrire gratuitement
               </button>
-              <button
-                onClick={() => navigate('/connexion')}
-                className="h-[52px] px-8 rounded-[12px] border-2 border-[#c1a0fd] text-[#c1a0fd] hover:bg-[#c1a0fd] hover:text-white font-semibold text-[15px] transition-colors cursor-pointer"
-              >
-                Se connecter
-              </button>
+              {!user && (
+                <button
+                  onClick={() => navigate('/connexion')}
+                  className="h-[52px] px-8 rounded-[12px] border-2 border-[#c1a0fd] text-[#c1a0fd] hover:bg-[#c1a0fd] hover:text-white font-semibold text-[15px] transition-colors cursor-pointer"
+                >
+                  Se connecter
+                </button>
+              )}
             </div>
           </div>
         </div>

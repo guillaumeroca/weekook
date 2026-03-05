@@ -565,12 +565,14 @@ export default function HomePage() {
               à nous contacter directement. Notre équipe est là pour vous aider !
             </p>
             <div className="flex flex-wrap gap-4">
-              <button
-                onClick={() => navigate('/connexion')}
-                className="h-[52px] px-8 rounded-[12px] bg-[#c1a0fd] hover:bg-[#b090ed] text-white font-semibold text-[15px] transition-colors cursor-pointer"
-              >
-                Je m'inscris
-              </button>
+              {!user && (
+                <button
+                  onClick={() => navigate('/connexion')}
+                  className="h-[52px] px-8 rounded-[12px] bg-[#c1a0fd] hover:bg-[#b090ed] text-white font-semibold text-[15px] transition-colors cursor-pointer"
+                >
+                  Je m'inscris
+                </button>
+              )}
               <button
                 onClick={() => navigate('/a-propos')}
                 className="h-[52px] px-8 rounded-[12px] border-2 border-[#c1a0fd] text-[#c1a0fd] hover:bg-[#c1a0fd] hover:text-white font-semibold text-[15px] transition-colors cursor-pointer"

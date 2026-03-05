@@ -490,6 +490,7 @@ export default function HomePage() {
       </section>
 
       {/* ═══════════════════════ CTA KOOKER SECTION ═══════════════════════ */}
+      {!user?.kookerProfileId && (
       <section className="px-4 md:px-8 lg:px-[96px] py-[48px] md:py-[64px] lg:py-[80px]">
         <div className="relative w-full rounded-[24px] overflow-hidden min-h-[400px] md:min-h-[460px] lg:min-h-[520px]">
           {/* Background Image */}
@@ -518,24 +519,34 @@ export default function HomePage() {
               d'utilisateurs.
             </p>
             <div className="flex flex-wrap gap-4">
-              <button
-                onClick={() => navigate('/connexion')}
-                className="h-[52px] px-8 rounded-[12px] bg-[#c1a0fd] hover:bg-[#b090ed] text-white font-semibold text-[15px] transition-colors cursor-pointer"
-              >
-                S'inscrire gratuitement
-              </button>
-              {!user && (
+              {user ? (
                 <button
-                  onClick={() => navigate('/connexion')}
-                  className="h-[52px] px-8 rounded-[12px] border-2 border-[#c1a0fd] text-[#c1a0fd] hover:bg-[#c1a0fd] hover:text-white font-semibold text-[15px] transition-colors cursor-pointer"
+                  onClick={() => navigate('/devenir-kooker')}
+                  className="h-[52px] px-8 rounded-[12px] bg-[#c1a0fd] hover:bg-[#b090ed] text-white font-semibold text-[15px] transition-colors cursor-pointer"
                 >
-                  Se connecter
+                  Devenir Kooker
                 </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => navigate('/connexion')}
+                    className="h-[52px] px-8 rounded-[12px] bg-[#c1a0fd] hover:bg-[#b090ed] text-white font-semibold text-[15px] transition-colors cursor-pointer"
+                  >
+                    S'inscrire gratuitement
+                  </button>
+                  <button
+                    onClick={() => navigate('/connexion')}
+                    className="h-[52px] px-8 rounded-[12px] border-2 border-[#c1a0fd] text-[#c1a0fd] hover:bg-[#c1a0fd] hover:text-white font-semibold text-[15px] transition-colors cursor-pointer"
+                  >
+                    Se connecter
+                  </button>
+                </>
               )}
             </div>
           </div>
         </div>
       </section>
+      )}
 
       {/* ═══════════════════════ FAQ SECTION ═══════════════════════ */}
       <section className="px-4 md:px-8 lg:px-[96px] py-[48px] md:py-[64px] lg:py-[80px]">

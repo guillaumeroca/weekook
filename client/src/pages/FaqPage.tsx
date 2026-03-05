@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
@@ -121,6 +122,7 @@ const FAQ_ITEMS = [
 
 export default function FaqPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [activeCategory, setActiveCategory] = useState('all');
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
@@ -240,12 +242,14 @@ export default function FaqPage() {
             Notre équipe est disponible pour vous aider. Contactez-nous directement ou rejoignez la communauté Weekook.
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
-            <button
-              onClick={() => navigate('/connexion')}
-              className="h-[52px] px-8 rounded-[12px] bg-white text-[#c1a0fd] font-semibold text-[15px] hover:bg-gray-50 transition-colors cursor-pointer"
-            >
-              Créer un compte
-            </button>
+            {!user && (
+              <button
+                onClick={() => navigate('/connexion')}
+                className="h-[52px] px-8 rounded-[12px] bg-white text-[#c1a0fd] font-semibold text-[15px] hover:bg-gray-50 transition-colors cursor-pointer"
+              >
+                Créer un compte
+              </button>
+            )}
             <button
               onClick={() => navigate('/recherche')}
               className="h-[52px] px-8 rounded-[12px] border-2 border-white text-white font-semibold text-[15px] hover:bg-white/10 transition-colors cursor-pointer"

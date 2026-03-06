@@ -401,9 +401,18 @@ export default function MessagesPage() {
                   </button>
                   <Avatar user={activeConv.user} size={40} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-[15px] font-semibold text-[#111125] truncate">
-                      {activeConv.user.firstName} {activeConv.user.lastName}
-                    </p>
+                    {activeConv.kookerRecipientId && activeConv.kookerRecipientId !== user?.kookerProfileId ? (
+                      <button
+                        onClick={() => navigate(`/kooker/${activeConv.kookerRecipientId}`)}
+                        className="text-[15px] font-semibold text-[#111125] truncate hover:text-[#c1a0fd] transition-colors block"
+                      >
+                        {activeConv.user.firstName} {activeConv.user.lastName}
+                      </button>
+                    ) : (
+                      <p className="text-[15px] font-semibold text-[#111125] truncate">
+                        {activeConv.user.firstName} {activeConv.user.lastName}
+                      </p>
+                    )}
                     {kookerContext && (
                       <p className="text-[12px] text-[#c1a0fd]">Via profil kooker</p>
                     )}

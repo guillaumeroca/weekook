@@ -3,6 +3,13 @@ import { useSearchParams } from 'react-router-dom';
 import KookerCard from '@/components/common/KookerCard';
 import { api } from '@/lib/api';
 
+const KOOKER_PLACEHOLDER_IMAGES = [
+  'https://images.unsplash.com/photo-1496952286950-c36951138af4?w=600&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1729774092918-f1b7c595cce1?w=600&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1760445528879-010bd4b7660b?w=600&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1617307744152-60bf7d1da3f8?w=600&h=400&fit=crop',
+];
+
 // ─── Types ──────────────────────────────────────────────────────────────────────
 type ServiceType = 'KOOK' | 'KOURS' | 'BOTH' | '';
 type SortOption = 'pertinence' | 'prix-asc' | 'prix-desc' | 'note';
@@ -121,10 +128,11 @@ export default function SearchPage() {
       ? (k.user.avatar.startsWith('http') ? k.user.avatar : `/uploads/${k.user.avatar}`)
       : '';
 
+    const imageUrl = avatarUrl || KOOKER_PLACEHOLDER_IMAGES[k.id % KOOKER_PLACEHOLDER_IMAGES.length];
     return {
       id: k.id,
       name: `${k.user.firstName} ${k.user.lastName}`,
-      imageUrl: avatarUrl,
+      imageUrl,
       avatarUrl,
       city: k.city || '',
       specialties,

@@ -4,6 +4,13 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
+const KOOKER_PLACEHOLDER_IMAGES = [
+  'https://images.unsplash.com/photo-1496952286950-c36951138af4?w=600&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1729774092918-f1b7c595cce1?w=600&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1760445528879-010bd4b7660b?w=600&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1617307744152-60bf7d1da3f8?w=600&h=400&fit=crop',
+];
+
 // ─── Types ──────────────────────────────────────────────────────────────────────
 interface ServiceImage {
   id: number;
@@ -74,7 +81,9 @@ function mapApiToProfile(data: any): KookerProfile {
     id: data.id,
     userId: data.user?.id || 0,
     name: `${data.user?.firstName || ''} ${data.user?.lastName || ''}`.trim() || 'Kooker',
-    avatarUrl: data.user?.avatar || '',
+    avatarUrl: data.user?.avatar
+      ? (data.user.avatar.startsWith('http') ? data.user.avatar : `/uploads/${data.user.avatar}`)
+      : KOOKER_PLACEHOLDER_IMAGES[data.id % KOOKER_PLACEHOLDER_IMAGES.length],
     coverUrl: '',
     city: data.city || '',
     bio: data.bio || '',
@@ -458,13 +467,7 @@ export default function KookerProfilePage() {
           <div className="flex flex-col sm:flex-row gap-5">
             {/* Avatar */}
             <div className="w-[110px] h-[110px] md:w-[130px] md:h-[130px] rounded-[16px] bg-[#f3ecff] overflow-hidden flex-shrink-0 self-start">
-              {profile.avatarUrl ? (
-                <img src={profile.avatarUrl} alt={profile.name} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-[#c1a0fd] to-[#8b6fce] flex items-center justify-center text-white font-bold text-[40px]">
-                  {profile.name.charAt(0).toUpperCase()}
-                </div>
-              )}
+              <img src={profile.avatarUrl} alt={profile.name} className="w-full h-full object-cover" />
             </div>
 
             {/* Info */}

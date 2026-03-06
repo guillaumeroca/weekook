@@ -124,7 +124,7 @@ export default function SearchPage() {
     return {
       id: k.id,
       name: `${k.user.firstName} ${k.user.lastName}`,
-      imageUrl: 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=600&h=400&fit=crop',
+      imageUrl: avatarUrl,
       avatarUrl,
       city: k.city || '',
       specialties,

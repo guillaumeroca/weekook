@@ -168,10 +168,13 @@ export default function HomePage() {
             const lowestPrice = k.services.length > 0
               ? Math.min(...k.services.map((s) => s.priceInCents)) / 100
               : 0;
+            const avatarUrl = k.user.avatar
+              ? (k.user.avatar.startsWith('http') ? k.user.avatar : `/uploads/${k.user.avatar}`)
+              : KOOKER_PLACEHOLDER_IMAGES[index % KOOKER_PLACEHOLDER_IMAGES.length];
             return {
               id: k.id,
               name: `${k.user.firstName} ${k.user.lastName}`,
-              imageUrl: KOOKER_PLACEHOLDER_IMAGES[index % KOOKER_PLACEHOLDER_IMAGES.length],
+              imageUrl: avatarUrl,
               city: k.city,
               specialties,
               price: lowestPrice,

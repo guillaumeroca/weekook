@@ -577,7 +577,7 @@ export default function HomePage() {
                 </button>
               )}
               <button
-                onClick={() => navigate('/a-propos')}
+                onClick={() => navigate('/faq')}
                 className="h-[52px] px-8 rounded-[12px] border-2 border-[#c1a0fd] text-[#c1a0fd] hover:bg-[#c1a0fd] hover:text-white font-semibold text-[15px] transition-colors cursor-pointer"
               >
                 En savoir plus

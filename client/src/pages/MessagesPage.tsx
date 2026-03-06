@@ -463,7 +463,14 @@ export default function MessagesPage() {
                               </div>
                             )}
                             <div className={`msg-row flex items-end gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
-                              {!isMe && <Avatar user={msg.sender} size={28} />}
+                              {!isMe && (
+                                <div
+                                  className={activeConv.user.kookerProfileId ? 'cursor-pointer flex-shrink-0' : 'flex-shrink-0'}
+                                  onClick={() => activeConv.user.kookerProfileId && navigate(`/kooker/${activeConv.user.kookerProfileId}`)}
+                                >
+                                  <Avatar user={msg.sender} size={28} />
+                                </div>
+                              )}
                               <button
                                 onClick={() => handleDeleteMessage(msg.id)}
                                 className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full hover:bg-[#fee2e2] text-[#9ca3af] hover:text-[#ef4444] mb-5"

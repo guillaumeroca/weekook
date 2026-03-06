@@ -39,10 +39,16 @@ router.get(
         },
         include: {
           sender: {
-            select: { id: true, firstName: true, lastName: true, avatar: true },
+            select: {
+              id: true, firstName: true, lastName: true, avatar: true,
+              kookerProfile: { select: { id: true } },
+            },
           },
           receiver: {
-            select: { id: true, firstName: true, lastName: true, avatar: true },
+            select: {
+              id: true, firstName: true, lastName: true, avatar: true,
+              kookerProfile: { select: { id: true } },
+            },
           },
         },
         orderBy: { createdAt: 'desc' },
@@ -52,7 +58,7 @@ router.get(
       const conversationMap = new Map<
         number,
         {
-          user: { id: number; firstName: string; lastName: string; avatar: string | null };
+          user: { id: number; firstName: string; lastName: string; avatar: string | null; kookerProfileId: number | null };
           lastMessage: (typeof messages)[0];
           unreadCount: number;
           kookerRecipientId: number | null;
@@ -61,7 +67,14 @@ router.get(
 
       for (const msg of messages) {
         const partnerId = msg.senderId === userId ? msg.receiverId : msg.senderId;
-        const partner = msg.senderId === userId ? msg.receiver : msg.sender;
+        const partnerRaw = msg.senderId === userId ? msg.receiver : msg.sender;
+        const partner = {
+          id: partnerRaw.id,
+          firstName: partnerRaw.firstName,
+          lastName: partnerRaw.lastName,
+          avatar: partnerRaw.avatar,
+          kookerProfileId: (partnerRaw as any).kookerProfile?.id ?? null,
+        };
 
         if (!conversationMap.has(partnerId)) {
           conversationMap.set(partnerId, {

@@ -12,6 +12,7 @@ interface MessageUser {
   firstName: string;
   lastName: string;
   avatar: string | null;
+  kookerProfileId?: number | null;
 }
 
 interface Message {
@@ -399,11 +400,16 @@ export default function MessagesPage() {
                       <path d="M15 18l-6-6 6-6"/>
                     </svg>
                   </button>
-                  <Avatar user={activeConv.user} size={40} />
+                  <div
+                    className={activeConv.user.kookerProfileId ? 'cursor-pointer' : ''}
+                    onClick={() => activeConv.user.kookerProfileId && navigate(`/kooker/${activeConv.user.kookerProfileId}`)}
+                  >
+                    <Avatar user={activeConv.user} size={40} />
+                  </div>
                   <div className="flex-1 min-w-0">
-                    {activeConv.kookerRecipientId && activeConv.kookerRecipientId !== user?.kookerProfileId ? (
+                    {activeConv.user.kookerProfileId ? (
                       <button
-                        onClick={() => navigate(`/kooker/${activeConv.kookerRecipientId}`)}
+                        onClick={() => navigate(`/kooker/${activeConv.user.kookerProfileId}`)}
                         className="text-[15px] font-semibold text-[#111125] truncate hover:text-[#c1a0fd] transition-colors block"
                       >
                         {activeConv.user.firstName} {activeConv.user.lastName}

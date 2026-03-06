@@ -44,7 +44,9 @@ const LoginPage = () => {
 
     try {
       const loggedUser = await login(loginEmail, loginPassword);
-      navigate(loggedUser.role === 'admin' ? '/admin' : '/tableau-de-bord');
+      if (loggedUser.role === 'admin') navigate('/admin');
+      else if (loggedUser.kookerProfileId) navigate('/tableau-de-bord');
+      else navigate('/');
     } catch (err: any) {
       setLoginError(err?.error || err?.response?.data?.error || err?.message || 'Erreur de connexion. Vérifiez vos identifiants.');
     } finally {
@@ -75,7 +77,7 @@ const LoginPage = () => {
 
     try {
       await register({ email: registerEmail, password: registerPassword, firstName: registerFirstName, lastName: registerLastName });
-      navigate('/tableau-de-bord');
+      navigate('/');
     } catch (err: any) {
       setRegisterError(err?.error || err?.response?.data?.error || err?.message || 'Erreur lors de l\'inscription.');
     } finally {

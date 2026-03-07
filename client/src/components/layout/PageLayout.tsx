@@ -13,7 +13,7 @@ function ScrollToTop() {
 
 export function PageLayout() {
   return (
-    <div className="bg-white w-full min-h-screen flex flex-col">
+    <div className="bg-[#f2f4fc] w-full min-h-screen flex flex-col">
       <ScrollToTop />
       <Navbar />
       <main className="flex-1">

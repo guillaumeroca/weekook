@@ -21,6 +21,7 @@ export const updateUserProfileSchema = z.object({
   firstName: z.string().optional(),
   lastName: z.string().optional(),
   phone: z.string().optional(),
+  email: z.string().email('Email invalide').optional(),
 });
 
 export const updateHostingProfileSchema = z.object({

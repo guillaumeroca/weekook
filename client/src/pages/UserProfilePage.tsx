@@ -164,7 +164,7 @@ const UserProfilePage = () => {
   const { user, refreshUser } = useAuth();
 
   const [activeSection, setActiveSection] = useState<SectionKey>('personal');
-  const [personal, setPersonal] = useState({ firstName: '', lastName: '', phone: '' });
+  const [personal, setPersonal] = useState({ firstName: '', lastName: '', phone: '', email: '' });
   const [hosting, setHosting] = useState<HostingProfile>(EMPTY_PROFILE);
   const [loading, setLoading] = useState(true);
 
@@ -179,7 +179,7 @@ const UserProfilePage = () => {
     document.title = 'Mon profil - Weekook';
     const load = async () => {
       if (user) {
-        setPersonal({ firstName: user.firstName, lastName: user.lastName, phone: user.phone ?? '' });
+        setPersonal({ firstName: user.firstName, lastName: user.lastName, phone: user.phone ?? '', email: user.email ?? '' });
       }
       try {
         const res = await api.get<HostingProfile & { tableCapacity: number | null }>('/users/hosting-profile');
@@ -201,7 +201,13 @@ const UserProfilePage = () => {
   const savePersonal = async () => {
     setSavingPersonal(true);
     try {
-      await api.put('/users/profile', personal);
+      const payload: Record<string, string> = {
+        firstName: personal.firstName,
+        lastName: personal.lastName,
+        phone: personal.phone,
+      };
+      if (personal.email !== (user?.email ?? '')) payload.email = personal.email;
+      await api.put('/users/profile', payload);
       await refreshUser();
       toast.success('Informations mises à jour');
     } catch { toast.error('Erreur lors de la mise à jour'); }
@@ -338,10 +344,21 @@ const UserProfilePage = () => {
                       placeholder="+33 6 00 00 00 00"
                       className={inputCls} />
                   </Field>
-                  <Field label="Email">
-                    <input type="email" value={user?.email ?? ''} disabled
-                      className={inputCls + ' bg-[#f8f8fc] text-[#828294] cursor-not-allowed'} />
+                  <Field label="Email (identifiant de connexion)">
+                    <input type="email" value={personal.email}
+                      onChange={e => setPersonal(p => ({ ...p, email: e.target.value }))}
+                      className={inputCls} />
                   </Field>
+                  {personal.email !== (user?.email ?? '') && (
+                    <div className="flex items-start gap-2.5 p-4 bg-[#fff8e1] border border-[#ffe082] rounded-[12px] text-[13px] text-[#7c6000]">
+                      <svg className="w-4 h-4 mt-0.5 flex-shrink-0 text-[#f59e0b]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                      </svg>
+                      <span>
+                        <strong>Attention :</strong> modifier votre email changera également votre identifiant de connexion. Vous devrez utiliser cette nouvelle adresse pour vous connecter.
+                      </span>
+                    </div>
+                  )}
                   <SaveButton saving={savingPersonal} onClick={savePersonal} />
                 </div>
               )}

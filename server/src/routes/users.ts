@@ -14,12 +14,23 @@ router.put(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.user!.userId;
-      const { firstName, lastName, phone } = req.body;
+      const { firstName, lastName, phone, email } = req.body;
+
+      // Check email uniqueness if email is being changed
+      if (email !== undefined) {
+        const existing = await prisma.user.findFirst({
+          where: { email, NOT: { id: userId } },
+        });
+        if (existing) {
+          return res.status(409).json({ success: false, error: 'Cet email est déjà utilisé par un autre compte.' });
+        }
+      }
 
       const data: Record<string, unknown> = {};
       if (firstName !== undefined) data.firstName = firstName;
       if (lastName !== undefined) data.lastName = lastName;
       if (phone !== undefined) data.phone = phone;
+      if (email !== undefined) data.email = email;
 
       const updated = await prisma.user.update({
         where: { id: userId },

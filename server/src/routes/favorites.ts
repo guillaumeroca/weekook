@@ -26,6 +26,10 @@ router.get(
                   avatar: true,
                 },
               },
+              services: {
+                where: { active: true },
+                select: { priceInCents: true },
+              },
             },
           },
         },

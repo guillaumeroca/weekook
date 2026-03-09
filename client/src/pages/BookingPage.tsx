@@ -66,7 +66,8 @@ function formatPrice(cents: number): string {
 }
 
 function formatDateFr(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00');
+  const datePart = dateStr.includes('T') ? dateStr.substring(0, 10) : dateStr;
+  const date = new Date(datePart + 'T00:00:00');
   return date.toLocaleDateString('fr-FR', {
     weekday: 'long',
     day: 'numeric',

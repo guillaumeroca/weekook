@@ -12,9 +12,9 @@ import {
 } from '../lib/email.js';
 
 // Envoie un message système dans la messagerie interne (fire-and-forget)
-async function sendSystemMessage(senderId: number, receiverId: number, content: string): Promise<void> {
+async function sendSystemMessage(senderId: number, receiverId: number, content: string, kookerRecipientId: number): Promise<void> {
   try {
-    await prisma.message.create({ data: { senderId, receiverId, content } });
+    await prisma.message.create({ data: { senderId, receiverId, content, kookerRecipientId } });
   } catch (err) {
     console.error('[booking] Failed to send system message:', err);
   }
@@ -215,7 +215,8 @@ router.post(
       sendSystemMessage(
         userId,
         kookerUser.id,
-        `📅 Nouvelle demande de réservation pour "${booking.service.title}" le ${new Date(booking.date).toLocaleDateString('fr-FR')} à ${booking.startTime} (${booking.guests} convive${booking.guests > 1 ? 's' : ''}). Montant : ${(booking.totalPriceInCents / 100).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}.`
+        `📅 Nouvelle demande de réservation pour "${booking.service.title}" le ${new Date(booking.date).toLocaleDateString('fr-FR')} à ${booking.startTime} (${booking.guests} convive${booking.guests > 1 ? 's' : ''}). Montant : ${(booking.totalPriceInCents / 100).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}.`,
+        booking.kookerProfileId
       );
 
       res.status(201).json({
@@ -295,7 +296,8 @@ router.put(
         sendSystemMessage(
           kookerProfileUser.id,
           clientUser.id,
-          `✅ Votre réservation pour "${updated.service.title}" le ${new Date(updated.date).toLocaleDateString('fr-FR')} à ${updated.startTime} a été confirmée par ${kookerName} !`
+          `✅ Votre réservation pour "${updated.service.title}" le ${new Date(updated.date).toLocaleDateString('fr-FR')} à ${updated.startTime} a été confirmée par ${kookerName} !`,
+          kookerProfileId
         );
       } else if (status === 'cancelled') {
         sendBookingCancelledToUser(
@@ -308,7 +310,8 @@ router.put(
         sendSystemMessage(
           kookerProfileUser.id,
           clientUser.id,
-          `❌ Votre réservation pour "${updated.service.title}" le ${new Date(updated.date).toLocaleDateString('fr-FR')} a été annulée par ${kookerName}.`
+          `❌ Votre réservation pour "${updated.service.title}" le ${new Date(updated.date).toLocaleDateString('fr-FR')} a été annulée par ${kookerName}.`,
+          kookerProfileId
         );
       }
 
@@ -391,7 +394,8 @@ router.put(
           sendSystemMessage(
             clientUser.id,
             kookerUser.id,
-            `❌ ${clientName} a annulé sa réservation pour "${serviceTitle}" du ${new Date(date).toLocaleDateString('fr-FR')}.`
+            `❌ ${clientName} a annulé sa réservation pour "${serviceTitle}" du ${new Date(date).toLocaleDateString('fr-FR')}.`,
+            fullBooking.kookerProfileId
           );
         } else {
           // Kooker cancelled → notify user
@@ -399,7 +403,8 @@ router.put(
           sendSystemMessage(
             kookerUser.id,
             clientUser.id,
-            `❌ Votre réservation pour "${serviceTitle}" du ${new Date(date).toLocaleDateString('fr-FR')} a été annulée par ${kookerName}.`
+            `❌ Votre réservation pour "${serviceTitle}" du ${new Date(date).toLocaleDateString('fr-FR')} a été annulée par ${kookerName}.`,
+            fullBooking.kookerProfileId
           );
         }
       }

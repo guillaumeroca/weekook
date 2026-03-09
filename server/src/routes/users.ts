@@ -3,6 +3,16 @@ import prisma from '../lib/prisma.js';
 import { authenticate } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { updateUserProfileSchema, updateHostingProfileSchema } from '../schemas/kooker.js';
+import { signToken } from '../utils/jwt.js';
+import { env } from '../config/env.js';
+
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: env.NODE_ENV === 'production',
+  sameSite: 'strict' as const,
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+  path: '/',
+};
 
 const router = Router();
 
@@ -46,6 +56,12 @@ router.put(
           createdAt: true,
         },
       });
+
+      // Re-issue JWT if email changed so the cookie stays in sync
+      if (email !== undefined) {
+        const newToken = signToken({ userId: updated.id, email: updated.email });
+        res.cookie('token', newToken, COOKIE_OPTIONS);
+      }
 
       res.json({
         success: true,

@@ -22,7 +22,7 @@ const COOKIE_OPTIONS = {
 // POST /register
 router.post(
   '/register',
-  rateLimit(10, 15 * 60 * 1000),
+  rateLimit(50, 15 * 60 * 1000),
   validate(registerSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -73,7 +73,7 @@ router.post(
 // POST /login
 router.post(
   '/login',
-  rateLimit(10, 15 * 60 * 1000),
+  rateLimit(50, 15 * 60 * 1000),
   validate(loginSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {

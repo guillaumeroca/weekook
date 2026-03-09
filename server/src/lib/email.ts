@@ -74,3 +74,146 @@ export async function sendNewMessageNotification(
     console.error('[email] Failed to send notification:', err);
   }
 }
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function formatDate(date: Date | string): string {
+  return new Date(date).toLocaleDateString('fr-FR', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  });
+}
+
+function formatPrice(cents: number): string {
+  return (cents / 100).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
+}
+
+function emailWrapper(icon: string, title: string, body: string, ctaUrl: string, ctaLabel: string): string {
+  return `
+    <div style="font-family: Inter, Arial, sans-serif; max-width: 520px; margin: 0 auto; background: #f2f4fc; padding: 32px 16px;">
+      <div style="background: white; border-radius: 20px; padding: 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <div style="text-align: center; margin-bottom: 24px;">
+          <div style="display: inline-block; background: #c1a0fd; border-radius: 50%; width: 48px; height: 48px; line-height: 48px; text-align: center; font-size: 24px;">${icon}</div>
+        </div>
+        <h2 style="color: #111125; font-size: 20px; font-weight: 700; margin: 0 0 16px 0;">${title}</h2>
+        ${body}
+        <a href="${ctaUrl}" style="display: block; text-align: center; background: #c1a0fd; color: white; text-decoration: none; padding: 14px 24px; border-radius: 12px; font-weight: 600; font-size: 15px; margin-top: 24px;">
+          ${ctaLabel}
+        </a>
+        <p style="color: #9ca3af; font-size: 12px; text-align: center; margin: 20px 0 0 0;">
+          Weekook — La cuisine à domicile réinventée
+        </p>
+      </div>
+    </div>`;
+}
+
+function infoBox(rows: { label: string; value: string }[]): string {
+  const items = rows.map(r =>
+    `<tr><td style="color:#6b7280;font-size:13px;padding:4px 0;width:140px;">${r.label}</td><td style="color:#111125;font-size:13px;font-weight:600;padding:4px 0;">${r.value}</td></tr>`
+  ).join('');
+  return `<table style="background:#f3ecff;border-radius:12px;padding:16px;width:100%;border-collapse:collapse;margin-bottom:8px;">${items}</table>`;
+}
+
+async function sendEmail(to: string, subject: string, html: string, label: string): Promise<void> {
+  const resend = getResend();
+  if (!resend) return;
+  try {
+    console.log(`[email] Sending "${label}" to ${to}...`);
+    await resend.emails.send({ from: 'Weekook <notifications@weekook.com>', to, subject, html });
+    console.log(`[email] Sent OK: "${label}" to ${to}`);
+  } catch (err) {
+    console.error(`[email] Failed "${label}" to ${to}:`, err);
+  }
+}
+
+// ─── Booking notifications ────────────────────────────────────────────────────
+
+export async function sendBookingRequestToKooker(
+  kookerEmail: string,
+  kookerName: string,
+  clientName: string,
+  serviceName: string,
+  date: Date | string,
+  startTime: string,
+  guests: number,
+  totalPriceInCents: number
+): Promise<void> {
+  const html = emailWrapper(
+    '📅',
+    `Nouvelle demande de réservation`,
+    `<p style="color:#6b7280;font-size:14px;margin:0 0 16px 0;">Bonjour ${kookerName}, <strong>${clientName}</strong> souhaite réserver votre prestation.</p>
+    ${infoBox([
+      { label: 'Prestation', value: serviceName },
+      { label: 'Date', value: formatDate(date) },
+      { label: 'Heure', value: startTime },
+      { label: 'Convives', value: String(guests) },
+      { label: 'Montant total', value: formatPrice(totalPriceInCents) },
+    ])}
+    <p style="color:#6b7280;font-size:13px;margin:12px 0 0 0;">Connectez-vous pour accepter ou refuser cette réservation.</p>`,
+    `${env.APP_URL}/tableau-de-bord`,
+    'Voir la réservation'
+  );
+  await sendEmail(kookerEmail, `Nouvelle réservation de ${clientName} — ${serviceName}`, html, 'booking-request');
+}
+
+export async function sendBookingConfirmedToUser(
+  userEmail: string,
+  userName: string,
+  kookerName: string,
+  serviceName: string,
+  date: Date | string,
+  startTime: string,
+  guests: number,
+  totalPriceInCents: number
+): Promise<void> {
+  const html = emailWrapper(
+    '✅',
+    `Votre réservation est confirmée !`,
+    `<p style="color:#6b7280;font-size:14px;margin:0 0 16px 0;">Bonjour ${userName}, <strong>${kookerName}</strong> a accepté votre demande. C'est officiel !</p>
+    ${infoBox([
+      { label: 'Prestation', value: serviceName },
+      { label: 'Kooker', value: kookerName },
+      { label: 'Date', value: formatDate(date) },
+      { label: 'Heure', value: startTime },
+      { label: 'Convives', value: String(guests) },
+      { label: 'Montant total', value: formatPrice(totalPriceInCents) },
+    ])}`,
+    `${env.APP_URL}/tableau-de-bord-utilisateur`,
+    'Voir mes réservations'
+  );
+  await sendEmail(userEmail, `Réservation confirmée — ${serviceName} avec ${kookerName}`, html, 'booking-confirmed');
+}
+
+export async function sendBookingCancelledToUser(
+  userEmail: string,
+  userName: string,
+  kookerName: string,
+  serviceName: string,
+  date: Date | string
+): Promise<void> {
+  const html = emailWrapper(
+    '❌',
+    `Réservation annulée`,
+    `<p style="color:#6b7280;font-size:14px;margin:0 0 16px 0;">Bonjour ${userName}, <strong>${kookerName}</strong> a annulé votre réservation pour la prestation <strong>${serviceName}</strong> du <strong>${formatDate(date)}</strong>.</p>
+    <p style="color:#6b7280;font-size:13px;margin:0;">Vous pouvez rechercher un autre kooker disponible.</p>`,
+    `${env.APP_URL}/recherche`,
+    'Trouver un autre kooker'
+  );
+  await sendEmail(userEmail, `Réservation annulée — ${serviceName}`, html, 'booking-cancelled-to-user');
+}
+
+export async function sendBookingCancelledToKooker(
+  kookerEmail: string,
+  kookerName: string,
+  clientName: string,
+  serviceName: string,
+  date: Date | string
+): Promise<void> {
+  const html = emailWrapper(
+    '❌',
+    `Réservation annulée par le client`,
+    `<p style="color:#6b7280;font-size:14px;margin:0 0 16px 0;">Bonjour ${kookerName}, <strong>${clientName}</strong> a annulé sa réservation pour la prestation <strong>${serviceName}</strong> du <strong>${formatDate(date)}</strong>.</p>`,
+    `${env.APP_URL}/tableau-de-bord`,
+    'Voir mon planning'
+  );
+  await sendEmail(kookerEmail, `Annulation de ${clientName} — ${serviceName}`, html, 'booking-cancelled-to-kooker');
+}

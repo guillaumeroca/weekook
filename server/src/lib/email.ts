@@ -23,8 +23,13 @@ export async function sendNewMessageNotification(
   const resend = getResend();
   if (!resend) return;
 
+  console.log(`[email] sendNewMessageNotification to ${receiverEmail} (id=${receiverId})`);
+
   const lastSent = emailCooldown.get(receiverId);
-  if (lastSent && Date.now() - lastSent < COOLDOWN_MS) return;
+  if (lastSent && Date.now() - lastSent < COOLDOWN_MS) {
+    console.log(`[email] Skipped (cooldown, ${Math.round((COOLDOWN_MS - (Date.now() - lastSent)) / 1000)}s remaining)`);
+    return;
+  }
 
   emailCooldown.set(receiverId, Date.now());
 
@@ -33,6 +38,7 @@ export async function sendNewMessageNotification(
     : messagePreview;
 
   try {
+    console.log(`[email] Sending via Resend to ${receiverEmail}...`);
     await resend.emails.send({
       from: 'Weekook <notifications@weekook.com>',
       to: receiverEmail,
@@ -62,6 +68,7 @@ export async function sendNewMessageNotification(
         </div>
       `,
     });
+    console.log(`[email] Sent OK to ${receiverEmail}`);
   } catch (err) {
     // Email failure ne doit pas impacter la réponse API
     console.error('[email] Failed to send notification:', err);

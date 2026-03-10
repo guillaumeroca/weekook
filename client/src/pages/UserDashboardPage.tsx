@@ -364,7 +364,7 @@ const UserDashboardPage = () => {
   };
 
   const tabs = [
-    { key: 'upcoming' as const, label: 'A venir', shortLabel: 'A venir', count: upcomingBookings.length },
+    { key: 'upcoming' as const, label: 'Réservations à venir', shortLabel: 'A venir', count: upcomingBookings.length },
     { key: 'history' as const, label: 'Historique', shortLabel: 'Historique', count: historyBookings.length },
     { key: 'favorites' as const, label: 'Mes Favoris', shortLabel: 'Favoris', count: favorites.length },
   ];
@@ -432,24 +432,55 @@ const UserDashboardPage = () => {
               </div>
             </div>
             <div className="flex gap-3 flex-wrap">
-              {user?.kookerProfileId && (
-                <button
-                  onClick={() => navigate('/kooker-dashboard')}
-                  className="px-5 py-2.5 border border-[#c1a0fd] text-[#c1a0fd] hover:bg-[#c1a0fd]/5 rounded-[8px] h-[44px] text-[14px] font-medium transition-all"
-                >
-                  Espace Kooker
-                </button>
-              )}
+              {/* Modifier le profil */}
               <button
                 onClick={() => navigate('/mon-profil')}
-                className="px-5 py-2.5 border border-[#c1a0fd] text-[#c1a0fd] hover:bg-[#c1a0fd]/5 rounded-[8px] h-[44px] text-[14px] font-medium transition-all"
+                className="flex items-center gap-2 px-5 py-2.5 border border-[#c1a0fd] text-[#c1a0fd] hover:bg-[#c1a0fd]/5 rounded-[12px] h-[44px] text-[14px] font-medium transition-all"
               >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
                 Modifier le profil
               </button>
+
+              {/* Devenir Kooker ou Espace Kooker */}
+              {user?.kookerProfileId ? (
+                <button
+                  onClick={() => navigate('/kooker-dashboard')}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-[#c1a0fd] hover:bg-[#b090ed] text-white rounded-[12px] h-[44px] text-[14px] font-medium transition-all"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"/>
+                    <line x1="6" y1="17" x2="18" y2="17"/>
+                    <line x1="6" y1="21" x2="18" y2="21"/>
+                  </svg>
+                  Espace Kooker
+                </button>
+              ) : (
+                <button
+                  onClick={() => navigate('/devenir-kooker')}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-[#c1a0fd] hover:bg-[#b090ed] text-white rounded-[12px] h-[44px] text-[14px] font-medium transition-all"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"/>
+                    <line x1="6" y1="17" x2="18" y2="17"/>
+                    <line x1="6" y1="21" x2="18" y2="21"/>
+                  </svg>
+                  Devenir Kooker
+                </button>
+              )}
+
+              {/* Se déconnecter */}
               <button
                 onClick={handleLogout}
-                className="px-5 py-2.5 border border-red-500 text-red-500 hover:bg-red-50 rounded-[8px] h-[44px] text-[14px] font-medium transition-all"
+                className="flex items-center gap-2 px-5 py-2.5 border border-red-400 text-red-500 hover:bg-red-50 rounded-[12px] h-[44px] text-[14px] font-medium transition-all"
               >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                  <polyline points="16 17 21 12 16 7"/>
+                  <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
                 Se déconnecter
               </button>
             </div>

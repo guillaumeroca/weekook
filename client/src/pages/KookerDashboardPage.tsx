@@ -792,6 +792,7 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
             availabilities={availabilities}
             availabilitiesLoading={availabilitiesLoading}
             onSaved={fetchAvailabilities}
+            bookings={bookings}
           />
         )}
 

@@ -13,10 +13,21 @@ interface Availability {
   isAvailable: boolean;
 }
 
+interface BookingInfo {
+  id: number;
+  date: string;
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  startTime: string;
+  guests: number;
+  service: { title: string };
+  user: { firstName: string; lastName: string };
+}
+
 interface PlanningTabProps {
   availabilities: Availability[];
   availabilitiesLoading: boolean;
   onSaved: () => Promise<void>;
+  bookings?: BookingInfo[];
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -123,7 +134,7 @@ function SpinnerIcon() {
   );
 }
 
-// Pastille vert+rouge pour "réservé"
+// Pastille vert+rouge pour "réservé confirmé"
 function DotBooked() {
   return (
     <div className="relative w-[18px] h-[18px] flex-shrink-0">
@@ -133,9 +144,19 @@ function DotBooked() {
   );
 }
 
+// Pastille vert+orange pour "réservé en attente"
+function DotPending() {
+  return (
+    <div className="relative w-[18px] h-[18px] flex-shrink-0">
+      <div className="w-[18px] h-[18px] rounded-full bg-green-500" />
+      <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-orange-400 border-2 border-white" />
+    </div>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function PlanningTab({ availabilities, availabilitiesLoading, onSaved }: PlanningTabProps) {
+export default function PlanningTab({ availabilities, availabilitiesLoading, onSaved, bookings = [] }: PlanningTabProps) {
 
   // ── Vue calendrier principale
   const [viewMonth, setViewMonth] = useState(() => new Date());
@@ -174,6 +195,18 @@ export default function PlanningTab({ availabilities, availabilitiesLoading, onS
 
   // ── Ensemble de dates avec au moins 1 créneau (pour la vue principale)
   const apiAvailableDates = useMemo(() => new Set(initFromApi.keys()), [initFromApi]);
+
+  // ── Map date → bookings actifs (hors annulés)
+  const bookingsByDate = useMemo(() => {
+    const map = new Map<string, BookingInfo[]>();
+    bookings.forEach(b => {
+      if (b.status === 'cancelled') return;
+      const d = String(b.date).substring(0, 10);
+      if (!map.has(d)) map.set(d, []);
+      map.get(d)!.push(b);
+    });
+    return map;
+  }, [bookings]);
 
   // ── Ouvre la modale d'édition en initialisant depuis l'API
   const openEdit = useCallback(() => {
@@ -330,7 +363,11 @@ export default function PlanningTab({ availabilities, availabilitiesLoading, onS
           </div>
           <div className="flex items-center gap-2">
             <DotBooked />
-            <span className="text-[13px] text-[#5c5c6f]">Créneau réservé</span>
+            <span className="text-[13px] text-[#5c5c6f]">Réservation confirmée</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <DotPending />
+            <span className="text-[13px] text-[#5c5c6f]">En attente de validation</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-[18px] h-[18px] rounded-full bg-[#d1d5db] flex-shrink-0" />
@@ -357,6 +394,9 @@ export default function PlanningTab({ availabilities, availabilitiesLoading, onS
             const key = dateKey(viewY, viewM, day);
             const available = apiAvailableDates.has(key);
             const daySlots = initFromApi.get(key);
+            const dayBookings = bookingsByDate.get(key) ?? [];
+            const hasConfirmed = dayBookings.some(b => b.status === 'confirmed' || b.status === 'completed');
+            const hasPending = dayBookings.some(b => b.status === 'pending');
             const dayDate = new Date(viewY, viewM, day);
             const dayName = DAYS_FULL_FR[dayDate.getDay()];
             const monthName = MONTHS_FR[viewM].toLowerCase();
@@ -370,28 +410,57 @@ export default function PlanningTab({ availabilities, availabilitiesLoading, onS
                 <span className={`text-[14px] font-medium leading-none ${
                   past ? 'text-[#111125]/30' : tod ? 'text-[#c1a0fd] font-bold' : 'text-[#111125]'
                 }`}>{day}</span>
-                {available
-                  ? <div className="w-[16px] h-[16px] rounded-full bg-green-500" />
-                  : <div className={`w-[16px] h-[16px] rounded-full ${past ? 'bg-[#e9eaec]' : 'bg-[#d1d5db]'}`} />
-                }
+
+                {/* Dot : priorité confirmé > en attente > disponible > indisponible */}
+                {hasConfirmed ? (
+                  <div className="relative w-[16px] h-[16px] flex-shrink-0">
+                    <div className="w-[16px] h-[16px] rounded-full bg-green-500" />
+                    <div className="absolute -top-0.5 -right-0.5 w-[9px] h-[9px] rounded-full bg-red-500 border-[1.5px] border-white" />
+                  </div>
+                ) : hasPending ? (
+                  <div className="relative w-[16px] h-[16px] flex-shrink-0">
+                    <div className={`w-[16px] h-[16px] rounded-full ${available ? 'bg-green-500' : 'bg-[#d1d5db]'}`} />
+                    <div className="absolute -top-0.5 -right-0.5 w-[9px] h-[9px] rounded-full bg-orange-400 border-[1.5px] border-white" />
+                  </div>
+                ) : available ? (
+                  <div className="w-[16px] h-[16px] rounded-full bg-green-500" />
+                ) : (
+                  <div className={`w-[16px] h-[16px] rounded-full ${past ? 'bg-[#e9eaec]' : 'bg-[#d1d5db]'}`} />
+                )}
 
                 {/* Tooltip survol */}
                 {tooltipDate === key && !past && (
                   <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col items-center">
-                    <div className="bg-white border border-[#e5e7eb] rounded-[10px] px-4 py-3 text-[13px] whitespace-nowrap shadow-lg text-[#111125]">
-                      {available && daySlots ? (
-                        <>
-                          <div className="font-bold mb-2 capitalize">{dayName} {day} {monthName}</div>
-                          {Array.from(daySlots).sort().map(idx => (
-                            <div key={idx} className="flex items-center gap-2 text-[#374151]">
-                              <span className="text-[#111125]">✓</span>
-                              <span>{SLOTS[idx].label} ({SLOTS[idx].startTime}-{SLOTS[idx].endTime})</span>
+                    <div className="bg-white border border-[#e5e7eb] rounded-[10px] px-4 py-3 text-[13px] whitespace-nowrap shadow-lg text-[#111125] min-w-[160px]">
+                      <div className="font-bold mb-2 capitalize">{dayName} {day} {monthName}</div>
+
+                      {/* Réservations */}
+                      {dayBookings.length > 0 && (
+                        <div className="mb-2 space-y-1">
+                          {dayBookings.map(b => (
+                            <div key={b.id} className="flex items-center gap-1.5">
+                              <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                                b.status === 'confirmed' || b.status === 'completed' ? 'bg-red-500' : 'bg-orange-400'
+                              }`} />
+                              <span className="text-[12px] text-[#374151]">
+                                {b.user.firstName} — {b.startTime} ({b.guests} conv.)
+                              </span>
                             </div>
                           ))}
-                        </>
-                      ) : (
-                        <span>Aucun créneau disponible</span>
+                        </div>
                       )}
+
+                      {/* Créneaux disponibles */}
+                      {available && daySlots ? (
+                        Array.from(daySlots).sort().map(idx => (
+                          <div key={idx} className="flex items-center gap-2 text-[#374151]">
+                            <span className="text-green-500">✓</span>
+                            <span>{SLOTS[idx].label} ({SLOTS[idx].startTime}-{SLOTS[idx].endTime})</span>
+                          </div>
+                        ))
+                      ) : dayBookings.length === 0 ? (
+                        <span className="text-[#9ca3af]">Aucun créneau disponible</span>
+                      ) : null}
                     </div>
                     <div className="w-2.5 h-2.5 bg-[#111125] rotate-45 -mt-[5px]" />
                   </div>
@@ -404,7 +473,7 @@ export default function PlanningTab({ availabilities, availabilitiesLoading, onS
         {/* Note */}
         <div className="mt-6 p-4 bg-[#eef2ff] border border-[#c1a0fd]/30 rounded-[12px]">
           <p className="text-[12px] text-[#5c5c6f] leading-relaxed">
-            📅 Vue mensuelle synthétique : Naviguez entre les mois avec les flèches. Pastille verte = au moins 1 créneau disponible. Pastille rouge = créneau réservé. Cliquez sur "Modifier les disponibilités" pour gérer votre planning en détail.
+            📅 Vue mensuelle synthétique : Pastille verte = créneau disponible. Point rouge = réservation confirmée. Point orange = en attente de validation. Cliquez sur "Modifier les disponibilités" pour gérer votre planning.
           </p>
         </div>
       </div>

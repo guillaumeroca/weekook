@@ -240,6 +240,13 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
           },
           orderBy: { date: 'asc' },
         },
+        bookingsReceived: {
+          where: {
+            status: { in: ['confirmed', 'completed'] },
+            date: { gte: new Date() },
+          },
+          select: { date: true, startTime: true },
+        },
       },
     });
 
@@ -247,9 +254,15 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
       throw new NotFoundError('Profil kooker non trouve');
     }
 
+    const { bookingsReceived, ...kookerData } = kooker as any;
+    const confirmedSlots = (bookingsReceived || []).map((b: any) => ({
+      date: String(b.date).slice(0, 10),
+      startTime: b.startTime,
+    }));
+
     res.json({
       success: true,
-      data: kooker,
+      data: { ...kookerData, confirmedSlots },
     });
   } catch (error) {
     next(error);

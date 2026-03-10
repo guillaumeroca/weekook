@@ -47,6 +47,11 @@ interface Availability {
   endTime: string;     // HH:MM
 }
 
+interface ConfirmedSlot {
+  date: string;   // YYYY-MM-DD
+  startTime: string; // HH:MM
+}
+
 interface KookerProfile {
   id: number;
   userId: number;
@@ -62,6 +67,7 @@ interface KookerProfile {
   services: Service[];
   reviews: Review[];
   availabilities: Availability[];
+  confirmedSlots: ConfirmedSlot[];
 }
 
 // ─── Helper: Parse JSON string safely ───────────────────────────────────────────
@@ -125,6 +131,10 @@ function mapApiToProfile(data: any): KookerProfile {
         startTime: a.startTime,
         endTime: a.endTime,
       })),
+    confirmedSlots: (data.confirmedSlots || []).map((s: any) => ({
+      date: String(s.date).slice(0, 10),
+      startTime: s.startTime,
+    })),
   };
 }
 
@@ -310,6 +320,17 @@ export default function KookerProfilePage() {
       const existing = map.get(av.date) || [];
       existing.push(av);
       map.set(av.date, existing);
+    }
+    return map;
+  }, [profile]);
+
+  // Confirmed booking slots map (date → Set of startTimes)
+  const confirmedSlotsMap = useMemo(() => {
+    if (!profile) return new Map<string, Set<string>>();
+    const map = new Map<string, Set<string>>();
+    for (const s of profile.confirmedSlots) {
+      if (!map.has(s.date)) map.set(s.date, new Set());
+      map.get(s.date)!.add(s.startTime);
     }
     return map;
   }, [profile]);
@@ -857,56 +878,63 @@ export default function KookerProfilePage() {
                         {week.map((dayDate, di) => {
                           const dateStr = toDateStr(dayDate);
                           const slots = availableDatesMap.get(dateStr);
-                          const isAvailable = !!slots && slots.length > 0;
+                          const confirmedOnDay = confirmedSlotsMap.get(dateStr);
                           const isCurrentMonth = dayDate.getMonth() === calendarMonth;
                           const dayName = DAY_SHORT_FR[di];
                           const dayDisplay = `${String(dayDate.getDate()).padStart(2, '0')}/${String(dayDate.getMonth() + 1).padStart(2, '0')}`;
+                          // Disponible = has slots AND at least one is not confirmed
+                          const freeSlots = slots?.filter(s => !confirmedOnDay?.has(s.startTime));
+                          const isAvailable = !!freeSlots && freeSlots.length > 0;
+                          const isFullyBooked = !!slots && slots.length > 0 && (!freeSlots || freeSlots.length === 0);
 
                           return (
                             <div
                               key={di}
-                              className="flex-1 flex items-center justify-center relative py-1"
+                              className="flex-1 flex flex-col items-center justify-center relative py-0.5"
                               onMouseEnter={() => isCurrentMonth ? setTooltipDate(dateStr) : undefined}
                               onMouseLeave={() => setTooltipDate(null)}
                             >
+                              {isCurrentMonth && (
+                                <span className="text-[10px] text-[#9ca3af] leading-none mb-0.5">
+                                  {String(dayDate.getDate()).padStart(2, '0')}
+                                </span>
+                              )}
                               <div
                                 className={`w-3 h-3 rounded-full transition-all ${
                                   !isCurrentMonth
                                     ? 'bg-[#f0f0f0]'
                                     : isAvailable
                                       ? 'bg-green-500 cursor-pointer hover:scale-125'
-                                      : 'bg-[#e5e7eb]'
+                                      : isFullyBooked
+                                        ? 'bg-[#fca5a5]'
+                                        : 'bg-[#e5e7eb]'
                                 }`}
                               />
 
-                              {/* Tooltip — disponible */}
-                              {isAvailable && tooltipDate === dateStr && slots && (
+                              {/* Tooltip */}
+                              {isCurrentMonth && tooltipDate === dateStr && (
                                 <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col items-center">
-                                  <div className="bg-white border border-[#e5e7eb] rounded-[10px] px-4 py-3 text-[13px] whitespace-nowrap shadow-lg text-[#111125]">
+                                  <div className="bg-white border border-[#e5e7eb] rounded-[10px] px-4 py-3 text-[13px] whitespace-nowrap shadow-lg text-[#111125] min-w-[160px]">
                                     <div className="font-bold mb-2">{dayName} {dayDisplay}</div>
-                                    {slots.map((s, si) => (
-                                      <div key={si} className="flex items-center gap-2 text-[#374151]">
-                                        <span className="text-[#111125]">✓</span>
-                                        <span>{getSlotLabel(s.startTime)}</span>
-                                      </div>
-                                    ))}
+                                    {slots && slots.length > 0 ? (
+                                      slots.map((s, si) => {
+                                        const isBooked = confirmedOnDay?.has(s.startTime);
+                                        return (
+                                          <div key={si} className="flex items-center gap-2">
+                                            <span className={isBooked ? 'text-red-400' : 'text-green-500'}>
+                                              {isBooked ? '✗' : '✓'}
+                                            </span>
+                                            <span className={isBooked ? 'text-[#9ca3af] line-through' : 'text-[#374151]'}>
+                                              {getSlotLabel(s.startTime)}
+                                            </span>
+                                            {isBooked && <span className="text-[11px] text-red-400 font-medium">Complet</span>}
+                                          </div>
+                                        );
+                                      })
+                                    ) : (
+                                      <span className="text-[#9ca3af]">Aucun créneau disponible</span>
+                                    )}
                                   </div>
-                                  {/* Diamond arrow */}
-                                  <svg width="16" height="10" viewBox="0 0 16 10" className="-mt-px">
-                                    <polygon points="8,10 0,0 16,0" fill="white"/>
-                                    <polyline points="0,0 8,10 16,0" fill="none" stroke="#e5e7eb" strokeWidth="1"/>
-                                  </svg>
-                                  <div className="w-2.5 h-2.5 bg-[#111125] rotate-45 -mt-[18px]" />
-                                </div>
-                              )}
-
-                              {/* Tooltip — non disponible */}
-                              {!isAvailable && isCurrentMonth && tooltipDate === dateStr && (
-                                <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col items-center">
-                                  <div className="bg-white border border-[#e5e7eb] rounded-[10px] px-4 py-2.5 text-[13px] whitespace-nowrap shadow-lg text-[#111125]">
-                                    Aucun créneau disponible
-                                  </div>
-                                  {/* Diamond arrow */}
                                   <div className="w-2.5 h-2.5 bg-[#111125] rotate-45 -mt-[5px]" />
                                 </div>
                               )}
@@ -918,10 +946,14 @@ export default function KookerProfilePage() {
                   </div>
 
                   {/* Legend */}
-                  <div className="flex items-center gap-4 mt-4 pt-4 border-t border-[#f0f0f0]">
+                  <div className="flex items-center flex-wrap gap-3 mt-4 pt-4 border-t border-[#f0f0f0]">
                     <div className="flex items-center gap-1.5">
                       <div className="w-3 h-3 rounded-full bg-green-500" />
                       <span className="text-[12px] text-[#6b7280]">Disponible</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-3 h-3 rounded-full bg-[#fca5a5]" />
+                      <span className="text-[12px] text-[#6b7280]">Complet</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <div className="w-3 h-3 rounded-full bg-[#e5e7eb]" />

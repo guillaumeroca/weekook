@@ -103,6 +103,7 @@ export default function BookingPage() {
   // Data state
   const [service, setService] = useState<ServiceDetail | null>(null);
   const [availabilities, setAvailabilities] = useState<Availability[]>([]);
+  const [confirmedSlotsMap, setConfirmedSlotsMap] = useState<Map<string, Set<string>>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
 
@@ -135,8 +136,9 @@ export default function BookingPage() {
     Promise.all([
       api.get<any>(`/services/${serviceId}`),
       api.get<Availability[]>(`/availability/kooker/${kookerId}`),
+      api.get<any>(`/kookers/${kookerId}`),
     ])
-      .then(([serviceRes, availRes]) => {
+      .then(([serviceRes, availRes, kookerRes]) => {
         if (serviceRes.success && serviceRes.data) {
           const s = serviceRes.data;
           const min = s.minGuests ?? 1;
@@ -161,6 +163,16 @@ export default function BookingPage() {
             (availRes.data as Availability[]).filter((a) => a.isAvailable)
           );
         }
+
+        if (kookerRes.success && kookerRes.data?.confirmedSlots) {
+          const map = new Map<string, Set<string>>();
+          for (const s of kookerRes.data.confirmedSlots as { date: string; startTime: string }[]) {
+            const d = String(s.date).slice(0, 10);
+            if (!map.has(d)) map.set(d, new Set());
+            map.get(d)!.add(s.startTime);
+          }
+          setConfirmedSlotsMap(map);
+        }
       })
       .catch(() => {
         setLoadError(true);
@@ -170,21 +182,26 @@ export default function BookingPage() {
       });
   }, [serviceId, kookerId]);
 
-  // ─── Available dates map ────────────────────────────────────────────────────
+  // ─── Available dates map (excludes dates where ALL slots are confirmed) ────
   const availableDatesMap = useMemo(() => {
     const map = new Map<string, Availability[]>();
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     for (const av of availabilities) {
-      // Normalize ISO datetime ("2026-03-10T00:00:00.000Z") to "2026-03-10"
       const dateKey = av.date.substring(0, 10);
-      // Only future dates
       if (dateKey < todayStr) continue;
       const existing = map.get(dateKey) || [];
       existing.push(av);
       map.set(dateKey, existing);
     }
+    // Remove dates where ALL slots are already confirmed
+    for (const [date, slots] of map) {
+      const confirmed = confirmedSlotsMap.get(date);
+      if (confirmed && slots.every(s => confirmed.has(s.startTime))) {
+        map.delete(date);
+      }
+    }
     return map;
-  }, [availabilities]);
+  }, [availabilities, confirmedSlotsMap]);
 
   // ─── Time slots for selected date ───────────────────────────────────────────
   const timeSlotsForDate = useMemo(() => {
@@ -577,17 +594,22 @@ export default function BookingPage() {
             <div className="flex flex-wrap gap-3">
               {timeSlotsForDate.map((slot, idx) => {
                 const isSelected = selectedTime === slot.startTime;
+                const isConfirmed = confirmedSlotsMap.get(selectedDate)?.has(slot.startTime);
                 return (
                   <button
                     key={idx}
-                    onClick={() => setSelectedTime(slot.startTime)}
+                    disabled={!!isConfirmed}
+                    onClick={() => !isConfirmed && setSelectedTime(slot.startTime)}
                     className={`px-5 py-3 rounded-[12px] text-[14px] font-medium transition-all border ${
-                      isSelected
-                        ? 'bg-[#c1a0fd] text-white border-[#c1a0fd] shadow-sm'
-                        : 'bg-white text-[#111125] border-[#e5e7eb] hover:border-[#c1a0fd] hover:text-[#c1a0fd]'
+                      isConfirmed
+                        ? 'bg-[#f9fafb] text-[#9ca3af] border-[#e5e7eb] cursor-not-allowed line-through'
+                        : isSelected
+                          ? 'bg-[#c1a0fd] text-white border-[#c1a0fd] shadow-sm'
+                          : 'bg-white text-[#111125] border-[#e5e7eb] hover:border-[#c1a0fd] hover:text-[#c1a0fd]'
                     }`}
                   >
                     {slot.startTime} - {slot.endTime}
+                    {isConfirmed && <span className="ml-2 text-[11px] font-normal no-underline" style={{ textDecoration: 'none' }}>Complet</span>}
                   </button>
                 );
               })}

@@ -452,12 +452,22 @@ export default function PlanningTab({ availabilities, availabilitiesLoading, onS
 
                       {/* Créneaux disponibles */}
                       {available && daySlots ? (
-                        Array.from(daySlots).sort().map(idx => (
-                          <div key={idx} className="flex items-center gap-2 text-[#374151]">
-                            <span className="text-green-500">✓</span>
-                            <span>{SLOTS[idx].label} ({SLOTS[idx].startTime}-{SLOTS[idx].endTime})</span>
-                          </div>
-                        ))
+                        Array.from(daySlots).sort().map(idx => {
+                          const slotBooking = dayBookings.find(b =>
+                            b.startTime >= SLOTS[idx].startTime && b.startTime < SLOTS[idx].endTime
+                          );
+                          const checkColor = slotBooking
+                            ? (slotBooking.status === 'confirmed' || slotBooking.status === 'completed'
+                                ? 'text-red-500'
+                                : 'text-orange-400')
+                            : 'text-green-500';
+                          return (
+                            <div key={idx} className="flex items-center gap-2 text-[#374151]">
+                              <span className={checkColor}>✓</span>
+                              <span>{SLOTS[idx].label} ({SLOTS[idx].startTime}-{SLOTS[idx].endTime})</span>
+                            </div>
+                          );
+                        })
                       ) : dayBookings.length === 0 ? (
                         <span className="text-[#9ca3af]">Aucun créneau disponible</span>
                       ) : null}

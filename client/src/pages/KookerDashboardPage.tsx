@@ -173,7 +173,7 @@ const SectionSpinner = ({ text }: { text?: string }) => (
 
 // ────────────────────────── Main Page ──────────────────────────
 
-const KookerDashboardPage = () => {
+const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<'bookings' | 'planning' | 'services' | 'profile'>('bookings');
@@ -493,6 +493,17 @@ const KookerDashboardPage = () => {
   ];
 
   if (loading) {
+    if (embedded) return (
+      <div className="flex items-center justify-center py-12">
+        <div className="flex flex-col items-center gap-4">
+          <svg className="animate-spin h-8 w-8 text-[#c1a0fd]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+          </svg>
+          <p className="text-[14px] text-[#111125]/50">Chargement de votre espace kooker...</p>
+        </div>
+      </div>
+    );
     return (
       <div className="min-h-screen bg-[#f2f4fc] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -506,11 +517,21 @@ const KookerDashboardPage = () => {
     );
   }
 
+  const wrap = (inner: JSX.Element) =>
+    embedded
+      ? <>{inner}</>
+      : (
+        <div className="min-h-screen bg-[#f2f4fc]">
+          <div className="max-w-[1200px] mx-auto px-4 md:px-8 lg:px-[96px] py-8 md:py-12">
+            {inner}
+          </div>
+        </div>
+      );
+
   return (
     <>
-    <div className="min-h-screen bg-[#f2f4fc]">
-      <div className="max-w-[1200px] mx-auto px-4 md:px-8 lg:px-[96px] py-8 md:py-12">
-        {/* Header */}
+    {wrap(<>
+      {!embedded && (
         <div className="mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <h1 className="text-[32px] md:text-[40px] font-semibold text-[#111125] tracking-[-0.8px] mb-2">
@@ -522,7 +543,7 @@ const KookerDashboardPage = () => {
           </div>
           <div className="flex items-center gap-3 flex-wrap">
             <button
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate('/tableau-de-bord')}
               className="flex items-center gap-2 px-4 h-[44px] border border-[#c1a0fd] text-[#c1a0fd] hover:bg-[#f3ecff] rounded-[8px] text-[13px] font-semibold transition-all"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -543,6 +564,7 @@ const KookerDashboardPage = () => {
             </button>
           </div>
         </div>
+      )}
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatCard
@@ -1174,8 +1196,7 @@ const KookerDashboardPage = () => {
             )}
           </div>
         )}
-      </div>
-    </div>
+    </>)}
 
     {/* ── Refusal modal ── */}
 

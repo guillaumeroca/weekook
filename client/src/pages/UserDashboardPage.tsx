@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../lib/api';
 import { toast } from 'sonner';
+import KookerDashboardPage from './KookerDashboardPage';
 
 // ────────────────────────── Types ──────────────────────────
 interface Booking {
@@ -268,7 +269,7 @@ const UserDashboardPage = () => {
   const navigate = useNavigate();
   const { user, logout, refreshUser } = useAuth(); // refreshUser used for avatar upload
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [activeTab, setActiveTab] = useState<'upcoming' | 'history' | 'favorites'>('upcoming');
+  const [activeTab, setActiveTab] = useState<'upcoming' | 'history' | 'favorites' | 'kooker'>('upcoming');
   const [upcomingBookings, setUpcomingBookings] = useState<Booking[]>([]);
   const [historyBookings, setHistoryBookings] = useState<Booking[]>([]);
   const [favorites, setFavorites] = useState<FavoriteKooker[]>([]);
@@ -444,20 +445,8 @@ const UserDashboardPage = () => {
                 Modifier le profil
               </button>
 
-              {/* Devenir Kooker ou Espace Kooker */}
-              {user?.kookerProfileId ? (
-                <button
-                  onClick={() => navigate('/kooker-dashboard')}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-[#c1a0fd] hover:bg-[#b090ed] text-white rounded-[12px] h-[44px] text-[14px] font-medium transition-all"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"/>
-                    <line x1="6" y1="17" x2="18" y2="17"/>
-                    <line x1="6" y1="21" x2="18" y2="21"/>
-                  </svg>
-                  Espace Kooker
-                </button>
-              ) : (
+              {/* Devenir Kooker (non-kookers only) */}
+              {!user?.kookerProfileId && (
                 <button
                   onClick={() => navigate('/devenir-kooker')}
                   className="flex items-center gap-2 px-5 py-2.5 bg-[#c1a0fd] hover:bg-[#b090ed] text-white rounded-[12px] h-[44px] text-[14px] font-medium transition-all"
@@ -488,21 +477,44 @@ const UserDashboardPage = () => {
         </div>
 
         {/* Tabs */}
-        <div className="grid w-full grid-cols-3 bg-white rounded-[12px] p-2 mb-6 h-[72px]">
-          {tabs.map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`rounded-[8px] text-[16px] md:text-[18px] font-normal transition-all duration-300 ${
-                activeTab === tab.key
-                  ? 'bg-[#c1a0fd] font-bold text-white shadow-sm'
-                  : 'text-[#111125]/60 hover:text-[#111125]'
-              }`}
-            >
-              <span className="hidden sm:inline">{tab.label}</span>
-              <span className="sm:hidden">{tab.shortLabel}</span>
-            </button>
-          ))}
+        <div className="flex items-center bg-white rounded-[12px] p-2 mb-6 h-[72px] gap-2">
+          <div className="grid grid-cols-3 flex-1 h-full">
+            {tabs.map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`rounded-[8px] text-[16px] md:text-[18px] font-normal transition-all duration-300 ${
+                  activeTab === tab.key
+                    ? 'bg-[#c1a0fd] font-bold text-white shadow-sm'
+                    : 'text-[#111125]/60 hover:text-[#111125]'
+                }`}
+              >
+                <span className="hidden sm:inline">{tab.label}</span>
+                <span className="sm:hidden">{tab.shortLabel}</span>
+              </button>
+            ))}
+          </div>
+          {user?.kookerProfileId && (
+            <>
+              <div className="w-px h-10 bg-[#e0e2ef] flex-shrink-0" />
+              <button
+                onClick={() => setActiveTab('kooker')}
+                className={`h-full px-3 md:px-5 rounded-[8px] flex items-center gap-2 text-[13px] md:text-[15px] font-medium transition-all duration-300 whitespace-nowrap flex-shrink-0 ${
+                  activeTab === 'kooker'
+                    ? 'bg-[#c1a0fd] text-white shadow-sm font-bold'
+                    : 'text-[#c1a0fd] hover:bg-[#f3ecff]'
+                }`}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"/>
+                  <line x1="6" y1="17" x2="18" y2="17"/>
+                  <line x1="6" y1="21" x2="18" y2="21"/>
+                </svg>
+                <span className="hidden sm:inline">Espace Kooker</span>
+                <span className="sm:hidden">Kooker</span>
+              </button>
+            </>
+          )}
         </div>
 
         {/* Upcoming Bookings Tab */}
@@ -596,6 +608,10 @@ const UserDashboardPage = () => {
               </div>
             )}
           </div>
+        )}
+        {/* Kooker Tab */}
+        {activeTab === 'kooker' && (
+          <KookerDashboardPage embedded={true} />
         )}
       </div>
     </div>

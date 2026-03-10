@@ -37,7 +37,6 @@ export function Navbar() {
 
   const isActive = (path: string) => location.pathname === path;
   const isUserDashboard = location.pathname === '/tableau-de-bord';
-  const isKookerDashboard = location.pathname === '/kooker-dashboard';
 
   return (
     <header className="sticky top-0 z-50 bg-[#f2f4fc] shadow-sm" style={{ fontFamily: 'Inter, sans-serif' }}>
@@ -110,19 +109,8 @@ export function Navbar() {
                   )}
                 </button>
 
-                {/* Kooker or Become Kooker button */}
-                {user.kookerProfileId ? (
-                  <button
-                    onClick={() => navigate('/kooker-dashboard')}
-                    className={`h-[48px] px-[20px] rounded-[8px] font-medium text-[14px] tracking-[-0.32px] transition-colors cursor-pointer ${
-                      isKookerDashboard
-                        ? 'bg-[#c1a0fd] border-2 border-[#c1a0fd] text-[#111125]'
-                        : 'bg-white border-2 border-[#c1a0fd] text-[#c1a0fd] hover:bg-[#f3ecff]'
-                    }`}
-                  >
-                    Dashboard Kooker
-                  </button>
-                ) : (
+                {/* Become Kooker button (non-kookers only) */}
+                {!user.kookerProfileId && (
                   <button
                     onClick={() => navigate('/devenir-kooker')}
                     className="h-[48px] px-[20px] rounded-[8px] bg-[#c1a0fd] text-[#111125] font-medium text-[14px] tracking-[-0.32px] transition-colors hover:bg-[#b090ed] cursor-pointer"
@@ -204,16 +192,7 @@ export function Navbar() {
                   )}
                 </button>
 
-                {user.kookerProfileId ? (
-                  <button
-                    onClick={() => navigate('/kooker-dashboard')}
-                    className={`p-4 rounded-lg font-medium text-[18px] transition-colors text-left cursor-pointer ${
-                      isKookerDashboard ? 'bg-[#c1a0fd] text-[#111125]' : 'bg-white hover:bg-[#f3ecff] text-[#303044]'
-                    }`}
-                  >
-                    Dashboard Kooker
-                  </button>
-                ) : (
+                {!user.kookerProfileId && (
                   <button
                     onClick={() => navigate('/devenir-kooker')}
                     className="bg-[#c1a0fd] p-4 rounded-lg font-medium text-[18px] text-[#111125] transition-colors hover:bg-[#b090ed] cursor-pointer"

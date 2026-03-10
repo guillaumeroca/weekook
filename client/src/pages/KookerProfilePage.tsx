@@ -134,7 +134,7 @@ function mapApiToProfile(data: any): KookerProfile {
       })),
     confirmedSlots: (data.confirmedSlots || []).map((s: any) => ({
       date: String(s.date).slice(0, 10),
-      startTime: s.startTime,
+      startTime: String(s.startTime).slice(0, 5), // normalize to HH:MM
       status: s.status || 'pending',
     })),
   };

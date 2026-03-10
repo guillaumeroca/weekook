@@ -255,11 +255,14 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
     }
 
     const { bookingsReceived, ...kookerData } = kooker as any;
-    const confirmedSlots = (bookingsReceived || []).map((b: any) => ({
-      date: String(b.date).slice(0, 10),
-      startTime: b.startTime,
-      status: b.status,
-    }));
+    const confirmedSlots = (bookingsReceived || []).map((b: any) => {
+      const rawDate: Date = b.date;
+      const dateStr = rawDate instanceof Date
+        ? rawDate.toISOString().slice(0, 10)
+        : String(rawDate).slice(0, 10);
+      const startTime = String(b.startTime).slice(0, 5); // normalize to HH:MM
+      return { date: dateStr, startTime, status: b.status };
+    });
 
     res.json({
       success: true,

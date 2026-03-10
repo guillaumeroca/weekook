@@ -168,8 +168,9 @@ export default function BookingPage() {
           const map = new Map<string, Set<string>>();
           for (const s of kookerRes.data.confirmedSlots as { date: string; startTime: string }[]) {
             const d = String(s.date).slice(0, 10);
+            const t = String(s.startTime).slice(0, 5); // normalize to HH:MM
             if (!map.has(d)) map.set(d, new Set());
-            map.get(d)!.add(s.startTime);
+            map.get(d)!.add(t);
           }
           setConfirmedSlotsMap(map);
         }
@@ -193,10 +194,10 @@ export default function BookingPage() {
       existing.push(av);
       map.set(dateKey, existing);
     }
-    // Remove dates where ALL slots are already confirmed
+    // Remove dates where ALL slots are already booked
     for (const [date, slots] of map) {
-      const confirmed = confirmedSlotsMap.get(date);
-      if (confirmed && slots.every(s => confirmed.has(s.startTime))) {
+      const booked = confirmedSlotsMap.get(date);
+      if (booked && slots.every(s => booked.has(String(s.startTime).slice(0, 5)))) {
         map.delete(date);
       }
     }
@@ -594,7 +595,8 @@ export default function BookingPage() {
             <div className="flex flex-wrap gap-3">
               {timeSlotsForDate.map((slot, idx) => {
                 const isSelected = selectedTime === slot.startTime;
-                const isConfirmed = confirmedSlotsMap.get(selectedDate)?.has(slot.startTime);
+                const slotTime = String(slot.startTime).slice(0, 5);
+                const isConfirmed = confirmedSlotsMap.get(selectedDate)?.has(slotTime);
                 return (
                   <button
                     key={idx}

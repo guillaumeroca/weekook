@@ -105,6 +105,8 @@ export default function MessagesPage() {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  // Prevent re-opening the same conversation every time conversations refreshes
+  const autoOpenedForRef = useRef<number | null>(null);
 
   // ── Chargement conversations
   const fetchConversations = useCallback(async () => {
@@ -122,9 +124,12 @@ export default function MessagesPage() {
     fetchConversations();
   }, [fetchConversations]);
 
-  // ── Ouvrir conversation automatiquement si ?to=userId
+  // ── Ouvrir conversation automatiquement si ?to=userId (une seule fois par toUserId)
   useEffect(() => {
     if (!toUserId || conversations.length === 0) return;
+    if (autoOpenedForRef.current === toUserId) return; // already opened, don't flicker on conversations refresh
+    autoOpenedForRef.current = toUserId;
+
     const existing = conversations.find(c => c.user.id === toUserId);
     if (existing) {
       openConversation(existing);

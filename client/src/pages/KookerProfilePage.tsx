@@ -48,8 +48,9 @@ interface Availability {
 }
 
 interface ConfirmedSlot {
-  date: string;   // YYYY-MM-DD
+  date: string;      // YYYY-MM-DD
   startTime: string; // HH:MM
+  status: string;    // pending | confirmed | completed
 }
 
 interface KookerProfile {
@@ -134,6 +135,7 @@ function mapApiToProfile(data: any): KookerProfile {
     confirmedSlots: (data.confirmedSlots || []).map((s: any) => ({
       date: String(s.date).slice(0, 10),
       startTime: s.startTime,
+      status: s.status || 'pending',
     })),
   };
 }
@@ -324,13 +326,13 @@ export default function KookerProfilePage() {
     return map;
   }, [profile]);
 
-  // Confirmed booking slots map (date → Set of startTimes)
+  // Booked slots map (date → Map<startTime, status>)
   const confirmedSlotsMap = useMemo(() => {
-    if (!profile) return new Map<string, Set<string>>();
-    const map = new Map<string, Set<string>>();
+    if (!profile) return new Map<string, Map<string, string>>();
+    const map = new Map<string, Map<string, string>>();
     for (const s of profile.confirmedSlots) {
-      if (!map.has(s.date)) map.set(s.date, new Set());
-      map.get(s.date)!.add(s.startTime);
+      if (!map.has(s.date)) map.set(s.date, new Map());
+      map.get(s.date)!.set(s.startTime, s.status);
     }
     return map;
   }, [profile]);
@@ -878,14 +880,17 @@ export default function KookerProfilePage() {
                         {week.map((dayDate, di) => {
                           const dateStr = toDateStr(dayDate);
                           const slots = availableDatesMap.get(dateStr);
-                          const confirmedOnDay = confirmedSlotsMap.get(dateStr);
+                          const confirmedOnDay = confirmedSlotsMap.get(dateStr); // Map<startTime, status>
                           const isCurrentMonth = dayDate.getMonth() === calendarMonth;
                           const dayName = DAY_SHORT_FR[di];
                           const dayDisplay = `${String(dayDate.getDate()).padStart(2, '0')}/${String(dayDate.getMonth() + 1).padStart(2, '0')}`;
-                          // Disponible = has slots AND at least one is not confirmed
+                          // Disponible = has slots AND at least one is not booked
                           const freeSlots = slots?.filter(s => !confirmedOnDay?.has(s.startTime));
                           const isAvailable = !!freeSlots && freeSlots.length > 0;
                           const isFullyBooked = !!slots && slots.length > 0 && (!freeSlots || freeSlots.length === 0);
+                          const bookedStatuses = confirmedOnDay ? [...confirmedOnDay.values()] : [];
+                          const hasConfirmedBooking = bookedStatuses.some(st => st === 'confirmed' || st === 'completed');
+                          const hasPendingBooking = bookedStatuses.some(st => st === 'pending');
 
                           return (
                             <div
@@ -906,7 +911,11 @@ export default function KookerProfilePage() {
                                     : isAvailable
                                       ? 'bg-green-500 cursor-pointer hover:scale-125'
                                       : isFullyBooked
-                                        ? 'bg-[#fca5a5]'
+                                        ? hasConfirmedBooking
+                                          ? 'bg-[#fca5a5]'
+                                          : hasPendingBooking
+                                            ? 'bg-orange-400'
+                                            : 'bg-[#fca5a5]'
                                         : 'bg-[#e5e7eb]'
                                 }`}
                               />
@@ -918,16 +927,21 @@ export default function KookerProfilePage() {
                                     <div className="font-bold mb-2">{dayName} {dayDisplay}</div>
                                     {slots && slots.length > 0 ? (
                                       slots.map((s, si) => {
-                                        const isBooked = confirmedOnDay?.has(s.startTime);
+                                        const slotStatus = confirmedOnDay?.get(s.startTime);
+                                        const isBooked = !!slotStatus;
+                                        const isConfirmed = slotStatus === 'confirmed' || slotStatus === 'completed';
+                                        const iconColor = isBooked ? (isConfirmed ? 'text-red-400' : 'text-orange-400') : 'text-green-500';
+                                        const badgeColor = isConfirmed ? 'text-red-400' : 'text-orange-400';
+                                        const badgeLabel = isConfirmed ? 'Complet' : 'En attente';
                                         return (
                                           <div key={si} className="flex items-center gap-2">
-                                            <span className={isBooked ? 'text-red-400' : 'text-green-500'}>
+                                            <span className={iconColor}>
                                               {isBooked ? '✗' : '✓'}
                                             </span>
                                             <span className={isBooked ? 'text-[#9ca3af] line-through' : 'text-[#374151]'}>
                                               {getSlotLabel(s.startTime)}
                                             </span>
-                                            {isBooked && <span className="text-[11px] text-red-400 font-medium">Complet</span>}
+                                            {isBooked && <span className={`text-[11px] font-medium ${badgeColor}`}>{badgeLabel}</span>}
                                           </div>
                                         );
                                       })
@@ -950,6 +964,10 @@ export default function KookerProfilePage() {
                     <div className="flex items-center gap-1.5">
                       <div className="w-3 h-3 rounded-full bg-green-500" />
                       <span className="text-[12px] text-[#6b7280]">Disponible</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-3 h-3 rounded-full bg-orange-400" />
+                      <span className="text-[12px] text-[#6b7280]">En attente</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <div className="w-3 h-3 rounded-full bg-[#fca5a5]" />

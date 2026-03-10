@@ -242,10 +242,10 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
         },
         bookingsReceived: {
           where: {
-            status: { in: ['confirmed', 'completed'] },
+            status: { in: ['pending', 'confirmed', 'completed'] },
             date: { gte: new Date() },
           },
-          select: { date: true, startTime: true },
+          select: { date: true, startTime: true, status: true },
         },
       },
     });
@@ -258,6 +258,7 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
     const confirmedSlots = (bookingsReceived || []).map((b: any) => ({
       date: String(b.date).slice(0, 10),
       startTime: b.startTime,
+      status: b.status,
     }));
 
     res.json({

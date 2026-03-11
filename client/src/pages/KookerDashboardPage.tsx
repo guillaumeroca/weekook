@@ -209,6 +209,7 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
   const [pendingDeleteServiceId, setPendingDeleteServiceId] = useState<number | null>(null);
 
   // ── Refusal modal state ──
+  const [pendingAcceptance, setPendingAcceptance] = useState<{ bookingId: number; clientName: string; serviceTitle: string; date: string; startTime: string; guests: number; totalPriceInCents: number } | null>(null);
   const [pendingRefusal, setPendingRefusal] = useState<{ bookingId: number; userId: number } | null>(null);
   const [refusalReasonId, setRefusalReasonId] = useState('unavailable');
   const [refusalCustom, setRefusalCustom] = useState('');
@@ -347,6 +348,12 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
     } catch (err: any) {
       toast.error(err?.error || 'Erreur lors de la mise à jour');
     }
+  };
+
+  const handleConfirmAcceptance = async () => {
+    if (!pendingAcceptance) return;
+    await handleUpdateBookingStatus(pendingAcceptance.bookingId, 'confirmed');
+    setPendingAcceptance(null);
   };
 
   const handleConfirmRefusal = async () => {
@@ -754,8 +761,16 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
                             {booking.status === 'pending' && (
                               <div className="flex gap-2">
                                 <button
-                                  onClick={() => handleUpdateBookingStatus(booking.id, 'confirmed')}
-                                  className="px-4 py-2 text-[13px] font-semibold text-white bg-green-500 hover:bg-green-600 rounded-[10px] transition-all flex items-center gap-1.5"
+                                  onClick={() => setPendingAcceptance({
+                                    bookingId: booking.id,
+                                    clientName: `${booking.user.firstName} ${booking.user.lastName}`.trim(),
+                                    serviceTitle: booking.service.title,
+                                    date: booking.date,
+                                    startTime: booking.startTime,
+                                    guests: booking.guests,
+                                    totalPriceInCents: booking.totalPriceInCents,
+                                  })}
+                                  className="px-4 py-2 text-[13px] font-semibold text-white bg-[#c1a0fd] hover:bg-[#b090ed] rounded-[10px] transition-all flex items-center gap-1.5"
                                 >
                                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M11.6667 3.5L5.25 9.91667L2.33333 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -1242,6 +1257,62 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
     )}
 
     {/* ── Refusal modal ── */}
+
+    {pendingAcceptance && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#111125]/30 backdrop-blur-sm px-4">
+        <div className="bg-white rounded-[20px] p-8 w-full max-w-[440px] shadow-xl border border-[#e0e2ef]">
+          <div className="flex items-center justify-center w-14 h-14 rounded-full bg-[#f3ecff] mx-auto mb-5">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c1a0fd" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+          </div>
+          <h3 className="text-[18px] font-bold text-[#111125] text-center mb-1">Accepter cette réservation ?</h3>
+          <p className="text-[13px] text-[#6b7280] text-center mb-6">Le client sera notifié par message et par e-mail.</p>
+
+          <div className="bg-[#f2f4fc] rounded-[14px] px-5 py-4 mb-7 space-y-2">
+            <div className="flex justify-between text-[13px]">
+              <span className="text-[#6b7280]">Client</span>
+              <span className="font-semibold text-[#111125]">{pendingAcceptance.clientName}</span>
+            </div>
+            <div className="flex justify-between text-[13px]">
+              <span className="text-[#6b7280]">Prestation</span>
+              <span className="font-semibold text-[#111125] text-right max-w-[60%]">{pendingAcceptance.serviceTitle}</span>
+            </div>
+            <div className="flex justify-between text-[13px]">
+              <span className="text-[#6b7280]">Date</span>
+              <span className="font-semibold text-[#111125]">
+                {new Date(pendingAcceptance.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} à {pendingAcceptance.startTime.slice(0, 5)}
+              </span>
+            </div>
+            <div className="flex justify-between text-[13px]">
+              <span className="text-[#6b7280]">Convives</span>
+              <span className="font-semibold text-[#111125]">{pendingAcceptance.guests} personne{pendingAcceptance.guests > 1 ? 's' : ''}</span>
+            </div>
+            <div className="h-px bg-[#e0e2ef] my-1" />
+            <div className="flex justify-between text-[14px]">
+              <span className="font-semibold text-[#111125]">Montant</span>
+              <span className="font-bold text-[#c1a0fd]">{formatPrice(pendingAcceptance.totalPriceInCents)}</span>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => setPendingAcceptance(null)}
+              className="flex-1 h-[48px] rounded-[12px] border border-[#e0e2ef] text-[14px] font-medium text-[#6b7280] hover:border-[#c1a0fd] hover:text-[#111125] transition-all"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={handleConfirmAcceptance}
+              className="flex-1 h-[48px] rounded-[12px] bg-[#c1a0fd] hover:bg-[#b090ed] text-white text-[14px] font-semibold transition-all"
+            >
+              Confirmer l'acceptation
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
 
     {pendingRefusal && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">

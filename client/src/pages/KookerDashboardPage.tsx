@@ -1210,27 +1210,29 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
 
     {/* ── Delete service confirmation modal ── */}
     {pendingDeleteServiceId && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-        <div className="bg-white rounded-[20px] p-6 w-full max-w-[400px] shadow-xl">
-          <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-50 mx-auto mb-4">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#111125]/30 backdrop-blur-sm px-4">
+        <div className="bg-white rounded-[20px] p-8 w-full max-w-[400px] shadow-xl border border-[#e0e2ef]">
+          <div className="flex items-center justify-center w-14 h-14 rounded-full bg-[#f3ecff] mx-auto mb-5">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c1a0fd" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
             </svg>
           </div>
-          <h3 className="text-[17px] font-bold text-[#111125] text-center mb-2">Supprimer cette offre ?</h3>
-          <p className="text-[13px] text-[#6b7280] text-center mb-6">
-            Cette action est irréversible. L'offre sera définitivement supprimée.
+          <h3 className="text-[18px] font-bold text-[#111125] text-center mb-2 tracking-[-0.3px]">
+            Supprimer cette offre ?
+          </h3>
+          <p className="text-[13px] text-[#6b7280] text-center leading-relaxed mb-7">
+            Cette action est irréversible.<br />L'offre sera définitivement supprimée.
           </p>
           <div className="flex gap-3">
             <button
               onClick={() => setPendingDeleteServiceId(null)}
-              className="flex-1 h-[48px] rounded-[12px] border border-[#e5e7eb] text-[14px] font-medium text-[#6b7280] hover:border-[#c1a0fd] hover:text-[#111125] transition-all"
+              className="flex-1 h-[48px] rounded-[12px] border border-[#e0e2ef] text-[14px] font-medium text-[#6b7280] hover:border-[#c1a0fd] hover:text-[#111125] transition-all"
             >
               Annuler
             </button>
             <button
               onClick={confirmDeleteService}
-              className="flex-1 h-[48px] rounded-[12px] bg-red-500 text-white text-[14px] font-semibold hover:bg-red-600 transition-all"
+              className="flex-1 h-[48px] rounded-[12px] bg-[#111125] hover:bg-[#1e1e38] text-white text-[14px] font-semibold transition-all"
             >
               Supprimer
             </button>

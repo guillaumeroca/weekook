@@ -1,4 +1,6 @@
 import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { useAuth } from './AuthContext';
 
@@ -14,14 +16,29 @@ const NotificationContext = createContext<NotificationContextType>({
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const prevCountRef = useRef(0);
+  const initialLoadDoneRef = useRef(false);
 
   const refreshUnread = async () => {
     if (!user) { setUnreadCount(0); return; }
     try {
       const res = await api.get<{ count: number }>('/messages/unread-count');
-      if (res.success && res.data) setUnreadCount(res.data.count);
+      if (res.success && res.data) {
+        const newCount = res.data.count;
+        if (initialLoadDoneRef.current && newCount > prevCountRef.current) {
+          toast.info('Nouveau message reçu', {
+            description: 'Consultez vos messages pour voir les détails.',
+            action: { label: 'Voir', onClick: () => navigate('/messages') },
+            duration: 6000,
+          });
+        }
+        prevCountRef.current = newCount;
+        initialLoadDoneRef.current = true;
+        setUnreadCount(newCount);
+      }
     } catch {
       // silencieux
     }
@@ -30,6 +47,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user) {
       setUnreadCount(0);
+      initialLoadDoneRef.current = false;
+      prevCountRef.current = 0;
       if (intervalRef.current) clearInterval(intervalRef.current);
       return;
     }

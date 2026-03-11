@@ -22,6 +22,7 @@ interface Message {
   content: string;
   read: boolean;
   kookerRecipientId: number | null;
+  bookingId: number | null;
   createdAt: string;
   sender: MessageUser;
   receiver: MessageUser;
@@ -493,6 +494,23 @@ export default function MessagesPage() {
                                 }`}>
                                   {msg.content}
                                 </div>
+                                {msg.bookingId && (
+                                  <div className={`mt-1.5 ${isMe ? 'flex justify-end' : 'flex justify-start'}`}>
+                                    <button
+                                      onClick={() => navigate(
+                                        msg.kookerRecipientId === user?.kookerProfileId
+                                          ? '/kooker-dashboard'
+                                          : '/dashboard'
+                                      )}
+                                      className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#c1a0fd] text-[#c1a0fd] text-[12px] font-semibold rounded-[10px] hover:bg-[#f3ecff] transition-colors"
+                                    >
+                                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                                      </svg>
+                                      Voir la réservation
+                                    </button>
+                                  </div>
+                                )}
                                 <p className={`text-[10px] text-[#9ca3af] mt-1 ${isMe ? 'text-right' : 'text-left'}`}>
                                   {formatFullTime(msg.createdAt)}
                                   {isMe && <span className="ml-1">{msg.read ? '✓✓' : '✓'}</span>}

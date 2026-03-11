@@ -20,5 +20,6 @@ jobs:
             git pull origin develop
             npm install --workspaces --if-present
             npx prisma generate
+            npx prisma db push --accept-data-loss
             npm run build
             pm2 reload weekook-dev

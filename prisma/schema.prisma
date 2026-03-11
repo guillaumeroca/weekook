@@ -229,6 +229,7 @@ model Message {
   content             String    @db.Text
   read                Boolean   @default(false)
   kookerRecipientId   Int?      @map("kooker_recipient_id")
+  bookingId           Int?      @map("booking_id")
   createdAt           DateTime  @default(now()) @map("created_at")
 
   sender          User      @relation("SentMessages", fields: [senderId], references: [id])

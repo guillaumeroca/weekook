@@ -12,9 +12,9 @@ import {
 } from '../lib/email.js';
 
 // Envoie un message système dans la messagerie interne (fire-and-forget)
-async function sendSystemMessage(senderId: number, receiverId: number, content: string, kookerRecipientId: number): Promise<void> {
+async function sendSystemMessage(senderId: number, receiverId: number, content: string, kookerRecipientId: number, bookingId?: number): Promise<void> {
   try {
-    await prisma.message.create({ data: { senderId, receiverId, content, kookerRecipientId } });
+    await prisma.message.create({ data: { senderId, receiverId, content, kookerRecipientId, ...(bookingId ? { bookingId } : {}) } });
   } catch (err) {
     console.error('[booking] Failed to send system message:', err);
   }
@@ -216,7 +216,8 @@ router.post(
         userId,
         kookerUser.id,
         `📅 Nouvelle demande de réservation pour "${booking.service.title}" le ${new Date(booking.date).toLocaleDateString('fr-FR')} à ${booking.startTime} (${booking.guests} convive${booking.guests > 1 ? 's' : ''}). Montant : ${(booking.totalPriceInCents / 100).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}.`,
-        booking.kookerProfileId
+        booking.kookerProfileId,
+        booking.id
       );
 
       res.status(201).json({
@@ -297,7 +298,8 @@ router.put(
           kookerProfileUser.id,
           clientUser.id,
           `✅ Votre réservation pour "${updated.service.title}" le ${new Date(updated.date).toLocaleDateString('fr-FR')} à ${updated.startTime} a été confirmée par ${kookerName} !`,
-          kookerProfileId
+          kookerProfileId,
+          updated.id
         );
       } else if (status === 'cancelled') {
         sendBookingCancelledToUser(
@@ -311,7 +313,8 @@ router.put(
           kookerProfileUser.id,
           clientUser.id,
           `❌ Votre réservation pour "${updated.service.title}" le ${new Date(updated.date).toLocaleDateString('fr-FR')} a été annulée par ${kookerName}.`,
-          kookerProfileId
+          kookerProfileId,
+          updated.id
         );
       }
 

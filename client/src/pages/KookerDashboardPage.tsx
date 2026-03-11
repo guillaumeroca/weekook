@@ -205,6 +205,9 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
   const [profileSaving, setProfileSaving] = useState(false);
   const [expandedServiceId, setExpandedServiceId] = useState<number | null>(null);
 
+  // ── Delete service confirmation state ──
+  const [pendingDeleteServiceId, setPendingDeleteServiceId] = useState<number | null>(null);
+
   // ── Refusal modal state ──
   const [pendingRefusal, setPendingRefusal] = useState<{ bookingId: number; userId: number } | null>(null);
   const [refusalReasonId, setRefusalReasonId] = useState('unavailable');
@@ -387,8 +390,14 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
     }
   };
 
-  const handleDeleteService = async (id: number) => {
-    if (!window.confirm('Êtes-vous sûr de vouloir supprimer cette offre ?')) return;
+  const handleDeleteService = (id: number) => {
+    setPendingDeleteServiceId(id);
+  };
+
+  const confirmDeleteService = async () => {
+    if (!pendingDeleteServiceId) return;
+    const id = pendingDeleteServiceId;
+    setPendingDeleteServiceId(null);
     try {
       await api.delete(`/services/${id}`);
       setServices(prev => prev.filter(s => s.id !== id));
@@ -1198,6 +1207,37 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
           </div>
         )}
     </>)}
+
+    {/* ── Delete service confirmation modal ── */}
+    {pendingDeleteServiceId && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+        <div className="bg-white rounded-[20px] p-6 w-full max-w-[400px] shadow-xl">
+          <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-50 mx-auto mb-4">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+            </svg>
+          </div>
+          <h3 className="text-[17px] font-bold text-[#111125] text-center mb-2">Supprimer cette offre ?</h3>
+          <p className="text-[13px] text-[#6b7280] text-center mb-6">
+            Cette action est irréversible. L'offre sera définitivement supprimée.
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setPendingDeleteServiceId(null)}
+              className="flex-1 h-[48px] rounded-[12px] border border-[#e5e7eb] text-[14px] font-medium text-[#6b7280] hover:border-[#c1a0fd] hover:text-[#111125] transition-all"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={confirmDeleteService}
+              className="flex-1 h-[48px] rounded-[12px] bg-red-500 text-white text-[14px] font-semibold hover:bg-red-600 transition-all"
+            >
+              Supprimer
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
 
     {/* ── Refusal modal ── */}
 

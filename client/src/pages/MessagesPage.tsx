@@ -500,7 +500,7 @@ export default function MessagesPage() {
                                       onClick={() => navigate(
                                         msg.kookerRecipientId === user?.kookerProfileId
                                           ? '/kooker-dashboard'
-                                          : '/dashboard'
+                                          : '/tableau-de-bord'
                                       )}
                                       className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#c1a0fd] text-[#c1a0fd] text-[12px] font-semibold rounded-[10px] hover:bg-[#f3ecff] transition-colors"
                                     >

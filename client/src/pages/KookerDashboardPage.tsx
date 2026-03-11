@@ -1053,7 +1053,7 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
 
                     {/* View Public Profile */}
                     <button
-                      onClick={() => navigate(`/kookers/${user?.kookerProfileId}`)}
+                      onClick={() => navigate(`/kooker/${user?.kookerProfileId}`)}
                       className="w-full mt-6 flex items-center justify-center gap-2 h-[44px] bg-[#f2f4fc] hover:bg-[#e8eaf5] text-[#111125] font-medium text-[13px] rounded-[12px] transition-all"
                     >
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">

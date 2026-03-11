@@ -239,7 +239,7 @@ export default function CreateMenuPage() {
         await api.post('/services', data);
       }
       toast.success('Service créé avec succès !');
-      navigate('/kooker-dashboard');
+      navigate('/kooker-dashboard', { state: { tab: 'services' } });
     } catch (err: unknown) {
       const e = err as { error?: string; details?: Record<string, string[]> };
       if (e?.details) {

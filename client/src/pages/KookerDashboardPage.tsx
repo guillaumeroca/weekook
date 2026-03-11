@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
@@ -175,8 +175,11 @@ const SectionSpinner = ({ text }: { text?: string }) => (
 
 const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState<'bookings' | 'planning' | 'services' | 'profile'>('bookings');
+  const [activeTab, setActiveTab] = useState<'bookings' | 'planning' | 'services' | 'profile'>(
+    (location.state as any)?.tab || 'bookings'
+  );
   const [bookingFilter, setBookingFilter] = useState<'all' | 'pending' | 'confirmed' | 'completed' | 'cancelled'>('all');
 
   // Data states

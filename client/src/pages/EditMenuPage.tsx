@@ -297,7 +297,7 @@ export default function EditMenuPage() {
       };
       await api.put(`/services/${id}`, data);
       toast.success('Service modifié avec succès !');
-      navigate('/kooker-dashboard');
+      navigate('/kooker-dashboard', { state: { tab: 'services' } });
     } catch (err: unknown) {
       const e = err as { error?: string; details?: Record<string, string[]> };
       if (e?.details) {

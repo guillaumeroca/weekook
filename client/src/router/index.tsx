@@ -21,6 +21,7 @@ const EditMenuPage = lazy(() => import('@/pages/EditMenuPage').then(m => ({ defa
 const BookingPage = lazy(() => import('@/pages/BookingPage').then(m => ({ default: m.default })));
 const FaqPage = lazy(() => import('@/pages/FaqPage').then(m => ({ default: m.default })));
 const MessagesPage = lazy(() => import('@/pages/MessagesPage').then(m => ({ default: m.default })));
+const BookingDetailPage = lazy(() => import('@/pages/BookingDetailPage').then(m => ({ default: m.default })));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage').then(m => ({ default: m.default })));
 const UserProfilePage = lazy(() => import('@/pages/UserProfilePage').then(m => ({ default: m.default })));
 const AdminLayout = lazy(() => import('@/pages/admin/AdminLayout').then(m => ({ default: m.default })));
@@ -73,6 +74,9 @@ export function AppRouter() {
           } />
           <Route path="/messages" element={
             <ProtectedRoute><MessagesPage /></ProtectedRoute>
+          } />
+          <Route path="/reservation/:id" element={
+            <ProtectedRoute><BookingDetailPage /></ProtectedRoute>
           } />
           <Route path="/mon-profil" element={
             <ProtectedRoute><UserProfilePage /></ProtectedRoute>

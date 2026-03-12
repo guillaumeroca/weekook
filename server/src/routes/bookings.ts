@@ -2,13 +2,15 @@ import { Router, Request, Response, NextFunction } from 'express';
 import prisma from '../lib/prisma.js';
 import { authenticate, requireKooker } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
-import { createBookingSchema, updateBookingStatusSchema } from '../schemas/booking.js';
+import { createBookingSchema, updateBookingStatusSchema, updateBookingDetailsSchema } from '../schemas/booking.js';
 import { NotFoundError, ForbiddenError, AppError } from '../utils/errors.js';
 import {
   sendBookingRequestToKooker,
   sendBookingConfirmedToUser,
   sendBookingCancelledToUser,
   sendBookingCancelledToKooker,
+  sendBookingModifiedToKooker,
+  sendBookingModifiedToUser,
 } from '../lib/email.js';
 
 // Envoie un message système dans la messagerie interne (fire-and-forget)
@@ -111,6 +113,46 @@ router.get(
         success: true,
         data: bookings,
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// GET /:id - Get single booking (owner or kooker)
+router.get(
+  '/:id',
+  authenticate,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) throw new AppError('ID invalide', 400);
+
+      const userId = req.user!.userId;
+      const kookerProfileId = req.user!.kookerProfileId;
+
+      const booking = await prisma.booking.findUnique({
+        where: { id },
+        include: {
+          service: {
+            select: { id: true, title: true, type: true, priceInCents: true, durationMinutes: true, description: true },
+          },
+          kookerProfile: {
+            include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true } } },
+          },
+          user: {
+            select: { id: true, firstName: true, lastName: true, email: true, avatar: true, phone: true },
+          },
+        },
+      });
+
+      if (!booking) throw new NotFoundError('Réservation non trouvée');
+
+      const isOwner = booking.userId === userId;
+      const isKooker = kookerProfileId && booking.kookerProfileId === kookerProfileId;
+      if (!isOwner && !isKooker) throw new ForbiddenError('Accès refusé');
+
+      res.json({ success: true, data: booking });
     } catch (error) {
       next(error);
     }
@@ -224,6 +266,121 @@ router.post(
         success: true,
         data: booking,
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// PUT /:id - Edit booking details (user if pending, kooker if not completed/cancelled)
+router.put(
+  '/:id',
+  authenticate,
+  validate(updateBookingDetailsSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) throw new AppError('ID invalide', 400);
+
+      const userId = req.user!.userId;
+      const kookerProfileId = req.user!.kookerProfileId;
+      const { date, startTime, guests, notes } = req.body;
+
+      const booking = await prisma.booking.findUnique({
+        where: { id },
+        include: {
+          service: { select: { id: true, title: true, priceInCents: true } },
+          kookerProfile: { include: { user: { select: { id: true, email: true, firstName: true, lastName: true } } } },
+          user: { select: { id: true, email: true, firstName: true, lastName: true } },
+        },
+      });
+
+      if (!booking) throw new NotFoundError('Réservation non trouvée');
+
+      const isOwner = booking.userId === userId;
+      const isKooker = kookerProfileId && booking.kookerProfileId === kookerProfileId;
+      if (!isOwner && !isKooker) throw new ForbiddenError('Accès refusé');
+
+      if (isOwner && booking.status !== 'pending') {
+        throw new AppError('Vous ne pouvez modifier une réservation qu\'en attente de validation', 400);
+      }
+      if (isKooker && (booking.status === 'completed' || booking.status === 'cancelled')) {
+        throw new AppError('Cette réservation ne peut plus être modifiée', 400);
+      }
+
+      const formatDateFR = (d: Date | string) =>
+        new Date(d).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+      const updateData: Record<string, unknown> = {};
+      const changes: string[] = [];
+
+      if (date) {
+        const oldDate = booking.date.toISOString().slice(0, 10);
+        if (oldDate !== date) {
+          changes.push(`Date : ${formatDateFR(booking.date)} → ${formatDateFR(new Date(date))}`);
+          updateData.date = new Date(date);
+        }
+      }
+      if (startTime) {
+        const oldTime = String(booking.startTime).slice(0, 5);
+        if (oldTime !== startTime) {
+          changes.push(`Heure : ${oldTime} → ${startTime}`);
+          updateData.startTime = startTime;
+        }
+      }
+      if (isOwner && typeof guests === 'number' && guests !== booking.guests) {
+        changes.push(`Convives : ${booking.guests} → ${guests}`);
+        updateData.guests = guests;
+        updateData.totalPriceInCents = (booking.service as any).priceInCents * guests;
+      }
+      if (typeof notes !== 'undefined') {
+        const oldNotes = booking.notes || '';
+        const newNotes = notes || '';
+        if (oldNotes !== newNotes) {
+          changes.push('Notes mises à jour');
+          updateData.notes = notes;
+        }
+      }
+
+      if (changes.length === 0) {
+        return res.json({ success: true, data: booking });
+      }
+
+      const updated = await prisma.booking.update({
+        where: { id },
+        data: updateData,
+        include: {
+          service: { select: { id: true, title: true, type: true, priceInCents: true, durationMinutes: true, description: true } },
+          kookerProfile: { include: { user: { select: { id: true, email: true, firstName: true, lastName: true, avatar: true } } } },
+          user: { select: { id: true, email: true, firstName: true, lastName: true, avatar: true, phone: true } },
+        },
+      });
+
+      // Notifications (fire-and-forget)
+      const changesText = changes.join('\n');
+      const clientUser = booking.user;
+      const kookerUser = (booking.kookerProfile as any).user as { id: number; email: string; firstName: string; lastName: string };
+      const clientName = `${clientUser.firstName} ${clientUser.lastName}`.trim();
+      const kookerName = `${kookerUser.firstName} ${kookerUser.lastName}`.trim();
+      const serviceTitle = (booking.service as any).title;
+
+      if (isOwner) {
+        sendBookingModifiedToKooker(kookerUser.email, kookerName, clientName, serviceTitle, changesText, id);
+        sendSystemMessage(
+          userId, kookerUser.id,
+          `✏️ ${clientName} a modifié sa réservation pour "${serviceTitle}".\n\nModifications :\n${changesText}`,
+          booking.kookerProfileId, id
+        );
+      } else {
+        sendBookingModifiedToUser(clientUser.email, clientName, kookerName, serviceTitle, changesText, id);
+        sendSystemMessage(
+          kookerUser.id, clientUser.id,
+          `✏️ ${kookerName} a modifié votre réservation pour "${serviceTitle}".\n\nModifications :\n${changesText}`,
+          booking.kookerProfileId, id
+        );
+      }
+
+      res.json({ success: true, data: updated });
     } catch (error) {
       next(error);
     }

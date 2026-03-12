@@ -99,7 +99,7 @@ const formatPrice = (cents: number) => {
 
 // ────────────────────────── Booking Card ──────────────────────────
 
-const BookingCard = ({ booking, showActions = false, onCancel }: { booking: Booking; showActions?: boolean; onCancel?: (id: number) => void }) => (
+const BookingCard = ({ booking, showActions = false, onCancel, onViewDetails }: { booking: Booking; showActions?: boolean; onCancel?: (id: number) => void; onViewDetails?: (id: number) => void }) => (
   <div className="bg-white rounded-[20px] p-6 shadow-sm">
     {/* Top row: service name + kooker + status badge */}
     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-5">
@@ -163,7 +163,10 @@ const BookingCard = ({ booking, showActions = false, onCancel }: { booking: Book
       <div className="flex gap-2">
         {showActions && booking.status !== 'cancelled' && booking.status !== 'completed' && (
           <>
-            <button className="px-4 py-2 bg-[#c1a0fd] hover:bg-[#b090ed] text-[#111125] text-[14px] font-medium rounded-[8px] transition-all">
+            <button
+              onClick={() => onViewDetails?.(booking.id)}
+              className="px-4 py-2 bg-[#c1a0fd] hover:bg-[#b090ed] text-white text-[14px] font-medium rounded-[8px] transition-all"
+            >
               Voir les détails
             </button>
             <button
@@ -545,7 +548,7 @@ const UserDashboardPage = () => {
               </div>
             ) : (
               upcomingBookings.map(booking => (
-                <BookingCard key={booking.id} booking={booking} showActions onCancel={handleCancelBooking} />
+                <BookingCard key={booking.id} booking={booking} showActions onCancel={handleCancelBooking} onViewDetails={(id) => navigate(`/reservation/${id}`)} />
               ))
             )}
           </div>

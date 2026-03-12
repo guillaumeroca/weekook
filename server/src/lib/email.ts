@@ -201,6 +201,56 @@ export async function sendBookingCancelledToUser(
   await sendEmail(userEmail, `Réservation annulée — ${serviceName}`, html, 'booking-cancelled-to-user');
 }
 
+export async function sendBookingModifiedToKooker(
+  kookerEmail: string,
+  kookerName: string,
+  clientName: string,
+  serviceName: string,
+  changes: string,
+  bookingId: number
+): Promise<void> {
+  const changesHtml = changes.split('\n').map(c =>
+    `<li style="color:#111125;font-size:13px;padding:3px 0;">${c}</li>`
+  ).join('');
+  const html = emailWrapper(
+    '✏️',
+    `Réservation modifiée par le client`,
+    `<p style="color:#6b7280;font-size:14px;margin:0 0 16px 0;">Bonjour ${kookerName}, <strong>${clientName}</strong> a modifié sa réservation pour <strong>${serviceName}</strong>.</p>
+    <div style="background:#f3ecff;border-radius:12px;padding:16px;margin-bottom:8px;">
+      <p style="color:#6b7280;font-size:12px;margin:0 0 8px 0;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Modifications</p>
+      <ul style="margin:0;padding-left:16px;">${changesHtml}</ul>
+    </div>`,
+    `${env.APP_URL}/reservation/${bookingId}`,
+    'Voir la réservation'
+  );
+  await sendEmail(kookerEmail, `Réservation modifiée par ${clientName} — ${serviceName}`, html, 'booking-modified-to-kooker');
+}
+
+export async function sendBookingModifiedToUser(
+  userEmail: string,
+  userName: string,
+  kookerName: string,
+  serviceName: string,
+  changes: string,
+  bookingId: number
+): Promise<void> {
+  const changesHtml = changes.split('\n').map(c =>
+    `<li style="color:#111125;font-size:13px;padding:3px 0;">${c}</li>`
+  ).join('');
+  const html = emailWrapper(
+    '✏️',
+    `Votre réservation a été modifiée`,
+    `<p style="color:#6b7280;font-size:14px;margin:0 0 16px 0;">Bonjour ${userName}, <strong>${kookerName}</strong> a modifié votre réservation pour <strong>${serviceName}</strong>.</p>
+    <div style="background:#f3ecff;border-radius:12px;padding:16px;margin-bottom:8px;">
+      <p style="color:#6b7280;font-size:12px;margin:0 0 8px 0;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Modifications</p>
+      <ul style="margin:0;padding-left:16px;">${changesHtml}</ul>
+    </div>`,
+    `${env.APP_URL}/reservation/${bookingId}`,
+    'Voir la réservation'
+  );
+  await sendEmail(userEmail, `Réservation modifiée par ${kookerName} — ${serviceName}`, html, 'booking-modified-to-user');
+}
+
 export async function sendBookingCancelledToKooker(
   kookerEmail: string,
   kookerName: string,

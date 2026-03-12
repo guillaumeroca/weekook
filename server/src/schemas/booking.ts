@@ -15,5 +15,13 @@ export const updateBookingStatusSchema = z.object({
   }),
 });
 
+export const updateBookingDetailsSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Format date invalide (YYYY-MM-DD)').optional(),
+  startTime: z.string().regex(/^\d{2}:\d{2}$/, 'Format heure invalide (HH:MM)').optional(),
+  guests: z.number().int().min(1).max(200).optional(),
+  notes: z.string().max(2000).nullable().optional(),
+});
+
 export type CreateBookingInput = z.infer<typeof createBookingSchema>;
 export type UpdateBookingStatusInput = z.infer<typeof updateBookingStatusSchema>;
+export type UpdateBookingDetailsInput = z.infer<typeof updateBookingDetailsSchema>;

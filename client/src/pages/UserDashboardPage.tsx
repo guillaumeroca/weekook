@@ -9,6 +9,7 @@ import KookerDashboardPage from './KookerDashboardPage';
 interface Booking {
   id: number;
   serviceName: string;
+  serviceType: string;
   kookerName: string;
   kookerAvatar: string;
   date: string;
@@ -99,7 +100,13 @@ const formatPrice = (cents: number) => {
 
 // ────────────────────────── Booking Card ──────────────────────────
 
-const BookingCard = ({ booking, showActions = false, onCancel, onViewDetails }: { booking: Booking; showActions?: boolean; onCancel?: (id: number) => void; onViewDetails?: (id: number) => void }) => (
+const BookingCard = ({ booking, showActions = false, onCancel, onViewDetails }: { booking: Booking; showActions?: boolean; onCancel?: (id: number) => void; onViewDetails?: (id: number) => void }) => {
+  const isKours = Array.isArray(booking.serviceType)
+    ? (booking.serviceType as unknown as string[]).includes('KOURS')
+    : String(booking.serviceType || '').includes('KOURS');
+  const isKook = !isKours && String(booking.serviceType || '').includes('KOOK');
+
+  return (
   <div className="bg-white rounded-[20px] p-6 shadow-sm">
     {/* Top row: service name + kooker + status badge */}
     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-5">
@@ -115,7 +122,11 @@ const BookingCard = ({ booking, showActions = false, onCancel, onViewDetails }: 
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <h4 className="text-[20px] font-semibold text-[#111125] truncate mb-0.5">{booking.serviceName}</h4>
+          <div className="flex flex-wrap items-center gap-2 mb-0.5">
+            <h4 className="text-[20px] font-semibold text-[#111125] truncate">{booking.serviceName}</h4>
+            {isKours && <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-bold bg-[#c1a0fd] text-white">KOURS</span>}
+            {isKook && <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-bold bg-[#7c5cbf] text-white">KOOK</span>}
+          </div>
           <p className="text-[16px] text-[#5c5c6f]">par {booking.kookerName}</p>
         </div>
       </div>
@@ -147,7 +158,7 @@ const BookingCard = ({ booking, showActions = false, onCancel, onViewDetails }: 
           <path d="M12.8333 12.25V11.0833C12.8333 10.0833 12.1667 9.25 11.375 8.91667" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
           <path d="M9.625 1.91663C10.4167 2.24996 11.0833 3.08329 11.0833 4.08329C11.0833 5.08329 10.4167 5.91663 9.625 6.24996" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
         </svg>
-        <span>{booking.guests} convive{booking.guests > 1 ? 's' : ''}</span>
+        <span>{booking.guests} {isKours ? 'participant' : 'convive'}{booking.guests > 1 ? 's' : ''}</span>
       </div>
     </div>
 
@@ -185,7 +196,8 @@ const BookingCard = ({ booking, showActions = false, onCancel, onViewDetails }: 
       </div>
     </div>
   </div>
-);
+  );
+};
 
 // ────────────────────────── Favorite Card ──────────────────────────
 
@@ -235,6 +247,7 @@ const FavoriteKookerCard = ({ kooker, onRemove }: { kooker: FavoriteKooker; onRe
 const mapApiBookingToBooking = (b: ApiBooking): Booking => ({
   id: b.id,
   serviceName: b.service.title,
+  serviceType: b.service.type,
   kookerName: `${b.kookerProfile.user.firstName} ${b.kookerProfile.user.lastName}`,
   kookerAvatar: b.kookerProfile.user.avatar || '',
   date: b.date,

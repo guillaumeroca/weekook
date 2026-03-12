@@ -204,7 +204,12 @@ export default function BookingDetailPage() {
                   size={52}
                 />
                 <div>
-                  <h1 className="text-[20px] font-bold text-[#111125] leading-tight">{booking.service.title}</h1>
+                  <div className="flex flex-wrap items-center gap-2 leading-tight mb-0.5">
+                    <h1 className="text-[20px] font-bold text-[#111125]">{booking.service.title}</h1>
+                    {isKours
+                      ? <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-bold bg-[#c1a0fd] text-white">KOURS</span>
+                      : <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-bold bg-[#7c5cbf] text-white">KOOK</span>}
+                  </div>
                   <button
                     onClick={() => navigate(`/kooker/${booking.kookerProfileId}`)}
                     className="text-[14px] text-[#c1a0fd] hover:underline mt-0.5 block"

@@ -24,7 +24,7 @@ interface KookerBooking {
   totalPriceInCents: number;
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
   user: { id: number; firstName: string; lastName: string; email: string };
-  service: { title: string };
+  service: { title: string; type?: string };
   message?: string;
 }
 
@@ -721,7 +721,19 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
                                 <h4 className="text-[15px] font-semibold text-[#111125]">{clientName}</h4>
                                 <StatusBadge status={booking.status} />
                               </div>
-                              <p className="text-[13px] text-[#c1a0fd] font-medium mb-2">{booking.service.title}</p>
+                              <div className="flex flex-wrap items-center gap-2 mb-2">
+                                <p className="text-[13px] text-[#c1a0fd] font-medium">{booking.service.title}</p>
+                                {(() => {
+                                  const t = booking.service.type || '';
+                                  const isKours = Array.isArray(t) ? (t as string[]).includes('KOURS') : String(t).includes('KOURS');
+                                  const isKook = !isKours && String(t).includes('KOOK');
+                                  return isKours
+                                    ? <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-bold bg-[#c1a0fd] text-white">KOURS</span>
+                                    : isKook
+                                      ? <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-bold bg-[#7c5cbf] text-white">KOOK</span>
+                                      : null;
+                                })()}
+                              </div>
 
                               <div className="flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-[#111125]/60">
                                 <span className="flex items-center gap-1.5">
@@ -745,7 +757,7 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
                                     <path d="M9.91667 12.25V11.0833C9.91667 10.4645 9.67083 9.871 9.23325 9.43342C8.79567 8.99583 8.20217 8.75 7.58333 8.75H3.5C2.88116 8.75 2.28767 8.99583 1.85008 9.43342C1.4125 9.871 1.16667 10.4645 1.16667 11.0833V12.25" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
                                     <circle cx="5.54167" cy="4.08333" r="2.33333" stroke="currentColor" strokeWidth="1.1"/>
                                   </svg>
-                                  {booking.guests} convive{booking.guests > 1 ? 's' : ''}
+                                  {booking.guests} {(() => { const t = String(booking.service.type || ''); return t.includes('KOURS') ? 'participant' : 'convive'; })()}{booking.guests > 1 ? 's' : ''}
                                 </span>
                               </div>
 

@@ -177,7 +177,7 @@ export async function sendBookingConfirmedToUser(
       { label: 'Convives', value: String(guests) },
       { label: 'Montant total', value: formatPrice(totalPriceInCents) },
     ])}`,
-    `${env.APP_URL}/tableau-de-bord-utilisateur`,
+    `${env.APP_URL}/tableau-de-bord`,
     'Voir mes réservations'
   );
   await sendEmail(userEmail, `Réservation confirmée — ${serviceName} avec ${kookerName}`, html, 'booking-confirmed');

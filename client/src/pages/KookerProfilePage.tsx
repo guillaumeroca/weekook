@@ -30,6 +30,9 @@ interface Service {
   maxGuests: number;
   images: ServiceImage[];
   isActive: boolean;
+  koursDifficulty?: string | null;
+  koursLocation?: string | null;
+  equipmentProvided?: boolean;
 }
 
 interface Review {
@@ -116,6 +119,9 @@ function mapApiToProfile(data: any): KookerProfile {
           alt: img.alt || '',
         })),
         isActive: s.active,
+        koursDifficulty: s.koursDifficulty || null,
+        koursLocation: s.koursLocation || null,
+        equipmentProvided: s.equipmentProvided || false,
       })),
     reviews: (data.reviews || []).map((r: any) => ({
       id: r.id,
@@ -710,7 +716,7 @@ export default function KookerProfilePage() {
                                 onClick={() => navigate(`/reservation?service=${service.id}&kooker=${profile.id}`)}
                                 className="px-4 py-2 bg-[#c1a0fd] text-white text-[13px] font-semibold rounded-[10px] hover:bg-[#b090ed] transition-all whitespace-nowrap flex-shrink-0"
                               >
-                                Réserver
+                                {service.types.includes('KOURS') ? 'Réserver ce cours' : 'Réserver'}
                               </button>
                             </div>
                           </div>
@@ -723,6 +729,26 @@ export default function KookerProfilePage() {
                             <p className="text-[13px] text-[#4b5563] leading-relaxed mb-4">
                               {service.description}
                             </p>
+                            {/* KOURS-specific badges */}
+                            {service.types.includes('KOURS') && (service.koursDifficulty || service.koursLocation || service.equipmentProvided) && (
+                              <div className="flex flex-wrap gap-2 mb-4">
+                                {service.koursDifficulty && (
+                                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] text-[#7c5cbf] text-[12px] font-semibold rounded-[8px]">
+                                    🎓 {service.koursDifficulty}
+                                  </span>
+                                )}
+                                {service.koursLocation && (
+                                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] text-[#7c5cbf] text-[12px] font-semibold rounded-[8px]">
+                                    📍 {service.koursLocation}
+                                  </span>
+                                )}
+                                {service.equipmentProvided && (
+                                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] text-[#7c5cbf] text-[12px] font-semibold rounded-[8px]">
+                                    🎒 Matériel fourni
+                                  </span>
+                                )}
+                              </div>
+                            )}
                             <div className="grid grid-cols-2 gap-4 mb-3">
                               <div>
                                 <span className="block text-[11px] font-semibold text-[#9ca3af] uppercase mb-0.5">Durée</span>

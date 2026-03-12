@@ -25,6 +25,7 @@ interface Kooker {
   rating: number;
   reviewCount: number;
   type: ServiceType | string;
+  types: string[];
 }
 
 // ─── API Response Types ─────────────────────────────────────────────────────────
@@ -87,6 +88,7 @@ export default function SearchPage() {
   const initialCity = searchParams.get('city') || 'Toutes';
   const initialMinPrice = searchParams.get('minPrice') || '';
   const initialMaxPrice = searchParams.get('maxPrice') || '';
+  const initialDifficulty = searchParams.get('difficulty') || '';
   const initialSort = (searchParams.get('sort') || 'pertinence') as SortOption;
 
   // Immediate state
@@ -100,6 +102,7 @@ export default function SearchPage() {
   const [pendingCity, setPendingCity] = useState(initialCity);
   const [pendingMinPrice, setPendingMinPrice] = useState(initialMinPrice);
   const [pendingMaxPrice, setPendingMaxPrice] = useState(initialMaxPrice);
+  const [pendingDifficulty, setPendingDifficulty] = useState(initialDifficulty);
 
   // Applied filter state (sent to API)
   const [type, setType] = useState<ServiceType>(initialType);
@@ -107,6 +110,7 @@ export default function SearchPage() {
   const [city, setCity] = useState(initialCity);
   const [minPrice, setMinPrice] = useState(initialMinPrice);
   const [maxPrice, setMaxPrice] = useState(initialMaxPrice);
+  const [difficulty, setDifficulty] = useState(initialDifficulty);
 
   const [isLoading, setIsLoading] = useState(true);
   const [results, setResults] = useState<Kooker[]>([]);
@@ -118,9 +122,15 @@ export default function SearchPage() {
     const specialties = (() => {
       try { return JSON.parse(k.specialties); } catch { return []; }
     })();
-    const typeArr = (() => {
+    const typeArr: string[] = (() => {
       try { return JSON.parse(k.type); } catch { return []; }
     })();
+    // Collect all service types across all services
+    const allServiceTypes = Array.from(new Set(
+      k.services.flatMap((s) => {
+        try { return JSON.parse(s.type); } catch { return []; }
+      })
+    )) as string[];
     const lowestPrice = k.services.length > 0
       ? Math.min(...k.services.map((s) => s.priceInCents)) / 100
       : 0;
@@ -140,6 +150,7 @@ export default function SearchPage() {
       rating: k.rating ?? 0,
       reviewCount: k.reviewCount ?? 0,
       type: typeArr[0] || '',
+      types: allServiceTypes,
     };
   };
 
@@ -155,6 +166,7 @@ export default function SearchPage() {
       if (city !== 'Toutes') params.set('city', city);
       if (minPrice) params.set('minPrice', minPrice);
       if (maxPrice) params.set('maxPrice', maxPrice);
+      if (difficulty && type === 'KOURS') params.set('difficulty', difficulty);
       if (sort !== 'pertinence') params.set('sort', sort);
       params.set('limit', '12');
 
@@ -175,7 +187,7 @@ export default function SearchPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [query, type, specialty, city, minPrice, maxPrice, sort]);
+  }, [query, type, specialty, city, minPrice, maxPrice, difficulty, sort]);
 
   // Debounce API calls
   useEffect(() => {
@@ -197,8 +209,9 @@ export default function SearchPage() {
     if (city !== 'Toutes') params.set('city', city);
     if (minPrice) params.set('minPrice', minPrice);
     if (maxPrice) params.set('maxPrice', maxPrice);
+    if (difficulty && type === 'KOURS') params.set('difficulty', difficulty);
     setSearchParams(params, { replace: true });
-  }, [query, type, specialty, city, minPrice, maxPrice, setSearchParams]);
+  }, [query, type, specialty, city, minPrice, maxPrice, difficulty, setSearchParams]);
 
   const applyFilters = () => {
     setType(pendingType);
@@ -206,6 +219,7 @@ export default function SearchPage() {
     setCity(pendingCity);
     setMinPrice(pendingMinPrice);
     setMaxPrice(pendingMaxPrice);
+    setDifficulty(pendingType === 'KOURS' ? pendingDifficulty : '');
   };
 
   const resetFilters = () => {
@@ -214,11 +228,13 @@ export default function SearchPage() {
     setPendingCity('Toutes');
     setPendingMinPrice('');
     setPendingMaxPrice('');
+    setPendingDifficulty('');
     setType('');
     setSpecialty('Toutes');
     setCity('Toutes');
     setMinPrice('');
     setMaxPrice('');
+    setDifficulty('');
     setQuery('');
   };
 
@@ -228,7 +244,8 @@ export default function SearchPage() {
     specialty !== 'Toutes' ||
     city !== 'Toutes' ||
     minPrice !== '' ||
-    maxPrice !== '';
+    maxPrice !== '' ||
+    difficulty !== '';
 
   // ─── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -317,7 +334,7 @@ export default function SearchPage() {
                   <label className="text-[13px] font-medium text-[#303044]">Type de service</label>
                   <select
                     value={pendingType}
-                    onChange={(e) => setPendingType(e.target.value as ServiceType)}
+                    onChange={(e) => { setPendingType(e.target.value as ServiceType); if (e.target.value !== 'KOURS') setPendingDifficulty(''); }}
                     className="h-[48px] px-3 bg-white border-2 border-[#e0e0e6] hover:border-[#c1a0fd] rounded-[12px] text-[14px] text-[#111125] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd] focus:border-transparent cursor-pointer"
                   >
                     <option value="">Tous les types</option>
@@ -326,6 +343,23 @@ export default function SearchPage() {
                     <option value="BOTH">Les deux</option>
                   </select>
                 </div>
+
+                {/* Niveau (KOURS only) */}
+                {pendingType === 'KOURS' && (
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[13px] font-medium text-[#303044]">Niveau</label>
+                    <select
+                      value={pendingDifficulty}
+                      onChange={(e) => setPendingDifficulty(e.target.value)}
+                      className="h-[48px] px-3 bg-white border-2 border-[#e0e0e6] hover:border-[#c1a0fd] rounded-[12px] text-[14px] text-[#111125] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd] focus:border-transparent cursor-pointer"
+                    >
+                      <option value="">Tous les niveaux</option>
+                      <option value="Débutant">Débutant</option>
+                      <option value="Intermédiaire">Intermédiaire</option>
+                      <option value="Avancé">Avancé</option>
+                    </select>
+                  </div>
+                )}
 
                 {/* Spécialités */}
                 <div className="flex flex-col gap-1.5">
@@ -409,6 +443,16 @@ export default function SearchPage() {
                   <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] border border-[#c1a0fd] text-[#c1a0fd] rounded-[8px] text-[12px] font-medium">
                     Les deux
                     <button onClick={() => { setType(''); setPendingType(''); }} className="hover:text-[#111125] transition-colors">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </span>
+                )}
+                {difficulty && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] border border-[#c1a0fd] text-[#c1a0fd] rounded-[8px] text-[12px] font-medium">
+                    🎓 {difficulty}
+                    <button onClick={() => { setDifficulty(''); setPendingDifficulty(''); }} className="hover:text-[#111125] transition-colors">
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                       </svg>
@@ -509,6 +553,7 @@ export default function SearchPage() {
                 city={kooker.city}
                 specialties={kooker.specialties}
                 price={kooker.price}
+                types={kooker.types}
               />
             ))}
           </div>

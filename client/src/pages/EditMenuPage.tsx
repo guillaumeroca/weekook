@@ -49,7 +49,7 @@ export default function EditMenuPage() {
   const [koursMinParticipants, setKoursMinParticipants] = useState('');
   const [koursMaxParticipants, setKoursMaxParticipants] = useState('');
   const [koursDifficulty, setKoursDifficulty] = useState('Débutant');
-  const [koursLocation, setKoursLocation] = useState('Chez moi');
+  const [koursLocation, setKoursLocation] = useState('Chez le kooker');
   const [koursEquipmentProvided, setKoursEquipmentProvided] = useState(false);
   const [koursMenuItems, setKoursMenuItems] = useState<MenuItem[]>([]);
   const [koursNewItemName, setKoursNewItemName] = useState('');
@@ -100,6 +100,8 @@ export default function EditMenuPage() {
             setKoursMinParticipants(s.minGuests ? String(s.minGuests) : '');
             setKoursMaxParticipants(String(s.maxGuests || ''));
             setKoursEquipmentProvided(s.equipmentProvided || false);
+            setKoursDifficulty(s.koursDifficulty || 'Débutant');
+            setKoursLocation(s.koursLocation || 'Chez le kooker');
           }
           if (types.includes('KOOK')) {
             setKookTitle(s.title || '');
@@ -287,6 +289,8 @@ export default function EditMenuPage() {
         prepTimeMinutes: !isKours && kookPrepTime ? parseInt(kookPrepTime) : undefined,
         ingredientsIncluded: !isKours ? kookIngredientsIncluded : undefined,
         equipmentProvided: isKours ? koursEquipmentProvided : undefined,
+        koursDifficulty: isKours ? koursDifficulty : undefined,
+        koursLocation: isKours ? koursLocation : undefined,
         menuItems: (isKours ? koursMenuItems : kookMenuItems).map((item, idx) => ({
           category: 'Plat',
           name: item.name,
@@ -512,7 +516,7 @@ export default function EditMenuPage() {
                     onChange={(e) => setKoursLocation(e.target.value)}
                     className={inputClass + ' appearance-none cursor-pointer'}
                   >
-                    <option value="Chez moi">Chez moi</option>
+                    <option value="Chez le kooker">Chez le kooker</option>
                     <option value="Chez le client">Chez le client</option>
                     <option value="Les deux">Les deux</option>
                   </select>

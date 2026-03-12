@@ -20,6 +20,8 @@ export const createServiceSchema = z.object({
   prepTimeMinutes: z.number().optional(),
   ingredientsIncluded: z.boolean().optional(),
   equipmentProvided: z.boolean().optional(),
+  koursDifficulty: z.string().optional(),
+  koursLocation: z.string().optional(),
   menuItems: z.array(menuItemSchema).optional(),
   images: z.array(z.string()).optional(),
 });
@@ -39,6 +41,8 @@ export const updateServiceSchema = z.object({
   prepTimeMinutes: z.number().optional(),
   ingredientsIncluded: z.boolean().optional(),
   equipmentProvided: z.boolean().optional(),
+  koursDifficulty: z.string().optional(),
+  koursLocation: z.string().optional(),
   menuItems: z.array(menuItemSchema).optional(),
   images: z.array(z.string()).optional(),
 });

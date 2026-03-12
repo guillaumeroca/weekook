@@ -47,7 +47,7 @@ export default function CreateMenuPage() {
   const [koursMinParticipants, setKoursMinParticipants] = useState('');
   const [koursMaxParticipants, setKoursMaxParticipants] = useState('');
   const [koursDifficulty, setKoursDifficulty] = useState('Débutant');
-  const [koursLocation, setKoursLocation] = useState('Chez moi (le kooker)');
+  const [koursLocation, setKoursLocation] = useState('Chez le kooker');
   const [koursEquipmentProvided, setKoursEquipmentProvided] = useState(false);
   const [koursMenuItems, setKoursMenuItems] = useState<MenuItem[]>([]);
   const [koursNewItemName, setKoursNewItemName] = useState('');
@@ -228,6 +228,8 @@ export default function CreateMenuPage() {
           prepTimeMinutes: !isKours && kookPrepTime ? parseInt(kookPrepTime) : undefined,
           ingredientsIncluded: !isKours ? kookIngredientsIncluded : undefined,
           equipmentProvided: isKours ? koursEquipmentProvided : undefined,
+          koursDifficulty: isKours ? koursDifficulty : undefined,
+          koursLocation: isKours ? koursLocation : undefined,
           menuItems: (isKours ? koursMenuItems : kookMenuItems).map((item, idx) => ({
             category: 'Plat',
             name: item.name,
@@ -474,7 +476,7 @@ export default function CreateMenuPage() {
                       onChange={(e) => setKoursLocation(e.target.value)}
                       className={inputClass + ' appearance-none cursor-pointer pr-10'}
                     >
-                      <option value="Chez moi (le kooker)">Chez moi (le kooker)</option>
+                      <option value="Chez le kooker">Chez le kooker</option>
                       <option value="Chez le client">Chez le client</option>
                       <option value="Les deux">Les deux</option>
                     </select>

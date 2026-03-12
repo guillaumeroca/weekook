@@ -18,6 +18,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       city,
       minPrice,
       maxPrice,
+      difficulty,
       page = '1',
       limit = '12',
     } = req.query;
@@ -58,6 +59,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
               title: true,
               description: true,
               specialty: true,
+              koursDifficulty: true,
             },
           },
         },
@@ -127,6 +129,17 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
         if (k.services.length === 0) return false;
         const lowestPrice = Math.min(...k.services.map((s) => s.priceInCents));
         return lowestPrice >= min && lowestPrice <= max;
+      });
+    }
+
+    // Post-filter by kours difficulty
+    if (difficulty) {
+      const difficultyFilter = difficulty as string;
+      filtered = filtered.filter((k) => {
+        return k.services.some((s: any) => {
+          const sTypes = Array.isArray(s.type) ? s.type : JSON.parse(s.type || '[]');
+          return sTypes.includes('KOURS') && s.koursDifficulty === difficultyFilter;
+        });
       });
     }
 

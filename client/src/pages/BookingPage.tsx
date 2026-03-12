@@ -15,6 +15,9 @@ interface ServiceDetail {
   maxGuests: number;
   type: string;
   specialties: string[];
+  koursDifficulty?: string | null;
+  koursLocation?: string | null;
+  equipmentProvided?: boolean;
 }
 
 interface Availability {
@@ -152,6 +155,9 @@ export default function BookingPage() {
             maxGuests: s.maxGuests || 1,
             type: safeJsonParse<string[]>(s.type, []).join(', '),
             specialties: safeJsonParse<string[]>(s.specialties, []),
+            koursDifficulty: s.koursDifficulty || null,
+            koursLocation: s.koursLocation || null,
+            equipmentProvided: s.equipmentProvided || false,
           });
           setGuests(min);
         } else {
@@ -272,12 +278,15 @@ export default function BookingPage() {
   };
 
   // ─── Derived values ────────────────────────────────────────────────────────
+  const isKours = service ? service.type.includes('KOURS') : false;
+  const guestLabel = isKours ? 'participant' : 'convive';
+  const guestLabelPlural = isKours ? 'participants' : 'convives';
   const totalPriceCents = service ? service.priceInCents * guests : 0;
   const guestsError = service
     ? guests < service.minGuests
-      ? `Minimum ${service.minGuests} convive${service.minGuests > 1 ? 's' : ''} requis pour ce service.`
+      ? `Minimum ${service.minGuests} ${guests < service.minGuests ? guestLabelPlural : guestLabel} requis pour ce service.`
       : guests > service.maxGuests
-        ? `Maximum ${service.maxGuests} convive${service.maxGuests > 1 ? 's' : ''} pour ce service.`
+        ? `Maximum ${service.maxGuests} ${guestLabelPlural} pour ce service.`
         : null
     : null;
   const canConfirm = !!selectedDate && !!selectedTime && !guestsError && !!service;
@@ -358,7 +367,7 @@ export default function BookingPage() {
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-[14px] text-[#6b7280]">Convives</span>
+                <span className="text-[14px] text-[#6b7280]">{isKours ? 'Participants' : 'Convives'}</span>
                 <span className="text-[14px] font-semibold text-[#111125]">
                   {createdBooking.guests} personne{createdBooking.guests > 1 ? 's' : ''}
                 </span>
@@ -636,7 +645,7 @@ export default function BookingPage() {
               4
             </div>
             <h2 className="text-[18px] font-semibold text-[#111125]">
-              Convives et notes
+              {isKours ? 'Participants et notes' : 'Convives et notes'}
             </h2>
           </div>
 
@@ -644,7 +653,7 @@ export default function BookingPage() {
             {/* Guests */}
             <div>
               <label htmlFor="guests" className="block text-[14px] font-medium text-[#111125] mb-1.5">
-                Nombre de convives
+                {isKours ? 'Nombre de participants' : 'Nombre de convives'}
               </label>
               <div className="flex items-center gap-3">
                 <button
@@ -747,11 +756,23 @@ export default function BookingPage() {
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-[14px] text-[#6b7280]">Convives</span>
+                  <span className="text-[14px] text-[#6b7280]">{isKours ? 'Participants' : 'Convives'}</span>
                   <span className="text-[14px] font-semibold text-[#111125]">
                     {guests} personne{guests > 1 ? 's' : ''}
                   </span>
                 </div>
+                {isKours && service.koursDifficulty && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-[14px] text-[#6b7280]">Niveau</span>
+                    <span className="text-[14px] font-semibold text-[#111125]">🎓 {service.koursDifficulty}</span>
+                  </div>
+                )}
+                {isKours && service.koursLocation && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-[14px] text-[#6b7280]">Lieu du cours</span>
+                    <span className="text-[14px] font-semibold text-[#111125]">📍 {service.koursLocation}</span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center">
                   <span className="text-[14px] text-[#6b7280]">Prix unitaire</span>
                   <span className="text-[14px] font-semibold text-[#111125]">

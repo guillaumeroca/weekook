@@ -26,6 +26,9 @@ interface BookingDetail {
     priceInCents: number;
     durationMinutes: number;
     description: string | null;
+    koursDifficulty?: string | null;
+    koursLocation?: string | null;
+    equipmentProvided?: boolean;
   };
   kookerProfile: {
     id: number;
@@ -124,6 +127,9 @@ export default function BookingDetailPage() {
 
   const isOwner = booking.userId === user?.id;
   const isKooker = user?.kookerProfileId != null && booking.kookerProfileId === user.kookerProfileId;
+  const isKours = Array.isArray(booking.service.type)
+    ? (booking.service.type as string[]).includes('KOURS')
+    : String(booking.service.type).includes('KOURS');
   const canEdit = isOwner
     ? booking.status === 'pending'
     : isKooker
@@ -233,7 +239,7 @@ export default function BookingDetailPage() {
                 },
                 {
                   icon: <><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>,
-                  label: 'Convives',
+                  label: isKours ? 'Participants' : 'Convives',
                   value: `${booking.guests} personne${booking.guests > 1 ? 's' : ''}`,
                 },
                 {
@@ -265,6 +271,28 @@ export default function BookingDetailPage() {
                     <span className="text-[13px] text-[#6b7280]">Durée estimée</span>
                   </div>
                   <span className="text-[13px] font-semibold text-[#111125]">{booking.service.durationMinutes} min</span>
+                </div>
+              )}
+              {isKours && booking.service.koursDifficulty && (
+                <div className="flex items-center justify-between px-5 py-3.5">
+                  <div className="flex items-center gap-3">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>
+                    </svg>
+                    <span className="text-[13px] text-[#6b7280]">Niveau</span>
+                  </div>
+                  <span className="text-[13px] font-semibold text-[#111125]">🎓 {booking.service.koursDifficulty}</span>
+                </div>
+              )}
+              {isKours && booking.service.koursLocation && (
+                <div className="flex items-center justify-between px-5 py-3.5">
+                  <div className="flex items-center gap-3">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                    </svg>
+                    <span className="text-[13px] text-[#6b7280]">Lieu du cours</span>
+                  </div>
+                  <span className="text-[13px] font-semibold text-[#111125]">📍 {booking.service.koursLocation}</span>
                 </div>
               )}
             </div>
@@ -347,7 +375,7 @@ export default function BookingDetailPage() {
 
                   {isOwner && (
                     <div>
-                      <label className="block text-[13px] font-semibold text-[#111125] mb-1.5">Nombre de convives</label>
+                      <label className="block text-[13px] font-semibold text-[#111125] mb-1.5">{isKours ? 'Nombre de participants' : 'Nombre de convives'}</label>
                       <input
                         type="number"
                         min={1}

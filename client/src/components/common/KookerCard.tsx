@@ -8,6 +8,7 @@ interface KookerCardProps {
   specialties: string[];
   price: number;
   avatarUrl?: string;
+  types?: string[];
   onClick?: () => void;
 }
 
@@ -19,6 +20,7 @@ export default function KookerCard({
   specialties,
   price,
   avatarUrl,
+  types,
   onClick,
 }: KookerCardProps) {
   const navigate = useNavigate();
@@ -53,6 +55,18 @@ export default function KookerCard({
             </div>
           )}
         </div>
+
+        {/* Type badges */}
+        {types && types.length > 0 && (
+          <div className="absolute top-[18px] right-[18px] flex flex-col gap-1">
+            {types.includes('KOURS') && (
+              <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-bold bg-[#c1a0fd] text-white shadow-sm">KOURS</span>
+            )}
+            {types.includes('KOOK') && (
+              <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-bold bg-[#7c5cbf] text-white shadow-sm">KOOK</span>
+            )}
+          </div>
+        )}
 
         {/* Avatar overlay */}
         <div className="absolute bottom-[-20px] left-[26px] w-[60px] h-[60px] rounded-full bg-white flex items-center justify-center">

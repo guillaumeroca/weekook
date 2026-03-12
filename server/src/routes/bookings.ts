@@ -135,7 +135,7 @@ router.get(
         where: { id },
         include: {
           service: {
-            select: { id: true, title: true, type: true, priceInCents: true, durationMinutes: true, description: true },
+            select: { id: true, title: true, type: true, priceInCents: true, durationMinutes: true, description: true, koursDifficulty: true, koursLocation: true, equipmentProvided: true },
           },
           kookerProfile: {
             include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true } } },
@@ -350,7 +350,7 @@ router.put(
         where: { id },
         data: updateData,
         include: {
-          service: { select: { id: true, title: true, type: true, priceInCents: true, durationMinutes: true, description: true } },
+          service: { select: { id: true, title: true, type: true, priceInCents: true, durationMinutes: true, description: true, koursDifficulty: true, koursLocation: true, equipmentProvided: true } },
           kookerProfile: { include: { user: { select: { id: true, email: true, firstName: true, lastName: true, avatar: true } } } },
           user: { select: { id: true, email: true, firstName: true, lastName: true, avatar: true, phone: true } },
         },

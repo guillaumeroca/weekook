@@ -122,6 +122,8 @@ model Service {
   prepTimeMinutes     Int?      @map("prep_time_minutes")
   ingredientsIncluded Boolean   @default(false) @map("ingredients_included")
   equipmentProvided   Boolean   @default(false) @map("equipment_provided")
+  koursDifficulty     String?   @map("kours_difficulty")
+  koursLocation       String?   @map("kours_location")
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 

@@ -95,6 +95,12 @@ export default function BookingDetailPage() {
   const [editTime, setEditTime] = useState('');
   const [editGuests, setEditGuests] = useState(1);
   const [editNotes, setEditNotes] = useState('');
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [hasReview, setHasReview] = useState(false);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewHovered, setReviewHovered] = useState(0);
+  const [reviewComment, setReviewComment] = useState('');
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -163,6 +169,26 @@ export default function BookingDetailPage() {
       toast.error(e?.error || 'Erreur lors de la modification');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSubmitReview = async () => {
+    if (!booking || reviewRating === 0) return;
+    setReviewSubmitting(true);
+    try {
+      await api.post('/reviews', {
+        kookerProfileId: booking.kookerProfileId,
+        rating: reviewRating,
+        comment: reviewComment.trim() || undefined,
+      });
+      setHasReview(true);
+      setShowReviewModal(false);
+      toast.success('Avis publié — merci !');
+    } catch (err: unknown) {
+      const e = err as { error?: string };
+      toast.error(e?.error || 'Erreur lors de la publication');
+    } finally {
+      setReviewSubmitting(false);
     }
   };
 
@@ -442,6 +468,20 @@ export default function BookingDetailPage() {
               Contacter {isOwner ? kookerUser.firstName : clientUser.firstName}
             </button>
 
+            {isOwner && booking.status === 'completed' && (
+              hasReview
+                ? <span className="flex items-center gap-1.5 px-5 py-3 text-[14px] font-semibold text-green-600 bg-white border border-green-200 rounded-[12px] shadow-sm">✓ Avis laissé</span>
+                : <button
+                    onClick={() => { setShowReviewModal(true); setReviewRating(0); setReviewComment(''); }}
+                    className="flex items-center gap-2 px-5 py-3 bg-[#c1a0fd] hover:bg-[#b090ed] text-white text-[14px] font-semibold rounded-[12px] transition-all shadow-sm"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                    </svg>
+                    Laisser un avis
+                  </button>
+            )}
+
             {booking.status !== 'cancelled' && booking.status !== 'completed' && (
               <button
                 onClick={() => navigate(isOwner ? '/tableau-de-bord' : '/kooker-dashboard')}
@@ -457,6 +497,64 @@ export default function BookingDetailPage() {
 
         </div>
       </div>
+
+      {/* ── Review Modal ── */}
+      {showReviewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-[20px] p-6 w-full max-w-[420px] shadow-xl">
+            <h2 className="text-[20px] font-semibold text-[#111125] mb-1">Laisser un avis</h2>
+            <p className="text-[14px] text-[#828294] mb-5">pour {kookerUser.firstName} {kookerUser.lastName}</p>
+
+            {/* Stars */}
+            <div className="flex gap-2 justify-center mb-5">
+              {[1, 2, 3, 4, 5].map(star => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => setReviewRating(star)}
+                  onMouseEnter={() => setReviewHovered(star)}
+                  onMouseLeave={() => setReviewHovered(0)}
+                  className="text-[40px] leading-none transition-transform hover:scale-110 focus:outline-none"
+                >
+                  <span className={(reviewHovered || reviewRating) >= star ? 'text-yellow-400' : 'text-[#e0e2ef]'}>★</span>
+                </button>
+              ))}
+            </div>
+            {reviewRating > 0 && (
+              <p className="text-center text-[13px] text-[#828294] mb-4">
+                {['', 'Décevant', 'Peut mieux faire', 'Bien', 'Très bien', 'Excellent !'][reviewRating]}
+              </p>
+            )}
+
+            {/* Comment */}
+            <textarea
+              value={reviewComment}
+              onChange={e => setReviewComment(e.target.value)}
+              placeholder="Partagez votre expérience (facultatif)..."
+              rows={3}
+              className="w-full rounded-[12px] border border-[#e0e2ef] px-4 py-3 text-[14px] text-[#111125] placeholder-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd] focus:border-transparent resize-none mb-5"
+            />
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowReviewModal(false)}
+                className="flex-1 h-[48px] rounded-[12px] border border-[#e0e2ef] text-[14px] font-medium text-[#6b7280] hover:border-[#c1a0fd] transition-all"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleSubmitReview}
+                disabled={reviewRating === 0 || reviewSubmitting}
+                className="flex-1 h-[48px] rounded-[12px] bg-[#c1a0fd] hover:bg-[#b090ed] text-white text-[14px] font-semibold transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+              >
+                {reviewSubmitting
+                  ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Envoi...</>
+                  : 'Publier l\'avis'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -10,6 +10,7 @@ interface Booking {
   id: number;
   serviceName: string;
   serviceType: string;
+  kookerProfileId: number;
   kookerName: string;
   kookerAvatar: string;
   date: string;
@@ -100,7 +101,7 @@ const formatPrice = (cents: number) => {
 
 // ────────────────────────── Booking Card ──────────────────────────
 
-const BookingCard = ({ booking, showActions = false, onCancel, onViewDetails }: { booking: Booking; showActions?: boolean; onCancel?: (id: number) => void; onViewDetails?: (id: number) => void }) => {
+const BookingCard = ({ booking, showActions = false, onCancel, onViewDetails, onReview, hasReview }: { booking: Booking; showActions?: boolean; onCancel?: (id: number) => void; onViewDetails?: (id: number) => void; onReview?: (booking: Booking) => void; hasReview?: boolean }) => {
   const isKours = Array.isArray(booking.serviceType)
     ? (booking.serviceType as unknown as string[]).includes('KOURS')
     : String(booking.serviceType || '').includes('KOURS');
@@ -189,9 +190,11 @@ const BookingCard = ({ booking, showActions = false, onCancel, onViewDetails }: 
           </>
         )}
         {booking.status === 'completed' && (
-          <button className="px-4 py-2 bg-[#c1a0fd] hover:bg-[#b090ed] text-[#111125] text-[14px] font-medium rounded-[8px] transition-all">
-            Laisser un avis
-          </button>
+          hasReview
+            ? <span className="px-4 py-2 text-[14px] font-medium text-green-600 flex items-center gap-1.5">✓ Avis laissé</span>
+            : <button onClick={() => onReview?.(booking)} className="px-4 py-2 bg-[#c1a0fd] hover:bg-[#b090ed] text-white text-[14px] font-medium rounded-[8px] transition-all">
+                Laisser un avis
+              </button>
         )}
       </div>
     </div>
@@ -248,6 +251,7 @@ const mapApiBookingToBooking = (b: ApiBooking): Booking => ({
   id: b.id,
   serviceName: b.service.title,
   serviceType: b.service.type,
+  kookerProfileId: b.kookerProfile.id,
   kookerName: `${b.kookerProfile.user.firstName} ${b.kookerProfile.user.lastName}`,
   kookerAvatar: b.kookerProfile.user.avatar || '',
   date: b.date,
@@ -290,6 +294,12 @@ const UserDashboardPage = () => {
   const [historyBookings, setHistoryBookings] = useState<Booking[]>([]);
   const [favorites, setFavorites] = useState<FavoriteKooker[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reviewTarget, setReviewTarget] = useState<{ kookerProfileId: number; kookerName: string; bookingId: number } | null>(null);
+  const [reviewedBookingIds, setReviewedBookingIds] = useState<Set<number>>(new Set());
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewHovered, setReviewHovered] = useState(0);
+  const [reviewComment, setReviewComment] = useState('');
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
 
   useEffect(() => {
     document.title = 'Mon Espace - Weekook';
@@ -366,6 +376,31 @@ const UserDashboardPage = () => {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  const openReviewModal = (booking: Booking) => {
+    setReviewTarget({ kookerProfileId: booking.kookerProfileId, kookerName: booking.kookerName, bookingId: booking.id });
+    setReviewRating(0);
+    setReviewComment('');
+  };
+
+  const handleSubmitReview = async () => {
+    if (!reviewTarget || reviewRating === 0) return;
+    setReviewSubmitting(true);
+    try {
+      await api.post('/reviews', {
+        kookerProfileId: reviewTarget.kookerProfileId,
+        rating: reviewRating,
+        comment: reviewComment.trim() || undefined,
+      });
+      setReviewedBookingIds(prev => new Set([...prev, reviewTarget.bookingId]));
+      setReviewTarget(null);
+      toast.success('Avis publié — merci !');
+    } catch (err: any) {
+      toast.error(err?.error || 'Erreur lors de la publication');
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
+
   const handleCancelBooking = async (id: number) => {
     try {
       await api.put('/bookings/' + id + '/cancel');
@@ -401,6 +436,7 @@ const UserDashboardPage = () => {
   }
 
   return (
+    <>
     <div className="min-h-screen bg-[#f2f4fc]">
       <div className="max-w-[1200px] mx-auto px-4 md:px-8 lg:px-[96px] py-8 md:py-12">
         {/* Heading */}
@@ -587,7 +623,7 @@ const UserDashboardPage = () => {
               </div>
             ) : (
               historyBookings.map(booking => (
-                <BookingCard key={booking.id} booking={booking} />
+                <BookingCard key={booking.id} booking={booking} onReview={openReviewModal} hasReview={reviewedBookingIds.has(booking.id)} />
               ))
             )}
           </div>
@@ -631,6 +667,65 @@ const UserDashboardPage = () => {
         )}
       </div>
     </div>
+
+    {/* ── Review Modal ── */}
+    {reviewTarget && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="bg-white rounded-[20px] p-6 w-full max-w-[420px] shadow-xl">
+          <h2 className="text-[20px] font-semibold text-[#111125] mb-1">Laisser un avis</h2>
+          <p className="text-[14px] text-[#828294] mb-5">pour {reviewTarget.kookerName}</p>
+
+          {/* Stars */}
+          <div className="flex gap-2 justify-center mb-5">
+            {[1, 2, 3, 4, 5].map(star => (
+              <button
+                key={star}
+                type="button"
+                onClick={() => setReviewRating(star)}
+                onMouseEnter={() => setReviewHovered(star)}
+                onMouseLeave={() => setReviewHovered(0)}
+                className="text-[40px] leading-none transition-transform hover:scale-110 focus:outline-none"
+              >
+                <span className={(reviewHovered || reviewRating) >= star ? 'text-yellow-400' : 'text-[#e0e2ef]'}>★</span>
+              </button>
+            ))}
+          </div>
+          {reviewRating > 0 && (
+            <p className="text-center text-[13px] text-[#828294] mb-4">
+              {['', 'Décevant', 'Peut mieux faire', 'Bien', 'Très bien', 'Excellent !'][reviewRating]}
+            </p>
+          )}
+
+          {/* Comment */}
+          <textarea
+            value={reviewComment}
+            onChange={e => setReviewComment(e.target.value)}
+            placeholder="Partagez votre expérience (facultatif)..."
+            rows={3}
+            className="w-full rounded-[12px] border border-[#e0e2ef] px-4 py-3 text-[14px] text-[#111125] placeholder-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd] focus:border-transparent resize-none mb-5"
+          />
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => setReviewTarget(null)}
+              className="flex-1 h-[48px] rounded-[12px] border border-[#e0e2ef] text-[14px] font-medium text-[#6b7280] hover:border-[#c1a0fd] transition-all"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={handleSubmitReview}
+              disabled={reviewRating === 0 || reviewSubmitting}
+              className="flex-1 h-[48px] rounded-[12px] bg-[#c1a0fd] hover:bg-[#b090ed] text-white text-[14px] font-semibold transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+            >
+              {reviewSubmitting
+                ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Envoi...</>
+                : 'Publier l\'avis'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 };
 

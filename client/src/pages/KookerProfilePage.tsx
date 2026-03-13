@@ -276,6 +276,14 @@ export default function KookerProfilePage() {
   const [messageContent, setMessageContent] = useState('');
   const [messageSending, setMessageSending] = useState(false);
 
+  // Review modal
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [hasReview, setHasReview] = useState(false);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewHovered, setReviewHovered] = useState(0);
+  const [reviewComment, setReviewComment] = useState('');
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+
   // Load profile from API
   useEffect(() => {
     if (!id) return;
@@ -468,6 +476,42 @@ export default function KookerProfilePage() {
       toast.error(err?.error || 'Erreur lors de l\'envoi');
     } finally {
       setMessageSending(false);
+    }
+  };
+
+  const handleSubmitReview = async () => {
+    if (!profile || reviewRating === 0) return;
+    setReviewSubmitting(true);
+    try {
+      const res = await api.post<any>('/reviews', {
+        kookerProfileId: profile.id,
+        rating: reviewRating,
+        comment: reviewComment.trim() || undefined,
+      });
+      // Optimistically add review to list and re-fetch profile for updated rating
+      if (res.success && res.data) {
+        const newReview = {
+          id: res.data.id,
+          userName: `${user?.firstName} ${user?.lastName}`,
+          userAvatar: user?.avatar || '',
+          rating: reviewRating,
+          comment: reviewComment.trim(),
+          date: new Date().toISOString(),
+        };
+        setProfile(prev => prev ? {
+          ...prev,
+          reviews: [newReview, ...prev.reviews],
+          reviewCount: prev.reviewCount + 1,
+          rating: Math.round(((prev.rating * prev.reviewCount + reviewRating) / (prev.reviewCount + 1)) * 10) / 10,
+        } : prev);
+      }
+      setHasReview(true);
+      setShowReviewModal(false);
+      toast.success('Avis publié — merci !');
+    } catch (err: any) {
+      toast.error(err?.error || 'Erreur lors de la publication');
+    } finally {
+      setReviewSubmitting(false);
     }
   };
 
@@ -799,7 +843,7 @@ export default function KookerProfilePage() {
                 <h2 className="text-[22px] md:text-[26px] font-semibold text-[#111125] tracking-[-0.5px]">
                   Avis
                 </h2>
-                <div className="flex items-center gap-3 text-[15px]">
+                <div className="flex flex-wrap items-center gap-3 text-[15px]">
                   <span className="flex items-center gap-1.5">
                     <svg className="w-5 h-5 text-[#facc15]" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
@@ -809,6 +853,19 @@ export default function KookerProfilePage() {
                   </span>
                   <div className="w-px h-5 bg-[#e0e0e0]" />
                   <span className="text-[#6b7280]">{profile.reviewCount} avis</span>
+                  {user && user.kookerProfileId !== profile.id && (
+                    hasReview
+                      ? <span className="text-[13px] font-medium text-green-600 flex items-center gap-1">✓ Avis laissé</span>
+                      : <button
+                          onClick={() => { setShowReviewModal(true); setReviewRating(0); setReviewComment(''); }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#c1a0fd] hover:bg-[#b090ed] text-white text-[13px] font-semibold rounded-[10px] transition-all"
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                          </svg>
+                          Laisser un avis
+                        </button>
+                  )}
                 </div>
               </div>
 
@@ -1160,6 +1217,62 @@ export default function KookerProfilePage() {
                   </svg>
                 )}
                 Envoyer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Review Modal ── */}
+      {showReviewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-[20px] p-6 w-full max-w-[420px] shadow-xl">
+            <h2 className="text-[20px] font-semibold text-[#111125] mb-1">Laisser un avis</h2>
+            <p className="text-[14px] text-[#828294] mb-5">pour {profile?.name}</p>
+
+            <div className="flex gap-2 justify-center mb-5">
+              {[1, 2, 3, 4, 5].map(star => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => setReviewRating(star)}
+                  onMouseEnter={() => setReviewHovered(star)}
+                  onMouseLeave={() => setReviewHovered(0)}
+                  className="text-[40px] leading-none transition-transform hover:scale-110 focus:outline-none"
+                >
+                  <span className={(reviewHovered || reviewRating) >= star ? 'text-yellow-400' : 'text-[#e0e2ef]'}>★</span>
+                </button>
+              ))}
+            </div>
+            {reviewRating > 0 && (
+              <p className="text-center text-[13px] text-[#828294] mb-4">
+                {['', 'Décevant', 'Peut mieux faire', 'Bien', 'Très bien', 'Excellent !'][reviewRating]}
+              </p>
+            )}
+
+            <textarea
+              value={reviewComment}
+              onChange={e => setReviewComment(e.target.value)}
+              placeholder="Partagez votre expérience (facultatif)..."
+              rows={3}
+              className="w-full rounded-[12px] border border-[#e0e2ef] px-4 py-3 text-[14px] text-[#111125] placeholder-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd] focus:border-transparent resize-none mb-5"
+            />
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowReviewModal(false)}
+                className="flex-1 h-[48px] rounded-[12px] border border-[#e0e2ef] text-[14px] font-medium text-[#6b7280] hover:border-[#c1a0fd] transition-all"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleSubmitReview}
+                disabled={reviewRating === 0 || reviewSubmitting}
+                className="flex-1 h-[48px] rounded-[12px] bg-[#c1a0fd] hover:bg-[#b090ed] text-white text-[14px] font-semibold transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+              >
+                {reviewSubmitting
+                  ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Envoi...</>
+                  : 'Publier l\'avis'}
               </button>
             </div>
           </div>

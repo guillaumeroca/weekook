@@ -60,6 +60,16 @@ function formatDateInput(dateStr: string) {
   return new Date(dateStr).toISOString().slice(0, 10);
 }
 
+const REFUSAL_REASONS = [
+  { id: 'unavailable',    label: 'Indisponible à cette date',            message: 'Je suis malheureusement indisponible à cette date.' },
+  { id: 'guests',         label: 'Nombre de convives incompatible',       message: "Le nombre de convives n'est pas compatible avec ce service." },
+  { id: 'distance',       label: 'Lieu trop éloigné',                    message: 'Le lieu de prestation est en dehors de ma zone de déplacement.' },
+  { id: 'delay',          label: 'Délai trop court',                     message: 'Le délai est insuffisant pour préparer cette prestation dans les meilleures conditions.' },
+  { id: 'menu',           label: 'Menu / ingrédients non disponibles',   message: 'Je ne suis pas en mesure de proposer ce service à cette date.' },
+  { id: 'other_booking',  label: 'Autre engagement professionnel',        message: "J'ai déjà un engagement professionnel à cette date." },
+  { id: 'custom',         label: 'Autre raison (préciser)',               message: '' },
+];
+
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
   pending:   { label: 'En attente',  color: '#d97706', bg: '#fef3c7' },
   confirmed: { label: 'Confirmée',   color: '#16a34a', bg: '#dcfce7' },
@@ -110,6 +120,15 @@ export default function BookingDetailPage() {
   const [testimonialHovered, setTestimonialHovered] = useState(0);
   const [testimonialSubmitting, setTestimonialSubmitting] = useState(false);
   const [testimonialSent, setTestimonialSent] = useState(false);
+
+  // Kooker action modals
+  const [showAcceptModal, setShowAcceptModal] = useState(false);
+  const [showRefuseModal, setShowRefuseModal] = useState(false);
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [refusalReasonId, setRefusalReasonId] = useState('unavailable');
+  const [refusalCustom, setRefusalCustom] = useState('');
 
   useEffect(() => {
     if (!id) return;
@@ -236,6 +255,86 @@ export default function BookingDetailPage() {
     setEditGuests(booking.guests);
     setEditNotes(booking.notes || '');
     setEditMode(false);
+  };
+
+  // ── Kooker actions ──
+
+  const handleAcceptBooking = async () => {
+    if (!id) return;
+    setActionLoading(true);
+    try {
+      await api.put(`/bookings/${id}/status`, { status: 'confirmed' });
+      setBooking(prev => prev ? { ...prev, status: 'confirmed' } : prev);
+      setShowAcceptModal(false);
+      toast.success('Réservation confirmée — le client a été notifié.');
+    } catch (err: unknown) {
+      const e = err as { error?: string };
+      toast.error(e?.error || 'Erreur lors de la confirmation');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRefuseBooking = async () => {
+    if (!id || !booking) return;
+    const reason = REFUSAL_REASONS.find(r => r.id === refusalReasonId);
+    const messageContent = refusalReasonId === 'custom'
+      ? refusalCustom.trim()
+      : reason?.message || '';
+    if (!messageContent) {
+      toast.error('Veuillez préciser la raison du refus.');
+      return;
+    }
+    setActionLoading(true);
+    try {
+      await api.put(`/bookings/${id}/status`, { status: 'cancelled' });
+      await api.post('/messages', {
+        receiverId: booking.user.id,
+        content: `Votre réservation a été refusée.\n\nRaison : ${messageContent}`,
+      });
+      setBooking(prev => prev ? { ...prev, status: 'cancelled' } : prev);
+      setShowRefuseModal(false);
+      setRefusalReasonId('unavailable');
+      setRefusalCustom('');
+      toast.success('Réservation refusée — le client a été notifié par message.');
+    } catch (err: unknown) {
+      const e = err as { error?: string };
+      toast.error(e?.error || 'Erreur lors du refus');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleCompleteBooking = async () => {
+    if (!id) return;
+    setActionLoading(true);
+    try {
+      await api.put(`/bookings/${id}/status`, { status: 'completed' });
+      setBooking(prev => prev ? { ...prev, status: 'completed' } : prev);
+      setShowCompleteModal(false);
+      toast.success('Réservation marquée comme terminée.');
+    } catch (err: unknown) {
+      const e = err as { error?: string };
+      toast.error(e?.error || 'Erreur lors de la mise à jour');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleCancelBooking = async () => {
+    if (!id) return;
+    setActionLoading(true);
+    try {
+      await api.put(`/bookings/${id}/cancel`, {});
+      setBooking(prev => prev ? { ...prev, status: 'cancelled' } : prev);
+      setShowCancelModal(false);
+      toast.success('Réservation annulée.');
+    } catch (err: unknown) {
+      const e = err as { error?: string };
+      toast.error(e?.error || 'Erreur lors de l\'annulation');
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   document.title = `Réservation #${booking.id.toString().padStart(5, '0')} — Weekook`;
@@ -495,56 +594,105 @@ export default function BookingDetailPage() {
           )}
 
           {/* ── Actions ── */}
-          <div className="flex flex-wrap gap-3">
-            <button
-              onClick={() => navigate(`/messages?to=${otherPersonId}`)}
-              className="flex items-center gap-2 px-5 py-3 bg-white border border-[#e0e2ef] text-[#111125] text-[14px] font-semibold rounded-[12px] hover:border-[#c1a0fd] hover:text-[#c1a0fd] transition-all shadow-sm"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-              </svg>
-              Contacter {isOwner ? kookerUser.firstName : clientUser.firstName}
-            </button>
+          <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm mb-4">
+            <h2 className="text-[16px] font-bold text-[#111125] mb-4">Actions</h2>
+            <div className="flex flex-wrap gap-3">
 
-            {isOwner && booking.status === 'completed' && (
-              hasReview
-                ? <span className="flex items-center gap-1.5 px-5 py-3 text-[14px] font-semibold text-green-600 bg-white border border-green-200 rounded-[12px] shadow-sm">✓ Avis laissé</span>
-                : <button
-                    onClick={() => { setShowReviewModal(true); setReviewRating(0); setReviewComment(''); }}
-                    className="flex items-center gap-2 px-5 py-3 bg-[#c1a0fd] hover:bg-[#b090ed] text-white text-[14px] font-semibold rounded-[12px] transition-all shadow-sm"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                    </svg>
-                    Laisser un avis
-                  </button>
-            )}
+              {/* Kooker: Accept pending booking */}
+              {isKooker && booking.status === 'pending' && (
+                <button
+                  onClick={() => setShowAcceptModal(true)}
+                  className="flex items-center gap-2 px-5 py-3 bg-[#c1a0fd] hover:bg-[#b090ed] text-white text-[14px] font-semibold rounded-[12px] transition-all shadow-sm"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                    <polyline points="22 4 12 14.01 9 11.01"/>
+                  </svg>
+                  Accepter
+                </button>
+              )}
 
-            {isOwner && booking.status === 'completed' && (
-              testimonialSent
-                ? <span className="flex items-center gap-1.5 px-5 py-3 text-[14px] font-semibold text-green-600 bg-white border border-green-200 rounded-[12px] shadow-sm">✓ Témoignage envoyé</span>
-                : <button
-                    onClick={openTestimonialModal}
-                    className="flex items-center gap-2 px-5 py-3 bg-white border border-[#c1a0fd] text-[#c1a0fd] hover:bg-[#f3ecff] text-[14px] font-semibold rounded-[12px] transition-all shadow-sm"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                    </svg>
-                    Partager votre expérience
-                  </button>
-            )}
+              {/* Kooker: Refuse pending booking */}
+              {isKooker && booking.status === 'pending' && (
+                <button
+                  onClick={() => { setShowRefuseModal(true); setRefusalReasonId('unavailable'); setRefusalCustom(''); }}
+                  className="flex items-center gap-2 px-5 py-3 bg-white border border-[#fca5a5] text-[#ef4444] text-[14px] font-semibold rounded-[12px] hover:bg-[#fee2e2] transition-all shadow-sm"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+                  </svg>
+                  Refuser
+                </button>
+              )}
 
-            {booking.status !== 'cancelled' && booking.status !== 'completed' && (
+              {/* Kooker: Mark confirmed booking as completed */}
+              {isKooker && booking.status === 'confirmed' && (
+                <button
+                  onClick={() => setShowCompleteModal(true)}
+                  className="flex items-center gap-2 px-5 py-3 bg-[#c1a0fd] hover:bg-[#b090ed] text-white text-[14px] font-semibold rounded-[12px] transition-all shadow-sm"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                    <polyline points="22 4 12 14.01 9 11.01"/>
+                  </svg>
+                  Marquer comme terminée
+                </button>
+              )}
+
+              {/* Contact button */}
               <button
-                onClick={() => navigate(isOwner ? '/tableau-de-bord' : '/kooker-dashboard')}
-                className="flex items-center gap-2 px-5 py-3 bg-white border border-[#fca5a5] text-[#ef4444] text-[14px] font-semibold rounded-[12px] hover:bg-[#fee2e2] transition-all shadow-sm"
+                onClick={() => navigate(`/messages?to=${otherPersonId}`)}
+                className="flex items-center gap-2 px-5 py-3 bg-white border border-[#e0e2ef] text-[#111125] text-[14px] font-semibold rounded-[12px] hover:border-[#c1a0fd] hover:text-[#c1a0fd] transition-all shadow-sm"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                 </svg>
-                Annuler depuis le dashboard
+                Contacter {isOwner ? kookerUser.firstName : clientUser.firstName}
               </button>
-            )}
+
+              {/* Owner: Leave review */}
+              {isOwner && booking.status === 'completed' && (
+                hasReview
+                  ? <span className="flex items-center gap-1.5 px-5 py-3 text-[14px] font-semibold text-green-600 bg-white border border-green-200 rounded-[12px] shadow-sm">✓ Avis laissé</span>
+                  : <button
+                      onClick={() => { setShowReviewModal(true); setReviewRating(0); setReviewComment(''); }}
+                      className="flex items-center gap-2 px-5 py-3 bg-[#c1a0fd] hover:bg-[#b090ed] text-white text-[14px] font-semibold rounded-[12px] transition-all shadow-sm"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                      </svg>
+                      Laisser un avis
+                    </button>
+              )}
+
+              {/* Owner: Share testimonial */}
+              {isOwner && booking.status === 'completed' && (
+                testimonialSent
+                  ? <span className="flex items-center gap-1.5 px-5 py-3 text-[14px] font-semibold text-green-600 bg-white border border-green-200 rounded-[12px] shadow-sm">✓ Témoignage envoyé</span>
+                  : <button
+                      onClick={openTestimonialModal}
+                      className="flex items-center gap-2 px-5 py-3 bg-white border border-[#c1a0fd] text-[#c1a0fd] hover:bg-[#f3ecff] text-[14px] font-semibold rounded-[12px] transition-all shadow-sm"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                      </svg>
+                      Partager votre expérience
+                    </button>
+              )}
+
+              {/* Cancel button (both roles, pending or confirmed) */}
+              {booking.status !== 'cancelled' && booking.status !== 'completed' && (
+                <button
+                  onClick={() => setShowCancelModal(true)}
+                  className="flex items-center gap-2 px-5 py-3 bg-white border border-[#fca5a5] text-[#ef4444] text-[14px] font-semibold rounded-[12px] hover:bg-[#fee2e2] transition-all shadow-sm"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+                  </svg>
+                  Annuler la réservation
+                </button>
+              )}
+            </div>
           </div>
 
         </div>
@@ -681,6 +829,241 @@ export default function BookingDetailPage() {
                 {reviewSubmitting
                   ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Envoi...</>
                   : 'Publier l\'avis'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Accept Modal ── */}
+      {showAcceptModal && booking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#111125]/30 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-[20px] p-8 w-full max-w-[440px] shadow-xl border border-[#e0e2ef]">
+            <div className="flex items-center justify-center w-14 h-14 rounded-full bg-[#f3ecff] mx-auto mb-5">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c1a0fd" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                <polyline points="22 4 12 14.01 9 11.01"/>
+              </svg>
+            </div>
+            <h3 className="text-[18px] font-bold text-[#111125] text-center mb-1">Accepter cette réservation ?</h3>
+            <p className="text-[13px] text-[#6b7280] text-center mb-6">Le client sera notifié par message et par e-mail.</p>
+
+            <div className="bg-[#f2f4fc] rounded-[14px] px-5 py-4 mb-7 space-y-2">
+              <div className="flex justify-between text-[13px]">
+                <span className="text-[#6b7280]">Client</span>
+                <span className="font-semibold text-[#111125]">{clientUser.firstName} {clientUser.lastName}</span>
+              </div>
+              <div className="flex justify-between text-[13px]">
+                <span className="text-[#6b7280]">Prestation</span>
+                <span className="font-semibold text-[#111125] text-right max-w-[60%]">{booking.service.title}</span>
+              </div>
+              <div className="flex justify-between text-[13px]">
+                <span className="text-[#6b7280]">Date</span>
+                <span className="font-semibold text-[#111125]">
+                  {new Date(booking.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} à {String(booking.startTime).slice(0, 5)}
+                </span>
+              </div>
+              <div className="flex justify-between text-[13px]">
+                <span className="text-[#6b7280]">{isKours ? 'Participants' : 'Convives'}</span>
+                <span className="font-semibold text-[#111125]">{booking.guests} personne{booking.guests > 1 ? 's' : ''}</span>
+              </div>
+              <div className="h-px bg-[#e0e2ef] my-1" />
+              <div className="flex justify-between text-[14px]">
+                <span className="font-semibold text-[#111125]">Montant</span>
+                <span className="font-bold text-[#c1a0fd]">{formatPrice(booking.totalPriceInCents)}</span>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowAcceptModal(false)}
+                disabled={actionLoading}
+                className="flex-1 h-[48px] rounded-[12px] border border-[#e0e2ef] text-[14px] font-medium text-[#6b7280] hover:border-[#c1a0fd] hover:text-[#111125] transition-all disabled:opacity-40"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleAcceptBooking}
+                disabled={actionLoading}
+                className="flex-1 h-[48px] rounded-[12px] bg-[#c1a0fd] hover:bg-[#b090ed] text-white text-[14px] font-semibold transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+              >
+                {actionLoading
+                  ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Confirmation...</>
+                  : "Confirmer l'acceptation"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Refuse Modal ── */}
+      {showRefuseModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-[20px] p-6 w-full max-w-[480px] shadow-xl max-h-[90vh] overflow-y-auto">
+            <h3 className="text-[18px] font-bold text-[#111125] mb-1">Refuser la réservation</h3>
+            <p className="text-[13px] text-[#6b7280] mb-5">
+              Choisissez une raison — un message sera automatiquement envoyé au client.
+            </p>
+
+            <div className="space-y-2.5 mb-5">
+              {REFUSAL_REASONS.map((reason) => (
+                <label
+                  key={reason.id}
+                  className={`flex items-start gap-3 p-3 rounded-[12px] border cursor-pointer transition-all ${
+                    refusalReasonId === reason.id
+                      ? 'border-[#c1a0fd] bg-[#f3ecff]'
+                      : 'border-[#e5e7eb] hover:border-[#c1a0fd]'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="refusalReason"
+                    value={reason.id}
+                    checked={refusalReasonId === reason.id}
+                    onChange={() => setRefusalReasonId(reason.id)}
+                    className="mt-0.5 accent-[#c1a0fd] flex-shrink-0"
+                  />
+                  <div>
+                    <p className="text-[14px] font-medium text-[#111125]">{reason.label}</p>
+                    {reason.id !== 'custom' && (
+                      <p className="text-[12px] text-[#6b7280] mt-0.5 italic">"{reason.message}"</p>
+                    )}
+                  </div>
+                </label>
+              ))}
+            </div>
+
+            {refusalReasonId === 'custom' && (
+              <textarea
+                value={refusalCustom}
+                onChange={(e) => setRefusalCustom(e.target.value)}
+                placeholder="Expliquez la raison du refus..."
+                rows={3}
+                className="w-full rounded-[12px] border border-[#e5e7eb] px-4 py-3 text-[14px] text-[#111125] placeholder-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd] focus:border-transparent resize-none mb-5"
+              />
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowRefuseModal(false); setRefusalReasonId('unavailable'); setRefusalCustom(''); }}
+                disabled={actionLoading}
+                className="flex-1 h-[48px] rounded-[12px] border border-[#e5e7eb] text-[14px] font-medium text-[#6b7280] hover:border-[#c1a0fd] hover:text-[#111125] transition-all disabled:opacity-40"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleRefuseBooking}
+                disabled={(refusalReasonId === 'custom' && !refusalCustom.trim()) || actionLoading}
+                className="flex-1 h-[48px] rounded-[12px] bg-red-500 text-white text-[14px] font-semibold hover:bg-red-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {actionLoading
+                  ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Refus...</>
+                  : 'Confirmer le refus'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Complete Modal ── */}
+      {showCompleteModal && booking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#111125]/30 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-[20px] p-8 w-full max-w-[440px] shadow-xl border border-[#e0e2ef]">
+            <div className="flex items-center justify-center w-14 h-14 rounded-full bg-[#dcfce7] mx-auto mb-5">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                <polyline points="22 4 12 14.01 9 11.01"/>
+              </svg>
+            </div>
+            <h3 className="text-[18px] font-bold text-[#111125] text-center mb-1">Marquer comme terminée ?</h3>
+            <p className="text-[13px] text-[#6b7280] text-center mb-6">
+              La prestation "{booking.service.title}" pour {clientUser.firstName} {clientUser.lastName} sera marquée comme terminée. Le client pourra ensuite laisser un avis.
+            </p>
+
+            <div className="bg-[#f2f4fc] rounded-[14px] px-5 py-4 mb-7 space-y-2">
+              <div className="flex justify-between text-[13px]">
+                <span className="text-[#6b7280]">Prestation</span>
+                <span className="font-semibold text-[#111125] text-right max-w-[60%]">{booking.service.title}</span>
+              </div>
+              <div className="flex justify-between text-[13px]">
+                <span className="text-[#6b7280]">Date</span>
+                <span className="font-semibold text-[#111125]">{formatDateLong(booking.date)}</span>
+              </div>
+              <div className="h-px bg-[#e0e2ef] my-1" />
+              <div className="flex justify-between text-[14px]">
+                <span className="font-semibold text-[#111125]">Montant</span>
+                <span className="font-bold text-[#c1a0fd]">{formatPrice(booking.totalPriceInCents)}</span>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowCompleteModal(false)}
+                disabled={actionLoading}
+                className="flex-1 h-[48px] rounded-[12px] border border-[#e0e2ef] text-[14px] font-medium text-[#6b7280] hover:border-[#c1a0fd] hover:text-[#111125] transition-all disabled:opacity-40"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleCompleteBooking}
+                disabled={actionLoading}
+                className="flex-1 h-[48px] rounded-[12px] bg-[#16a34a] hover:bg-[#15803d] text-white text-[14px] font-semibold transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+              >
+                {actionLoading
+                  ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Mise à jour...</>
+                  : 'Confirmer la fin'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Cancel Modal ── */}
+      {showCancelModal && booking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#111125]/30 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-[20px] p-8 w-full max-w-[440px] shadow-xl border border-[#e0e2ef]">
+            <div className="flex items-center justify-center w-14 h-14 rounded-full bg-[#fee2e2] mx-auto mb-5">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+              </svg>
+            </div>
+            <h3 className="text-[18px] font-bold text-[#111125] text-center mb-1">Annuler cette réservation ?</h3>
+            <p className="text-[13px] text-[#6b7280] text-center mb-6">
+              Cette action est irréversible. {isOwner ? 'Le kooker' : 'Le client'} sera notifié par message et par e-mail.
+            </p>
+
+            <div className="bg-[#f2f4fc] rounded-[14px] px-5 py-4 mb-7 space-y-2">
+              <div className="flex justify-between text-[13px]">
+                <span className="text-[#6b7280]">Prestation</span>
+                <span className="font-semibold text-[#111125] text-right max-w-[60%]">{booking.service.title}</span>
+              </div>
+              <div className="flex justify-between text-[13px]">
+                <span className="text-[#6b7280]">Date</span>
+                <span className="font-semibold text-[#111125]">{formatDateLong(booking.date)}</span>
+              </div>
+              <div className="h-px bg-[#e0e2ef] my-1" />
+              <div className="flex justify-between text-[14px]">
+                <span className="font-semibold text-[#111125]">Montant</span>
+                <span className="font-bold text-[#c1a0fd]">{formatPrice(booking.totalPriceInCents)}</span>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowCancelModal(false)}
+                disabled={actionLoading}
+                className="flex-1 h-[48px] rounded-[12px] border border-[#e0e2ef] text-[14px] font-medium text-[#6b7280] hover:border-[#c1a0fd] hover:text-[#111125] transition-all disabled:opacity-40"
+              >
+                Ne pas annuler
+              </button>
+              <button
+                onClick={handleCancelBooking}
+                disabled={actionLoading}
+                className="flex-1 h-[48px] rounded-[12px] bg-red-500 text-white text-[14px] font-semibold hover:bg-red-600 transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+              >
+                {actionLoading
+                  ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Annulation...</>
+                  : 'Confirmer l\'annulation'}
               </button>
             </div>
           </div>

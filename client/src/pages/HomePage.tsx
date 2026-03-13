@@ -5,6 +5,7 @@ import { Search, ChevronLeft, ChevronRight, Star, Quote } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import KookerCard from '@/components/common/KookerCard';
 import { api } from '@/lib/api';
+import { toast } from 'sonner';
 import heroImage from '@/assets/d44ea553455097a6377797d27e1f725103cf1bcf.png';
 import kookerImage from '@/assets/daf59a7b2f5cb369dff77dcdb101b9bb2386564d.png';
 
@@ -148,6 +149,16 @@ export default function HomePage() {
   const [testimonials, setTestimonials] = useState<DisplayTestimonial[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Testimonial submission modal
+  const [showTestimonialModal, setShowTestimonialModal] = useState(false);
+  const [testimonialName, setTestimonialName] = useState('');
+  const [testimonialRole, setTestimonialRole] = useState('');
+  const [testimonialContent, setTestimonialContent] = useState('');
+  const [testimonialRating, setTestimonialRating] = useState(5);
+  const [testimonialHovered, setTestimonialHovered] = useState(0);
+  const [testimonialSubmitting, setTestimonialSubmitting] = useState(false);
+  const [testimonialSent, setTestimonialSent] = useState(false);
+
   const typewriterText = useTypewriter(TYPEWRITER_WORDS, 80, 50, 1800);
 
   // Fetch kookers and testimonials on mount
@@ -228,11 +239,40 @@ export default function HomePage() {
     }
   };
 
+  const openTestimonialModal = () => {
+    setTestimonialName(user ? `${user.firstName} ${user.lastName}` : '');
+    setTestimonialRole('');
+    setTestimonialContent('');
+    setTestimonialRating(5);
+    setShowTestimonialModal(true);
+  };
+
+  const handleSubmitTestimonial = async () => {
+    if (!testimonialContent.trim() || testimonialContent.trim().length < 10) return;
+    setTestimonialSubmitting(true);
+    try {
+      await api.post('/testimonials', {
+        authorName: testimonialName.trim(),
+        authorRole: testimonialRole.trim() || undefined,
+        content: testimonialContent.trim(),
+        rating: testimonialRating,
+      });
+      setTestimonialSent(true);
+      setShowTestimonialModal(false);
+      toast.success('Merci ! Votre témoignage sera visible après validation par notre équipe.');
+    } catch (err: any) {
+      toast.error(err?.error || 'Erreur lors de l\'envoi');
+    } finally {
+      setTestimonialSubmitting(false);
+    }
+  };
+
   const handleFaqToggle = (index: number) => {
     setOpenFaqIndex(openFaqIndex === index ? null : index);
   };
 
   return (
+    <>
     <div className="min-h-screen bg-[#f2f4fc]" style={{ fontFamily: 'Inter, sans-serif' }}>
       {/* ═══════════════════════ HERO SECTION ═══════════════════════ */}
       <section className="relative w-full h-[280px] md:h-[340px] lg:h-[520px] overflow-hidden">
@@ -489,6 +529,23 @@ export default function HomePage() {
               <ChevronRight className="w-[22px] h-[22px] text-white" />
             </button>
           </div>
+
+          {/* CTA témoignage */}
+          {user && (
+            <div className="text-center mt-8">
+              {testimonialSent ? (
+                <span className="text-[14px] font-medium text-green-600">✓ Témoignage envoyé — merci !</span>
+              ) : (
+                <button
+                  onClick={openTestimonialModal}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 border border-[#c1a0fd] text-[#c1a0fd] hover:bg-[#f3ecff] text-[14px] font-semibold rounded-[12px] transition-all"
+                >
+                  <Star className="w-4 h-4 fill-[#c1a0fd] text-[#c1a0fd]" />
+                  Partager votre expérience
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </section>
 
@@ -671,5 +728,89 @@ export default function HomePage() {
         </div>
       </section>
     </div>
+
+    {/* ── Testimonial Modal ── */}
+    {showTestimonialModal && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="bg-white rounded-[20px] p-6 w-full max-w-[460px] shadow-xl">
+          <h2 className="text-[20px] font-semibold text-[#111125] mb-1">Partager votre expérience</h2>
+          <p className="text-[14px] text-[#828294] mb-5">Votre témoignage sera affiché après validation.</p>
+
+          {/* Stars */}
+          <div className="flex gap-2 justify-center mb-5">
+            {[1, 2, 3, 4, 5].map(star => (
+              <button
+                key={star}
+                type="button"
+                onClick={() => setTestimonialRating(star)}
+                onMouseEnter={() => setTestimonialHovered(star)}
+                onMouseLeave={() => setTestimonialHovered(0)}
+                className="text-[40px] leading-none transition-transform hover:scale-110 focus:outline-none"
+              >
+                <span className={(testimonialHovered || testimonialRating) >= star ? 'text-yellow-400' : 'text-[#e0e2ef]'}>★</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Name */}
+          <div className="mb-3">
+            <label className="block text-[13px] font-semibold text-[#111125] mb-1.5">Nom affiché</label>
+            <input
+              type="text"
+              value={testimonialName}
+              onChange={e => setTestimonialName(e.target.value)}
+              placeholder="Sophie L."
+              className="w-full h-[44px] rounded-[12px] border border-[#e0e2ef] px-4 text-[14px] text-[#111125] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd] focus:border-transparent"
+            />
+          </div>
+
+          {/* Role */}
+          <div className="mb-3">
+            <label className="block text-[13px] font-semibold text-[#111125] mb-1.5">Votre profil <span className="font-normal text-[#9ca3af]">(facultatif)</span></label>
+            <input
+              type="text"
+              value={testimonialRole}
+              onChange={e => setTestimonialRole(e.target.value)}
+              placeholder="Cliente depuis 2024, Fan de cuisine italienne…"
+              className="w-full h-[44px] rounded-[12px] border border-[#e0e2ef] px-4 text-[14px] text-[#111125] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd] focus:border-transparent"
+            />
+          </div>
+
+          {/* Content */}
+          <div className="mb-5">
+            <label className="block text-[13px] font-semibold text-[#111125] mb-1.5">Votre témoignage</label>
+            <textarea
+              value={testimonialContent}
+              onChange={e => setTestimonialContent(e.target.value)}
+              placeholder="Décrivez votre expérience Weekook…"
+              rows={3}
+              className="w-full rounded-[12px] border border-[#e0e2ef] px-4 py-3 text-[14px] text-[#111125] placeholder-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd] focus:border-transparent resize-none"
+            />
+            {testimonialContent.trim().length > 0 && testimonialContent.trim().length < 10 && (
+              <p className="text-[12px] text-red-400 mt-1">Minimum 10 caractères.</p>
+            )}
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowTestimonialModal(false)}
+              className="flex-1 h-[48px] rounded-[12px] border border-[#e0e2ef] text-[14px] font-medium text-[#6b7280] hover:border-[#c1a0fd] transition-all"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={handleSubmitTestimonial}
+              disabled={testimonialContent.trim().length < 10 || !testimonialName.trim() || testimonialSubmitting}
+              className="flex-1 h-[48px] rounded-[12px] bg-[#c1a0fd] hover:bg-[#b090ed] text-white text-[14px] font-semibold transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+            >
+              {testimonialSubmitting
+                ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Envoi...</>
+                : 'Envoyer'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

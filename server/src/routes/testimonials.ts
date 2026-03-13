@@ -1,5 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import prisma from '../lib/prisma.js';
+import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -29,6 +30,41 @@ router.get('/', async (_req: Request, res: Response, next: NextFunction) => {
       success: true,
       data: testimonials,
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST / - Submit a testimonial (pending admin validation)
+router.post('/', authenticate, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { authorName, authorRole, content, rating } = req.body;
+
+    if (!content || typeof content !== 'string' || content.trim().length < 10) {
+      res.status(400).json({ success: false, error: 'Le témoignage doit faire au moins 10 caractères.' });
+      return;
+    }
+    if (!authorName || typeof authorName !== 'string' || authorName.trim().length === 0) {
+      res.status(400).json({ success: false, error: 'Le nom est requis.' });
+      return;
+    }
+    const ratingNum = parseInt(rating, 10);
+    if (isNaN(ratingNum) || ratingNum < 1 || ratingNum > 5) {
+      res.status(400).json({ success: false, error: 'La note doit être entre 1 et 5.' });
+      return;
+    }
+
+    const testimonial = await prisma.testimonial.create({
+      data: {
+        authorName: authorName.trim(),
+        authorRole: authorRole?.trim() || null,
+        content: content.trim(),
+        rating: ratingNum,
+        featured: false,
+      },
+    });
+
+    res.status(201).json({ success: true, data: testimonial });
   } catch (error) {
     next(error);
   }

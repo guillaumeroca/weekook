@@ -17,6 +17,7 @@ interface BookingDetail {
   guests: number;
   totalPriceInCents: number;
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  paymentStatus?: string;
   notes: string | null;
   createdAt: string;
   service: {
@@ -75,6 +76,16 @@ const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }
   confirmed: { label: 'Confirmée',   color: '#16a34a', bg: '#dcfce7' },
   cancelled: { label: 'Annulée',     color: '#dc2626', bg: '#fee2e2' },
   completed: { label: 'Terminée',    color: '#6b7280', bg: '#f3f4f6' },
+};
+
+const PAYMENT_STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
+  none:                    { label: '',                  color: '', bg: '' },
+  pending_authorization:   { label: 'Paiement en cours', color: '#d97706', bg: '#fef3c7' },
+  authorized:              { label: 'Pré-autorisé',      color: '#d97706', bg: '#fff7ed' },
+  captured:                { label: 'Payé',              color: '#16a34a', bg: '#dcfce7' },
+  transferred:             { label: 'Versé au kooker',   color: '#16a34a', bg: '#d1fae5' },
+  cancelled:               { label: 'Annulé',            color: '#6b7280', bg: '#f3f4f6' },
+  refunded:                { label: 'Remboursé',         color: '#6b7280', bg: '#f3f4f6' },
 };
 
 function Avatar({ firstName, lastName, avatar, size = 48 }: { firstName: string; lastName: string; avatar: string | null; size?: number }) {
@@ -384,12 +395,22 @@ export default function BookingDetailPage() {
                   </p>
                 </div>
               </div>
-              <span
-                className="text-[12px] font-semibold px-3 py-1.5 rounded-full flex-shrink-0"
-                style={{ color: statusInfo.color, backgroundColor: statusInfo.bg }}
-              >
-                {statusInfo.label}
-              </span>
+              <div className="flex flex-wrap gap-2 flex-shrink-0">
+                <span
+                  className="text-[12px] font-semibold px-3 py-1.5 rounded-full"
+                  style={{ color: statusInfo.color, backgroundColor: statusInfo.bg }}
+                >
+                  {statusInfo.label}
+                </span>
+                {booking.paymentStatus && booking.paymentStatus !== 'none' && PAYMENT_STATUS_LABELS[booking.paymentStatus] && (
+                  <span
+                    className="text-[12px] font-semibold px-3 py-1.5 rounded-full"
+                    style={{ color: PAYMENT_STATUS_LABELS[booking.paymentStatus].color, backgroundColor: PAYMENT_STATUS_LABELS[booking.paymentStatus].bg }}
+                  >
+                    {PAYMENT_STATUS_LABELS[booking.paymentStatus].label}
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Details grid */}

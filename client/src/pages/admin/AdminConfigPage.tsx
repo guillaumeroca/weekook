@@ -7,7 +7,8 @@ interface ConfigData {
   cities?: string[];
   allergens?: string[];
   serviceTypes?: string[];
-  [key: string]: string[] | undefined;
+  platformCommission?: number;
+  [key: string]: string[] | number | undefined;
 }
 
 const CONFIG_LABELS: Record<string, string> = {
@@ -101,15 +102,65 @@ function ConfigList({
   );
 }
 
+function CommissionEditor({ value, onSave }: { value: number; onSave: (val: number) => Promise<void> }) {
+  const [rate, setRate] = useState(value);
+  const [saving, setSaving] = useState(false);
+  const dirty = rate !== value;
+
+  useEffect(() => { setRate(value); }, [value]);
+
+  const save = async () => {
+    setSaving(true);
+    await onSave(Math.max(0, Math.min(100, rate)));
+    setSaving(false);
+  };
+
+  return (
+    <div className="bg-white rounded-[20px] p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="font-semibold text-[#111125]">Commission plateforme</h2>
+        {dirty && (
+          <button
+            onClick={save}
+            disabled={saving}
+            className="px-4 py-1.5 bg-[#c1a0fd] text-white rounded-[12px] text-sm font-medium hover:bg-[#b090ed] disabled:opacity-50"
+          >
+            {saving ? 'Sauvegarde...' : 'Sauvegarder'}
+          </button>
+        )}
+      </div>
+      <p className="text-sm text-gray-500 mb-4">Pourcentage prélevé sur chaque paiement avant transfert au kooker.</p>
+      <div className="flex items-center gap-3">
+        <input
+          type="number"
+          min={0}
+          max={100}
+          step={1}
+          value={rate}
+          onChange={e => setRate(Math.round(Number(e.target.value)))}
+          className="w-24 px-3 py-2 border border-gray-200 rounded-[12px] text-sm text-center focus:outline-none focus:border-[#c1a0fd]"
+        />
+        <span className="text-sm text-gray-500 font-medium">%</span>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminConfigPage() {
   const [config, setConfig] = useState<ConfigData>({});
+  const [commission, setCommission] = useState<number>(20);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => { document.title = 'Admin — Configuration | Weekook'; }, []);
 
   useEffect(() => {
     api.get<ConfigData>('/admin/config').then(res => {
-      if (res.success && res.data) setConfig(res.data);
+      if (res.success && res.data) {
+        setConfig(res.data);
+        if (typeof res.data.platformCommission === 'number') {
+          setCommission(res.data.platformCommission);
+        }
+      }
     }).finally(() => setLoading(false));
   }, []);
 
@@ -117,6 +168,13 @@ export default function AdminConfigPage() {
     const res = await api.put(`/admin/config/${key}`, { value: values });
     if (res.success && res.data) {
       setConfig(prev => ({ ...prev, [key]: values }));
+    }
+  };
+
+  const handleCommissionSave = async (val: number) => {
+    const res = await api.put('/admin/config/platformCommission', { value: val });
+    if (res.success) {
+      setCommission(val);
     }
   };
 
@@ -133,12 +191,13 @@ export default function AdminConfigPage() {
         <div className="text-gray-400 text-sm">Chargement...</div>
       ) : (
         <div className="space-y-4">
+          <CommissionEditor value={commission} onSave={handleCommissionSave} />
           {configKeys.map(key => (
             <ConfigList
               key={key}
               configKey={key}
               label={CONFIG_LABELS[key] ?? key}
-              values={config[key] ?? []}
+              values={Array.isArray(config[key]) ? config[key] as string[] : []}
               onSave={handleSave}
             />
           ))}

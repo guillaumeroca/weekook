@@ -23,6 +23,7 @@ interface KookerBooking {
   guests: number;
   totalPriceInCents: number;
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  paymentStatus?: string;
   user: { id: number; firstName: string; lastName: string; email: string };
   service: { title: string; type?: string };
   message?: string;
@@ -144,6 +145,23 @@ const StatusBadge = ({ status }: { status: KookerBooking['status'] }) => {
   );
 };
 
+const PAYMENT_BADGE_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
+  authorized:  { label: 'Pré-autorisé', bg: 'bg-[#fff7ed]', text: 'text-orange-500' },
+  captured:    { label: 'Payé', bg: 'bg-[#e8f5e9]', text: 'text-green-600' },
+  transferred: { label: 'Versé', bg: 'bg-[#d1fae5]', text: 'text-green-700' },
+  refunded:    { label: 'Remboursé', bg: 'bg-[#f5f5f5]', text: 'text-[#828294]' },
+};
+
+const PaymentBadge = ({ paymentStatus }: { paymentStatus?: string }) => {
+  if (!paymentStatus || !PAYMENT_BADGE_CONFIG[paymentStatus]) return null;
+  const c = PAYMENT_BADGE_CONFIG[paymentStatus];
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] text-[12px] font-medium ${c.bg} ${c.text}`}>
+      {c.label}
+    </span>
+  );
+};
+
 // ────────────────────────── Stat Card ──────────────────────────
 
 const StatCard = ({ icon, label, value, subtitle, color }: { icon: React.ReactNode; label: string; value: string; subtitle?: string; color: string }) => (
@@ -216,6 +234,10 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
   const [pendingRefusal, setPendingRefusal] = useState<{ bookingId: number; userId: number } | null>(null);
   const [refusalReasonId, setRefusalReasonId] = useState('unavailable');
   const [refusalCustom, setRefusalCustom] = useState('');
+
+  // ── Stripe Connect status ──
+  const [stripeStatus, setStripeStatus] = useState<{ connected: boolean; onboardingComplete: boolean } | null>(null);
+  const [stripeLoading, setStripeLoading] = useState(false);
 
   const kookerProfileId = user?.kookerProfileId;
 
@@ -308,15 +330,52 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
     }
   }, [kookerProfileId]);
 
+  // ── Fetch Stripe Connect status ──
+  const fetchStripeStatus = useCallback(async () => {
+    try {
+      const res = await api.get<{ connected: boolean; onboardingComplete: boolean }>('/stripe/connect/status');
+      if (res.success && res.data) {
+        setStripeStatus(res.data);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  const handleStripeOnboard = async () => {
+    setStripeLoading(true);
+    try {
+      const res = await api.post<{ url: string }>('/stripe/connect/onboard');
+      if (res.success && res.data?.url) {
+        window.location.href = res.data.url;
+      } else {
+        toast.error('Erreur lors de la configuration Stripe.');
+      }
+    } catch (err: any) {
+      toast.error(err?.error || 'Erreur lors de la configuration Stripe.');
+    } finally {
+      setStripeLoading(false);
+    }
+  };
+
   // ── Initial Load ──
   useEffect(() => {
     document.title = 'Espace Kooker - Weekook';
     const loadAll = async () => {
-      await Promise.all([fetchStats(), fetchBookings()]);
+      await Promise.all([fetchStats(), fetchBookings(), fetchStripeStatus()]);
       setLoading(false);
     };
     loadAll();
-  }, [fetchStats, fetchBookings]);
+
+    // Handle Stripe return URL params
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('stripe') === 'return') {
+      fetchStripeStatus();
+      toast.success('Configuration Stripe mise à jour.');
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (params.get('stripe') === 'refresh') {
+      toast.info('Veuillez relancer la configuration Stripe.');
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [fetchStats, fetchBookings, fetchStripeStatus]);
 
   // ── Tab-based lazy loading ──
   useEffect(() => {
@@ -584,6 +643,36 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
           </div>
         </div>
       )}
+        {/* Stripe Connect Banner */}
+        {stripeStatus && !stripeStatus.onboardingComplete && (
+          <div className="mb-6 bg-gradient-to-r from-[#f3ecff] to-[#e8e0ff] border border-[#c1a0fd]/30 rounded-[16px] p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-[#c1a0fd] flex items-center justify-center flex-shrink-0">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>
+                </svg>
+              </div>
+              <div>
+                <p className="text-[15px] font-semibold text-[#111125]">Configurez vos paiements</p>
+                <p className="text-[13px] text-[#6b7280] mt-0.5">
+                  Pour recevoir les paiements de vos clients, connectez votre compte bancaire via Stripe.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleStripeOnboard}
+              disabled={stripeLoading}
+              className="flex items-center gap-2 px-5 py-2.5 bg-[#c1a0fd] hover:bg-[#b090ed] text-white text-[14px] font-semibold rounded-[12px] transition-all disabled:opacity-50 flex-shrink-0"
+            >
+              {stripeLoading ? (
+                <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Configuration...</>
+              ) : (
+                'Configurer Stripe'
+              )}
+            </button>
+          </div>
+        )}
+
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatCard
@@ -720,6 +809,7 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
                               <div className="flex flex-wrap items-center gap-2 mb-1">
                                 <h4 className="text-[15px] font-semibold text-[#111125]">{clientName}</h4>
                                 <StatusBadge status={booking.status} />
+                                <PaymentBadge paymentStatus={booking.paymentStatus} />
                               </div>
                               <div className="flex flex-wrap items-center gap-2 mb-2">
                                 <p className="text-[13px] text-[#c1a0fd] font-medium">{booking.service.title}</p>

@@ -69,6 +69,15 @@ export default function BecomeKookerPage() {
       toast.success('Félicitations ! Vous êtes maintenant Kooker !');
       // Refresh user to get kookerProfileId
       await refreshUser();
+      // Try to redirect to Stripe onboarding
+      try {
+        const stripeRes = await api.post<{ url: string }>('/stripe/connect/onboard');
+        if (stripeRes.success && stripeRes.data?.url) {
+          toast.info('Configurez vos paiements via Stripe pour recevoir vos revenus.');
+          window.location.href = stripeRes.data.url;
+          return;
+        }
+      } catch { /* If Stripe onboarding fails, just go to dashboard */ }
       navigate('/kooker-dashboard');
     } catch (err) {
       toast.error('Erreur lors de la création du profil kooker');

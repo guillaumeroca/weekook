@@ -11,4 +11,7 @@ export const env = {
   COOKIE_DOMAIN: process.env.COOKIE_DOMAIN || 'localhost',
   RESEND_API_KEY: process.env.RESEND_API_KEY || '',
   APP_URL: process.env.APP_URL || 'https://dev.weekook.com',
+  STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || '',
+  STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY || '',
+  STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || '',
 };

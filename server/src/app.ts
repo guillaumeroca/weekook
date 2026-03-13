@@ -18,6 +18,7 @@ import testimonialsRoutes from './routes/testimonials.js';
 import usersRoutes from './routes/users.js';
 import uploadRoutes from './routes/upload.js';
 import adminRoutes from './routes/admin.js';
+import stripeRoutes from './routes/stripe.js';
 
 import { errorHandler } from './middleware/errorHandler.js';
 
@@ -29,13 +30,13 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'"],
+        scriptSrc: ["'self'", "https://js.stripe.com"],
         styleSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", 'data:', 'blob:'],
-        connectSrc: ["'self'"],
+        imgSrc: ["'self'", 'data:', 'blob:', "https://*.stripe.com"],
+        connectSrc: ["'self'", "https://api.stripe.com"],
         fontSrc: ["'self'"],
         objectSrc: ["'none'"],
-        frameSrc: ["'none'"],
+        frameSrc: ["'self'", "https://js.stripe.com", "https://hooks.stripe.com"],
         baseUri: ["'self'"],
         formAction: ["'self'"],
       },
@@ -64,6 +65,9 @@ app.use(
   })
 );
 
+// ── Stripe webhook raw body (must be before json parser) ──
+app.use('/api/v1/stripe/webhook', express.raw({ type: 'application/json' }));
+
 // ── Body parsing ──
 app.use(cookieParser());
 app.use(express.json({ limit: '1mb' }));
@@ -84,16 +88,18 @@ app.use('/api/v1/testimonials', testimonialsRoutes);
 app.use('/api/v1/users', usersRoutes);
 app.use('/api/v1/upload', uploadRoutes);
 app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/stripe', stripeRoutes);
 
 // ── Error handler ──
 app.use(errorHandler);
 
 // ── Config seed defaults ──
-const CONFIG_DEFAULTS: Record<string, string[]> = {
+const CONFIG_DEFAULTS: Record<string, unknown> = {
   specialties: ['Provençale', 'Méditerranéenne', 'Pâtisserie', 'Grillades', 'Végétarien', 'Fruits de mer', 'Italienne', 'Asiatique'],
   cities: ['Marseille', 'Aix-en-Provence', 'Cassis', 'La Ciotat', 'Toulon', 'Nice', 'Arles', 'Avignon'],
   allergens: ['Gluten', 'Crustacés', 'Œufs', 'Poisson', 'Arachides', 'Soja', 'Lait', 'Fruits à coque', 'Céleri', 'Moutarde', 'Sésame', 'Sulfites', 'Lupin', 'Mollusques'],
   serviceTypes: ['KOOK', 'KOURS'],
+  platformCommission: 20,
 };
 
 async function seedConfig() {

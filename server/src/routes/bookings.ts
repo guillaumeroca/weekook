@@ -1,5 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import prisma from '../lib/prisma.js';
+import stripe from '../lib/stripe.js';
+import { getCommissionRate } from '../lib/commission.js';
 import { authenticate, requireKooker } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { createBookingSchema, updateBookingStatusSchema, updateBookingDetailsSchema } from '../schemas/booking.js';
@@ -159,7 +161,7 @@ router.get(
   }
 );
 
-// POST / - Create booking
+// POST / - Create booking + Stripe PaymentIntent (manual capture)
 router.post(
   '/',
   authenticate,
@@ -197,9 +199,20 @@ router.post(
         );
       }
 
+      // Verify kooker has completed Stripe onboarding
+      const kookerProfile = await prisma.kookerProfile.findUnique({
+        where: { id: service.kookerProfileId },
+        select: { stripeAccountId: true, stripeOnboardingComplete: true },
+      });
+
+      if (!kookerProfile?.stripeAccountId || !kookerProfile.stripeOnboardingComplete) {
+        throw new AppError('Ce kooker n\'accepte pas encore les paiements en ligne. Veuillez réessayer plus tard.', 400);
+      }
+
       // Auto-calculate total price: price * guests
       const totalPriceInCents = service.priceInCents * guests;
 
+      // Create booking
       const booking = await prisma.booking.create({
         data: {
           userId,
@@ -210,6 +223,7 @@ router.post(
           guests,
           totalPriceInCents,
           notes,
+          paymentStatus: 'pending_authorization',
         },
         include: {
           service: {
@@ -237,8 +251,101 @@ router.post(
         },
       });
 
-      // Notifications (fire-and-forget)
-      const kookerUser = booking.kookerProfile.user as { id: number; email: string; firstName: string; lastName: string; avatar: string | null };
+      // Create Stripe PaymentIntent with manual capture
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: totalPriceInCents,
+        currency: 'eur',
+        capture_method: 'manual',
+        metadata: {
+          bookingId: String(booking.id),
+          userId: String(userId),
+          serviceId: String(serviceId),
+          kookerProfileId: String(service.kookerProfileId),
+        },
+      });
+
+      // Save PaymentIntent ID on the booking
+      await prisma.booking.update({
+        where: { id: booking.id },
+        data: { stripePaymentIntentId: paymentIntent.id },
+      });
+
+      // Create audit record
+      await prisma.payment.create({
+        data: {
+          bookingId: booking.id,
+          stripePaymentIntentId: paymentIntent.id,
+          type: 'authorization',
+          amountInCents: totalPriceInCents,
+          status: 'pending',
+        },
+      });
+
+      res.status(201).json({
+        success: true,
+        data: {
+          booking,
+          clientSecret: paymentIntent.client_secret,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// POST /:id/confirm-payment - Confirm payment after Stripe card authorization
+router.post(
+  '/:id/confirm-payment',
+  authenticate,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) throw new AppError('ID invalide', 400);
+
+      const userId = req.user!.userId;
+
+      const booking = await prisma.booking.findUnique({
+        where: { id },
+        include: {
+          service: { select: { title: true } },
+          kookerProfile: {
+            include: { user: { select: { id: true, email: true, firstName: true, lastName: true } } },
+          },
+        },
+      });
+
+      if (!booking) throw new NotFoundError('Réservation non trouvée');
+      if (booking.userId !== userId) throw new ForbiddenError('Accès refusé');
+
+      if (booking.paymentStatus !== 'pending_authorization') {
+        return res.json({ success: true, data: { status: booking.paymentStatus } });
+      }
+
+      // Verify PaymentIntent status with Stripe
+      if (booking.stripePaymentIntentId) {
+        const pi = await stripe.paymentIntents.retrieve(booking.stripePaymentIntentId);
+        if (pi.status !== 'requires_capture') {
+          throw new AppError(`Statut de paiement inattendu : ${pi.status}`, 400);
+        }
+      }
+
+      // Update payment status
+      await prisma.booking.update({
+        where: { id },
+        data: { paymentStatus: 'authorized' },
+      });
+
+      // Update audit record
+      if (booking.stripePaymentIntentId) {
+        await prisma.payment.updateMany({
+          where: { bookingId: id, type: 'authorization', status: 'pending' },
+          data: { status: 'succeeded' },
+        });
+      }
+
+      // Send notifications to kooker (moved here from booking creation)
+      const kookerUser = booking.kookerProfile.user as { id: number; email: string; firstName: string; lastName: string };
       const clientUser = await prisma.user.findUnique({ where: { id: userId }, select: { firstName: true, lastName: true } });
       const clientName = clientUser ? `${clientUser.firstName} ${clientUser.lastName}`.trim() : 'Un utilisateur';
       const kookerName = `${kookerUser.firstName} ${kookerUser.lastName}`.trim();
@@ -262,10 +369,7 @@ router.post(
         booking.id
       );
 
-      res.status(201).json({
-        success: true,
-        data: booking,
-      });
+      res.json({ success: true, data: { status: 'authorized' } });
     } catch (error) {
       next(error);
     }
@@ -387,7 +491,7 @@ router.put(
   }
 );
 
-// PUT /:id/status - Update booking status (kooker only)
+// PUT /:id/status - Update booking status (kooker only) + Stripe capture/transfer/refund
 router.put(
   '/:id/status',
   authenticate,
@@ -410,6 +514,109 @@ router.put(
       }
       if (booking.kookerProfileId !== kookerProfileId) {
         throw new ForbiddenError('Vous ne pouvez modifier que vos propres reservations');
+      }
+
+      // ── Stripe: Capture on confirmation ──
+      if (status === 'confirmed' && booking.stripePaymentIntentId) {
+        if (booking.paymentStatus !== 'authorized') {
+          throw new AppError('Le paiement n\'a pas encore été autorisé pour cette réservation.', 400);
+        }
+        try {
+          await stripe.paymentIntents.capture(booking.stripePaymentIntentId);
+          await prisma.booking.update({ where: { id }, data: { paymentStatus: 'captured' } });
+          await prisma.payment.create({
+            data: {
+              bookingId: id,
+              stripePaymentIntentId: booking.stripePaymentIntentId,
+              type: 'capture',
+              amountInCents: booking.totalPriceInCents,
+              status: 'succeeded',
+            },
+          });
+        } catch (captureError) {
+          console.error('[booking] Stripe capture failed:', captureError);
+          await prisma.booking.update({ where: { id }, data: { paymentStatus: 'capture_failed' } });
+          throw new AppError('Le paiement du client n\'a pas pu être capturé. La réservation reste en attente.', 400);
+        }
+      }
+
+      // ── Stripe: Refund/cancel on kooker refuse ──
+      if (status === 'cancelled' && booking.stripePaymentIntentId) {
+        try {
+          if (booking.paymentStatus === 'authorized') {
+            await stripe.paymentIntents.cancel(booking.stripePaymentIntentId);
+            await prisma.booking.update({ where: { id }, data: { paymentStatus: 'cancelled' } });
+            await prisma.payment.create({
+              data: { bookingId: id, stripePaymentIntentId: booking.stripePaymentIntentId, type: 'cancellation', amountInCents: booking.totalPriceInCents, status: 'succeeded' },
+            });
+          } else if (booking.paymentStatus === 'captured') {
+            await stripe.refunds.create({ payment_intent: booking.stripePaymentIntentId });
+            await prisma.booking.update({ where: { id }, data: { paymentStatus: 'refunded' } });
+            await prisma.payment.create({
+              data: { bookingId: id, stripePaymentIntentId: booking.stripePaymentIntentId, type: 'refund', amountInCents: booking.totalPriceInCents, status: 'succeeded' },
+            });
+          }
+        } catch (stripeError) {
+          console.error('[booking] Stripe cancel/refund failed:', stripeError);
+          await prisma.payment.create({
+            data: { bookingId: id, stripePaymentIntentId: booking.stripePaymentIntentId, type: 'refund', amountInCents: booking.totalPriceInCents, status: 'failed', metadata: { error: String(stripeError) } },
+          });
+        }
+      }
+
+      // ── Stripe: Transfer on completion ──
+      if (status === 'completed' && booking.stripePaymentIntentId && booking.paymentStatus === 'captured') {
+        const commissionRate = await getCommissionRate();
+        const commissionInCents = Math.round(booking.totalPriceInCents * commissionRate / 100);
+        const transferAmount = booking.totalPriceInCents - commissionInCents;
+
+        const kProfile = await prisma.kookerProfile.findUnique({
+          where: { id: booking.kookerProfileId },
+          select: { stripeAccountId: true },
+        });
+
+        if (kProfile?.stripeAccountId && transferAmount > 0) {
+          try {
+            const transfer = await stripe.transfers.create({
+              amount: transferAmount,
+              currency: 'eur',
+              destination: kProfile.stripeAccountId,
+              transfer_group: `booking_${booking.id}`,
+              metadata: {
+                bookingId: String(booking.id),
+                totalAmount: String(booking.totalPriceInCents),
+                commission: String(commissionInCents),
+                commissionRate: String(commissionRate),
+              },
+            });
+            await prisma.booking.update({ where: { id }, data: { paymentStatus: 'transferred' } });
+            await prisma.payment.create({
+              data: {
+                bookingId: id,
+                stripePaymentIntentId: booking.stripePaymentIntentId,
+                type: 'transfer',
+                amountInCents: transferAmount,
+                commissionInCents,
+                stripeTransferId: transfer.id,
+                status: 'succeeded',
+                metadata: { commissionRate },
+              },
+            });
+          } catch (transferError) {
+            console.error('[booking] Stripe transfer failed:', transferError);
+            await prisma.payment.create({
+              data: {
+                bookingId: id,
+                stripePaymentIntentId: booking.stripePaymentIntentId,
+                type: 'transfer',
+                amountInCents: transferAmount,
+                commissionInCents,
+                status: 'failed',
+                metadata: { error: String(transferError) },
+              },
+            });
+          }
+        }
       }
 
       const updated = await prisma.booking.update({
@@ -533,6 +740,30 @@ router.put(
           },
         },
       });
+
+      // ── Stripe: cancel hold or refund ──
+      if (booking.stripePaymentIntentId) {
+        try {
+          if (booking.paymentStatus === 'authorized' || booking.paymentStatus === 'pending_authorization') {
+            await stripe.paymentIntents.cancel(booking.stripePaymentIntentId);
+            await prisma.booking.update({ where: { id }, data: { paymentStatus: 'cancelled' } });
+            await prisma.payment.create({
+              data: { bookingId: id, stripePaymentIntentId: booking.stripePaymentIntentId, type: 'cancellation', amountInCents: booking.totalPriceInCents, status: 'succeeded' },
+            });
+          } else if (booking.paymentStatus === 'captured') {
+            await stripe.refunds.create({ payment_intent: booking.stripePaymentIntentId });
+            await prisma.booking.update({ where: { id }, data: { paymentStatus: 'refunded' } });
+            await prisma.payment.create({
+              data: { bookingId: id, stripePaymentIntentId: booking.stripePaymentIntentId, type: 'refund', amountInCents: booking.totalPriceInCents, status: 'succeeded' },
+            });
+          }
+        } catch (stripeError) {
+          console.error('[booking] Stripe cancel/refund failed:', stripeError);
+          await prisma.payment.create({
+            data: { bookingId: id, stripePaymentIntentId: booking.stripePaymentIntentId, type: 'refund', amountInCents: booking.totalPriceInCents, status: 'failed', metadata: { error: String(stripeError) } },
+          });
+        }
+      }
 
       const updated = await prisma.booking.update({
         where: { id },

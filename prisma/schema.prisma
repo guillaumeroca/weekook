@@ -44,6 +44,8 @@ model KookerProfile {
   featured        Boolean   @default(false)
   verified        Boolean   @default(false)
   active          Boolean   @default(true)
+  stripeAccountId          String?   @map("stripe_account_id")
+  stripeOnboardingComplete Boolean   @default(false) @map("stripe_onboarding_complete")
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
@@ -173,14 +175,34 @@ model Booking {
   totalPriceInCents Int     @map("total_price_in_cents")
   status          String    @default("pending")
   notes           String?   @db.Text
+  stripePaymentIntentId String? @map("stripe_payment_intent_id")
+  paymentStatus   String    @default("none") @map("payment_status")
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
   user            User      @relation("UserBookings", fields: [userId], references: [id])
   kookerProfile   KookerProfile @relation("KookerBookings", fields: [kookerProfileId], references: [id])
   service         Service   @relation(fields: [serviceId], references: [id])
+  payments        Payment[]
 
   @@map("bookings")
+}
+
+model Payment {
+  id                    Int       @id @default(autoincrement())
+  bookingId             Int       @map("booking_id")
+  stripePaymentIntentId String    @map("stripe_payment_intent_id")
+  type                  String
+  amountInCents         Int       @map("amount_in_cents")
+  commissionInCents     Int?      @map("commission_in_cents")
+  stripeTransferId      String?   @map("stripe_transfer_id")
+  status                String
+  metadata              Json?
+  createdAt             DateTime  @default(now()) @map("created_at")
+
+  booking               Booking   @relation(fields: [bookingId], references: [id])
+
+  @@map("payments")
 }
 
 model Review {

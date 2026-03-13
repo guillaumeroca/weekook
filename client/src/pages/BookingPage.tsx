@@ -1,8 +1,12 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { Elements } from '@stripe/react-stripe-js';
 import { api } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { getStripe } from '@/lib/stripe';
+import { StripePaymentForm, StripePaymentFormHandle } from '@/components/payment/StripePaymentForm';
+import type { Stripe } from '@stripe/stripe-js';
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 interface ServiceDetail {
@@ -116,6 +120,10 @@ export default function BookingPage() {
   const [guests, setGuests] = useState(1);
   const [notes, setNotes] = useState('');
 
+  // Stripe state
+  const [stripeInstance, setStripeInstance] = useState<Stripe | null>(null);
+  const paymentFormRef = useRef<StripePaymentFormHandle>(null);
+
   // Submission state
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdBooking, setCreatedBooking] = useState<CreatedBooking | null>(null);
@@ -189,6 +197,11 @@ export default function BookingPage() {
       });
   }, [serviceId, kookerId]);
 
+  // ─── Load Stripe ──────────────────────────────────────────────────────────
+  useEffect(() => {
+    getStripe().then(setStripeInstance);
+  }, []);
+
   // ─── Available dates map (excludes dates where ALL slots are confirmed) ────
   const availableDatesMap = useMemo(() => {
     const map = new Map<string, Availability[]>();
@@ -250,13 +263,14 @@ export default function BookingPage() {
 
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-  // ─── Submit booking ────────────────────────────────────────────────────────
+  // ─── Submit booking with Stripe payment ────────────────────────────────────
   const handleSubmit = async () => {
     if (!selectedDate || !selectedTime || !service) return;
 
     setIsSubmitting(true);
     try {
-      const res = await api.post<CreatedBooking>('/bookings', {
+      // Step 1: Create booking + PaymentIntent
+      const res = await api.post<{ booking: CreatedBooking; clientSecret: string }>('/bookings', {
         serviceId: service.id,
         date: selectedDate,
         startTime: selectedTime,
@@ -264,12 +278,28 @@ export default function BookingPage() {
         notes: notes.trim() || undefined,
       });
 
-      if (res.success && res.data) {
-        setCreatedBooking(res.data);
-        toast.success('Reservation confirmee !');
-      } else {
+      if (!res.success || !res.data) {
         toast.error(res.error || 'Une erreur est survenue.');
+        return;
       }
+
+      const { booking, clientSecret } = res.data;
+
+      // Step 2: Confirm payment with Stripe (pre-authorization)
+      const paymentResult = await paymentFormRef.current?.confirmPayment(clientSecret);
+
+      if (!paymentResult?.success) {
+        toast.error(paymentResult?.error || 'Le paiement a échoué.');
+        // Cancel the booking since payment failed
+        try { await api.put(`/bookings/${booking.id}/cancel`, {}); } catch { /* ignore */ }
+        return;
+      }
+
+      // Step 3: Confirm payment on server
+      await api.post(`/bookings/${booking.id}/confirm-payment`, {});
+
+      setCreatedBooking(booking);
+      toast.success('Réservation confirmée !');
     } catch (err: any) {
       toast.error(err?.error || 'Une erreur est survenue.');
     } finally {
@@ -722,12 +752,48 @@ export default function BookingPage() {
         </section>
 
         {/* ═══════════════════════════════════════════════════════════════ */}
-        {/* STEP 5 - Summary & Confirm                                     */}
+        {/* STEP 5 - Payment                                               */}
         {/* ═══════════════════════════════════════════════════════════════ */}
         <section className={`bg-white rounded-[20px] shadow-sm border border-[#e5e7eb]/50 p-5 md:p-6 mb-6 transition-opacity ${canConfirm ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}>
           <div className="flex items-center gap-3 mb-4">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-[14px] ${canConfirm ? 'bg-[#c1a0fd] text-white' : 'bg-[#e5e7eb] text-[#9ca3af]'}`}>
               5
+            </div>
+            <h2 className="text-[18px] font-semibold text-[#111125]">
+              Paiement
+            </h2>
+          </div>
+
+          <p className="text-[13px] text-[#6b7280] mb-4">
+            Votre carte sera pré-autorisée. Le montant ne sera débité que lorsque le kooker acceptera votre réservation.
+          </p>
+
+          {stripeInstance ? (
+            <Elements stripe={stripeInstance}>
+              <StripePaymentForm ref={paymentFormRef} />
+            </Elements>
+          ) : (
+            <div className="flex items-center gap-2 text-[13px] text-[#9ca3af]">
+              <div className="w-4 h-4 border-2 border-[#c1a0fd] border-t-transparent rounded-full animate-spin" />
+              Chargement du module de paiement...
+            </div>
+          )}
+
+          <div className="mt-3 flex items-center gap-2 text-[12px] text-[#9ca3af]">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            Paiement sécurisé par Stripe
+          </div>
+        </section>
+
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        {/* STEP 6 - Summary & Confirm                                     */}
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        <section className={`bg-white rounded-[20px] shadow-sm border border-[#e5e7eb]/50 p-5 md:p-6 mb-6 transition-opacity ${canConfirm ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}>
+          <div className="flex items-center gap-3 mb-4">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-[14px] ${canConfirm ? 'bg-[#c1a0fd] text-white' : 'bg-[#e5e7eb] text-[#9ca3af]'}`}>
+              6
             </div>
             <h2 className="text-[18px] font-semibold text-[#111125]">
               Recapitulatif
@@ -807,7 +873,7 @@ export default function BookingPage() {
                   </>
                 ) : (
                   <>
-                    Confirmer la reservation - {formatPrice(totalPriceCents)}&euro;
+                    Payer et réserver — {formatPrice(totalPriceCents)}&euro;
                   </>
                 )}
               </button>

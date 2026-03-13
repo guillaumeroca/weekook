@@ -13,6 +13,7 @@ interface KookerUser {
 interface AdminKooker {
   id: number;
   city: string | null;
+  type: string | string[] | null;
   rating: number;
   reviewCount: number;
   featured: boolean;
@@ -95,6 +96,7 @@ export default function AdminKookersPage() {
                   <th className="text-left px-4 py-3 font-medium text-gray-500">ID</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-500">Kooker</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-500">Ville</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-500">Type</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-500">Note</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-500">Services</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-500">Réservations</th>
@@ -112,6 +114,16 @@ export default function AdminKookersPage() {
                       <div className="text-xs text-gray-400">{k.user.email}</div>
                     </td>
                     <td className="px-4 py-3 text-gray-600">{k.city ?? '—'}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-1">
+                        {(() => {
+                          const types = Array.isArray(k.type) ? k.type : (() => { try { return JSON.parse(k.type as string || '[]'); } catch { return []; } })();
+                          return (types as string[]).map((t: string) => (
+                            <span key={t} className={`px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold text-white ${t === 'KOURS' ? 'bg-[#c1a0fd]' : 'bg-[#7c5cbf]'}`}>{t}</span>
+                          ));
+                        })()}
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-gray-600">{k.rating.toFixed(1)} ({k.reviewCount})</td>
                     <td className="px-4 py-3 text-gray-600">{k._count.services}</td>
                     <td className="px-4 py-3 text-gray-600">{k._count.bookingsReceived}</td>

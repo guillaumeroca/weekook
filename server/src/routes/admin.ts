@@ -197,7 +197,7 @@ router.get('/bookings', async (req: Request, res: Response, next: NextFunction) 
           kookerProfile: {
             include: { user: { select: { id: true, firstName: true, lastName: true } } },
           },
-          service: { select: { id: true, title: true } },
+          service: { select: { id: true, title: true, type: true } },
         },
         orderBy: { createdAt: 'desc' },
         skip,

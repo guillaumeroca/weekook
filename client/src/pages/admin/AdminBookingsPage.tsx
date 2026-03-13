@@ -3,7 +3,7 @@ import { api } from '@/lib/api';
 
 interface BookingUser { id: number; email: string; firstName: string; lastName: string; }
 interface BookingKooker { id: number; user: { id: number; firstName: string; lastName: string }; }
-interface BookingService { id: number; title: string; }
+interface BookingService { id: number; title: string; type?: string; }
 
 interface AdminBooking {
   id: number;
@@ -110,7 +110,17 @@ export default function AdminBookingsPage() {
                     <td className="px-4 py-3 text-gray-600">
                       {b.kookerProfile.user.firstName} {b.kookerProfile.user.lastName}
                     </td>
-                    <td className="px-4 py-3 text-gray-600">{b.service.title}</td>
+                    <td className="px-4 py-3 text-gray-600">
+                      <div className="flex items-center gap-2">
+                        <span>{b.service.title}</span>
+                        {(() => {
+                          const t = String(b.service.type || '');
+                          if (t.includes('KOURS')) return <span className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold bg-[#c1a0fd] text-white">KOURS</span>;
+                          if (t.includes('KOOK')) return <span className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold bg-[#7c5cbf] text-white">KOOK</span>;
+                          return null;
+                        })()}
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-gray-600">{b.guests}</td>
                     <td className="px-4 py-3 font-medium text-[#111125]">
                       {(b.totalPriceInCents / 100).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}

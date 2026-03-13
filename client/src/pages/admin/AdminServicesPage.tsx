@@ -72,8 +72,15 @@ export default function AdminServicesPage() {
                     <td className="px-4 py-3 text-gray-600">
                       {s.kookerProfile.user.firstName} {s.kookerProfile.user.lastName}
                     </td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {Array.isArray(s.type) ? s.type.join(', ') : s.type}
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-1">
+                        {(() => {
+                          const types = Array.isArray(s.type) ? s.type : (() => { try { return JSON.parse(s.type as string); } catch { return [s.type]; } })();
+                          return (types as string[]).map((t: string) => (
+                            <span key={t} className={`px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold text-white ${t === 'KOURS' ? 'bg-[#c1a0fd]' : 'bg-[#7c5cbf]'}`}>{t}</span>
+                          ));
+                        })()}
+                      </div>
                     </td>
                     <td className="px-4 py-3 font-medium text-[#111125]">
                       {(s.priceInCents / 100).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}

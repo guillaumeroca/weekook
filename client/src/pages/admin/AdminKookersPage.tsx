@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { Search, Star, CheckCircle, XCircle } from 'lucide-react';
+import { Search, Star, CheckCircle, XCircle, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface KookerUser {
   id: number;
@@ -31,11 +32,22 @@ interface KookersResponse {
   limit: number;
 }
 
+interface AdminReview {
+  id: number;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+  user: { id: number; firstName: string; lastName: string; avatar: string | null };
+}
+
 export default function AdminKookersPage() {
   const [data, setData] = useState<KookersResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [reviewTarget, setReviewTarget] = useState<{ id: number; name: string } | null>(null);
+  const [reviews, setReviews] = useState<AdminReview[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
 
   useEffect(() => { document.title = 'Admin — Kookers | Weekook'; }, []);
 
@@ -56,6 +68,22 @@ export default function AdminKookersPage() {
     fetchKookers(search, 1);
   };
 
+  const openReviews = async (kookerId: number, kookerName: string) => {
+    setReviewTarget({ id: kookerId, name: kookerName });
+    setReviewsLoading(true);
+    setReviews([]);
+    const res = await api.get<AdminReview[]>(`/admin/reviews/kooker/${kookerId}`);
+    if (res.success && res.data) setReviews(res.data);
+    setReviewsLoading(false);
+  };
+
+  const handleDeleteReview = async (reviewId: number) => {
+    await api.delete(`/admin/reviews/${reviewId}`);
+    setReviews(prev => prev.filter(r => r.id !== reviewId));
+    toast.success('Avis supprimé');
+    fetchKookers(search, page);
+  };
+
   const toggle = async (id: number, field: 'featured' | 'verified' | 'active', current: boolean) => {
     const res = await api.put(`/admin/kookers/${id}`, { [field]: !current });
     if (res.success) fetchKookers(search, page);
@@ -64,6 +92,7 @@ export default function AdminKookersPage() {
   const totalPages = data ? Math.ceil(data.total / data.limit) : 1;
 
   return (
+    <>
     <div>
       <h1 className="text-2xl font-bold text-[#111125] mb-6">Kookers</h1>
 
@@ -124,7 +153,17 @@ export default function AdminKookersPage() {
                         })()}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-gray-600">{k.rating.toFixed(1)} ({k.reviewCount})</td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => openReviews(k.id, `${k.user.firstName} ${k.user.lastName}`)}
+                        className="flex items-center gap-1 text-yellow-500 hover:text-yellow-600 font-medium text-sm transition-colors"
+                        title="Voir les avis"
+                      >
+                        <Star size={13} className="fill-yellow-400 text-yellow-400" />
+                        {k.rating.toFixed(1)}
+                        <span className="text-gray-400 font-normal">({k.reviewCount})</span>
+                      </button>
+                    </td>
                     <td className="px-4 py-3 text-gray-600">{k._count.services}</td>
                     <td className="px-4 py-3 text-gray-600">{k._count.bookingsReceived}</td>
                     <td className="px-4 py-3 text-center">
@@ -164,5 +203,53 @@ export default function AdminKookersPage() {
         )}
       </div>
     </div>
+      {/* ── Reviews Modal ── */}
+      {reviewTarget && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-[20px] w-full max-w-[520px] shadow-xl max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <div>
+                <h2 className="text-[16px] font-bold text-[#111125]">Avis — {reviewTarget.name}</h2>
+                <p className="text-[12px] text-gray-400 mt-0.5">{reviews.length} avis</p>
+              </div>
+              <button onClick={() => setReviewTarget(null)} className="text-gray-400 hover:text-gray-600 transition-colors">
+                <XCircle size={20} />
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
+              {reviewsLoading ? (
+                <p className="text-center text-sm text-gray-400 py-8">Chargement...</p>
+              ) : reviews.length === 0 ? (
+                <p className="text-center text-sm text-gray-400 py-8">Aucun avis pour ce kooker.</p>
+              ) : (
+                reviews.map(r => (
+                  <div key={r.id} className="bg-gray-50 rounded-[12px] p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[13px] font-semibold text-[#111125]">
+                            {r.user.firstName} {r.user.lastName}
+                          </span>
+                          <span className="text-yellow-400 text-[13px]">{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</span>
+                        </div>
+                        {r.comment && <p className="text-[13px] text-gray-600 leading-relaxed">{r.comment}</p>}
+                        <p className="text-[11px] text-gray-400 mt-1">{new Date(r.createdAt).toLocaleDateString('fr-FR')}</p>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteReview(r.id)}
+                        className="text-red-400 hover:text-red-600 transition-colors flex-shrink-0 mt-0.5"
+                        title="Supprimer cet avis"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

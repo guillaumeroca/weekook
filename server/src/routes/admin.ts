@@ -178,6 +178,54 @@ router.put('/kookers/:id', async (req: Request, res: Response, next: NextFunctio
   }
 });
 
+// ── Reviews ───────────────────────────────────────────────────────────────────
+
+// GET /reviews/kooker/:id
+router.get('/reviews/kooker/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const kookerProfileId = parseInt(req.params.id);
+    const reviews = await prisma.review.findMany({
+      where: { kookerProfileId },
+      include: {
+        user: { select: { id: true, firstName: true, lastName: true, avatar: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json({ success: true, data: reviews });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// DELETE /reviews/:id
+router.delete('/reviews/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    const review = await prisma.review.findUnique({ where: { id } });
+    if (!review) throw new NotFoundError('Avis introuvable');
+
+    await prisma.review.delete({ where: { id } });
+
+    // Recalculate kooker rating
+    const agg = await prisma.review.aggregate({
+      where: { kookerProfileId: review.kookerProfileId },
+      _avg: { rating: true },
+      _count: { rating: true },
+    });
+    await prisma.kookerProfile.update({
+      where: { id: review.kookerProfileId },
+      data: {
+        rating: Math.round((agg._avg.rating || 0) * 10) / 10,
+        reviewCount: agg._count.rating,
+      },
+    });
+
+    res.json({ success: true, data: { message: 'Avis supprimé' } });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // ── Bookings ──────────────────────────────────────────────────────────────────
 
 // GET /bookings

@@ -199,7 +199,11 @@ router.post(
         );
       }
 
-      // Verify kooker has completed Stripe onboarding
+      // Verify Stripe is configured and kooker has completed onboarding
+      if (!stripe) {
+        throw new AppError('Les paiements Stripe ne sont pas configurés sur ce serveur.', 503);
+      }
+
       const kookerProfile = await prisma.kookerProfile.findUnique({
         where: { id: service.kookerProfileId },
         select: { stripeAccountId: true, stripeOnboardingComplete: true },
@@ -323,7 +327,7 @@ router.post(
       }
 
       // Verify PaymentIntent status with Stripe
-      if (booking.stripePaymentIntentId) {
+      if (stripe && booking.stripePaymentIntentId) {
         const pi = await stripe.paymentIntents.retrieve(booking.stripePaymentIntentId);
         if (pi.status !== 'requires_capture') {
           throw new AppError(`Statut de paiement inattendu : ${pi.status}`, 400);
@@ -517,7 +521,7 @@ router.put(
       }
 
       // ── Stripe: Capture on confirmation ──
-      if (status === 'confirmed' && booking.stripePaymentIntentId) {
+      if (status === 'confirmed' && stripe && booking.stripePaymentIntentId) {
         if (booking.paymentStatus !== 'authorized') {
           throw new AppError('Le paiement n\'a pas encore été autorisé pour cette réservation.', 400);
         }
@@ -541,7 +545,7 @@ router.put(
       }
 
       // ── Stripe: Refund/cancel on kooker refuse ──
-      if (status === 'cancelled' && booking.stripePaymentIntentId) {
+      if (status === 'cancelled' && stripe && booking.stripePaymentIntentId) {
         try {
           if (booking.paymentStatus === 'authorized') {
             await stripe.paymentIntents.cancel(booking.stripePaymentIntentId);
@@ -565,7 +569,7 @@ router.put(
       }
 
       // ── Stripe: Transfer on completion ──
-      if (status === 'completed' && booking.stripePaymentIntentId && booking.paymentStatus === 'captured') {
+      if (status === 'completed' && stripe && booking.stripePaymentIntentId && booking.paymentStatus === 'captured') {
         const commissionRate = await getCommissionRate();
         const commissionInCents = Math.round(booking.totalPriceInCents * commissionRate / 100);
         const transferAmount = booking.totalPriceInCents - commissionInCents;
@@ -742,7 +746,7 @@ router.put(
       });
 
       // ── Stripe: cancel hold or refund ──
-      if (booking.stripePaymentIntentId) {
+      if (stripe && booking.stripePaymentIntentId) {
         try {
           if (booking.paymentStatus === 'authorized' || booking.paymentStatus === 'pending_authorization') {
             await stripe.paymentIntents.cancel(booking.stripePaymentIntentId);

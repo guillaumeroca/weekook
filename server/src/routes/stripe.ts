@@ -23,6 +23,8 @@ router.post(
   requireKooker,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      if (!stripe) throw new AppError('Les paiements Stripe ne sont pas configurés.', 503);
+
       const kookerProfileId = req.user!.kookerProfileId!;
 
       const kookerProfile = await prisma.kookerProfile.findUnique({
@@ -83,7 +85,7 @@ router.get(
         select: { stripeAccountId: true, stripeOnboardingComplete: true },
       });
 
-      if (!kookerProfile?.stripeAccountId) {
+      if (!kookerProfile?.stripeAccountId || !stripe) {
         return res.json({
           success: true,
           data: { connected: false, chargesEnabled: false, payoutsEnabled: false, onboardingComplete: false },
@@ -117,7 +119,7 @@ router.get(
 router.post('/webhook', async (req: Request, res: Response) => {
   const sig = req.headers['stripe-signature'] as string;
 
-  if (!sig || !env.STRIPE_WEBHOOK_SECRET) {
+  if (!stripe || !sig || !env.STRIPE_WEBHOOK_SECRET) {
     return res.status(400).send('Missing signature or webhook secret');
   }
 

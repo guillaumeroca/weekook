@@ -6,7 +6,12 @@ export function getStripe(): Promise<Stripe | null> {
   if (!stripePromise) {
     stripePromise = fetch('/api/v1/stripe/config')
       .then(res => res.json())
-      .then(data => loadStripe(data.data.publishableKey));
+      .then(data => {
+        const key = data?.data?.publishableKey;
+        if (!key) return null;
+        return loadStripe(key);
+      })
+      .catch(() => null);
   }
   return stripePromise;
 }

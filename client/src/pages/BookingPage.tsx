@@ -120,8 +120,10 @@ export default function BookingPage() {
   const [guests, setGuests] = useState(1);
   const [notes, setNotes] = useState('');
 
-  // Stripe state
+  // Payment phase state
+  const [showPayment, setShowPayment] = useState(false);
   const [stripeInstance, setStripeInstance] = useState<Stripe | null>(null);
+  const [stripeLoading, setStripeLoading] = useState(false);
   const paymentFormRef = useRef<StripePaymentFormHandle>(null);
 
   // Submission state
@@ -182,7 +184,7 @@ export default function BookingPage() {
           const map = new Map<string, Set<string>>();
           for (const s of kookerRes.data.confirmedSlots as { date: string; startTime: string }[]) {
             const d = String(s.date).slice(0, 10);
-            const t = String(s.startTime).slice(0, 5); // normalize to HH:MM
+            const t = String(s.startTime).slice(0, 5);
             if (!map.has(d)) map.set(d, new Set());
             map.get(d)!.add(t);
           }
@@ -197,11 +199,6 @@ export default function BookingPage() {
       });
   }, [serviceId, kookerId]);
 
-  // ─── Load Stripe ──────────────────────────────────────────────────────────
-  useEffect(() => {
-    getStripe().then(setStripeInstance);
-  }, []);
-
   // ─── Available dates map (excludes dates where ALL slots are confirmed) ────
   const availableDatesMap = useMemo(() => {
     const map = new Map<string, Availability[]>();
@@ -213,7 +210,6 @@ export default function BookingPage() {
       existing.push(av);
       map.set(dateKey, existing);
     }
-    // Remove dates where ALL slots are already booked
     for (const [date, slots] of map) {
       const booked = confirmedSlotsMap.get(date);
       if (booked && slots.every(s => booked.has(String(s.startTime).slice(0, 5)))) {
@@ -263,8 +259,19 @@ export default function BookingPage() {
 
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-  // ─── Submit booking with Stripe payment ────────────────────────────────────
-  const handleSubmit = async () => {
+  // ─── Handle "Réserver" click → show payment step ────────────────────────
+  const handleReserveClick = async () => {
+    setShowPayment(true);
+    if (!stripeInstance) {
+      setStripeLoading(true);
+      const s = await getStripe();
+      setStripeInstance(s);
+      setStripeLoading(false);
+    }
+  };
+
+  // ─── Handle payment submit ────────────────────────────────────────────────
+  const handlePaymentSubmit = async () => {
     if (!selectedDate || !selectedTime || !service) return;
 
     setIsSubmitting(true);
@@ -290,7 +297,6 @@ export default function BookingPage() {
 
       if (!paymentResult?.success) {
         toast.error(paymentResult?.error || 'Le paiement a échoué.');
-        // Cancel the booking since payment failed
         try { await api.put(`/bookings/${booking.id}/cancel`, {}); } catch { /* ignore */ }
         return;
       }
@@ -362,7 +368,6 @@ export default function BookingPage() {
       <div className="min-h-screen bg-[#f2f4fc] py-10 md:py-16">
         <div className="px-4 md:px-8 lg:px-[96px] max-w-[640px] mx-auto">
           <div className="bg-white rounded-[20px] shadow-sm border border-[#e5e7eb]/50 p-6 md:p-8 text-center">
-            {/* Success icon */}
             <div className="w-16 h-16 mx-auto mb-5 rounded-full bg-[#dcfce7] flex items-center justify-center">
               <svg className="w-8 h-8 text-[#16a34a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -376,7 +381,6 @@ export default function BookingPage() {
               Votre demande de reservation a bien ete envoyee.
             </p>
 
-            {/* Booking details */}
             <div className="mt-6 bg-[#f2f4fc] rounded-[16px] p-5 text-left space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-[14px] text-[#6b7280]">Service</span>
@@ -410,7 +414,6 @@ export default function BookingPage() {
               </div>
             </div>
 
-            {/* Actions */}
             <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
               <button
                 onClick={() => navigate('/tableau-de-bord')}
@@ -426,6 +429,115 @@ export default function BookingPage() {
               </button>
             </div>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Payment phase (shown after clicking "Réserver") ────────────────────
+  if (showPayment) {
+    return (
+      <div className="min-h-screen bg-[#f2f4fc] py-8 md:py-12">
+        <div className="px-4 md:px-8 lg:px-[96px] max-w-[640px] mx-auto">
+          {/* Back to booking form */}
+          <button
+            onClick={() => setShowPayment(false)}
+            disabled={isSubmitting}
+            className="flex items-center gap-2 mb-6 text-[14px] font-medium text-[#6b7280] hover:text-[#111125] transition-colors disabled:opacity-50"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Modifier la réservation
+          </button>
+
+          <h1 className="text-[24px] md:text-[32px] font-bold text-[#111125] mb-6">
+            Finaliser le paiement
+          </h1>
+
+          {/* Booking summary */}
+          <section className="bg-white rounded-[20px] shadow-sm border border-[#e5e7eb]/50 p-5 md:p-6 mb-6">
+            <h2 className="text-[16px] font-semibold text-[#111125] mb-4">Récapitulatif</h2>
+            <div className="bg-[#f2f4fc] rounded-[16px] p-4 md:p-5 space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-[14px] text-[#6b7280]">Service</span>
+                <span className="text-[14px] font-semibold text-[#111125]">{service.title}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-[14px] text-[#6b7280]">Date</span>
+                <span className="text-[14px] font-semibold text-[#111125]">{formatDateFr(selectedDate!)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-[14px] text-[#6b7280]">Créneau</span>
+                <span className="text-[14px] font-semibold text-[#111125]">{selectedTime}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-[14px] text-[#6b7280]">{isKours ? 'Participants' : 'Convives'}</span>
+                <span className="text-[14px] font-semibold text-[#111125]">{guests} personne{guests > 1 ? 's' : ''}</span>
+              </div>
+              <div className="border-t border-[#e5e7eb] pt-3 flex justify-between items-center">
+                <span className="text-[16px] font-bold text-[#111125]">Total</span>
+                <span className="text-[22px] font-bold text-[#c1a0fd]">{formatPrice(totalPriceCents)}&euro;</span>
+              </div>
+            </div>
+          </section>
+
+          {/* Payment form */}
+          <section className="bg-white rounded-[20px] shadow-sm border border-[#e5e7eb]/50 p-5 md:p-6 mb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-8 rounded-full bg-[#c1a0fd] flex items-center justify-center">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>
+                </svg>
+              </div>
+              <h2 className="text-[18px] font-semibold text-[#111125]">
+                Informations de paiement
+              </h2>
+            </div>
+
+            <p className="text-[13px] text-[#6b7280] mb-4">
+              Votre carte sera pré-autorisée. Le montant ne sera débité que lorsque le kooker acceptera votre réservation.
+            </p>
+
+            {stripeLoading || !stripeInstance ? (
+              <div className="flex items-center gap-2 text-[13px] text-[#9ca3af] py-4">
+                <div className="w-4 h-4 border-2 border-[#c1a0fd] border-t-transparent rounded-full animate-spin" />
+                Chargement du module de paiement...
+              </div>
+            ) : (
+              <Elements stripe={stripeInstance}>
+                <StripePaymentForm ref={paymentFormRef} />
+              </Elements>
+            )}
+
+            <div className="mt-3 flex items-center gap-2 text-[12px] text-[#9ca3af]">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+              Paiement sécurisé par Stripe
+            </div>
+          </section>
+
+          {/* Pay button */}
+          <button
+            onClick={handlePaymentSubmit}
+            disabled={isSubmitting || !stripeInstance}
+            className="w-full py-3.5 bg-[#c1a0fd] text-white font-semibold rounded-[12px] hover:bg-[#b090ed] transition-all text-[16px] shadow-sm disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {isSubmitting ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Paiement en cours...
+              </>
+            ) : (
+              <>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+                Payer et confirmer — {formatPrice(totalPriceCents)}&euro;
+              </>
+            )}
+          </button>
         </div>
       </div>
     );
@@ -527,7 +639,6 @@ export default function BookingPage() {
             </div>
           ) : (
             <div className="max-w-[420px]">
-              {/* Month Navigation */}
               <div className="flex items-center justify-between mb-4">
                 <button
                   onClick={goToPrevMonth}
@@ -550,7 +661,6 @@ export default function BookingPage() {
                 </button>
               </div>
 
-              {/* Day Headers */}
               <div className="grid grid-cols-7 mb-2">
                 {DAY_NAMES.map((day) => (
                   <div
@@ -562,7 +672,6 @@ export default function BookingPage() {
                 ))}
               </div>
 
-              {/* Calendar Grid */}
               <div className="grid grid-cols-7">
                 {calendarDays.map((day, idx) => {
                   if (day === null) {
@@ -602,7 +711,6 @@ export default function BookingPage() {
                 })}
               </div>
 
-              {/* Legend */}
               <div className="flex items-center gap-4 mt-4 pt-4 border-t border-[#f0f0f0]">
                 <div className="flex items-center gap-1.5">
                   <div className="w-3 h-3 rounded-full bg-green-500" />
@@ -680,7 +788,6 @@ export default function BookingPage() {
           </div>
 
           <div className="space-y-5">
-            {/* Guests */}
             <div>
               <label htmlFor="guests" className="block text-[14px] font-medium text-[#111125] mb-1.5">
                 {isKours ? 'Nombre de participants' : 'Nombre de convives'}
@@ -734,7 +841,6 @@ export default function BookingPage() {
               )}
             </div>
 
-            {/* Notes */}
             <div>
               <label htmlFor="notes" className="block text-[14px] font-medium text-[#111125] mb-1.5">
                 Notes <span className="text-[#9ca3af] font-normal">(optionnel)</span>
@@ -752,48 +858,12 @@ export default function BookingPage() {
         </section>
 
         {/* ═══════════════════════════════════════════════════════════════ */}
-        {/* STEP 5 - Payment                                               */}
+        {/* STEP 5 - Summary & Reserve button                              */}
         {/* ═══════════════════════════════════════════════════════════════ */}
         <section className={`bg-white rounded-[20px] shadow-sm border border-[#e5e7eb]/50 p-5 md:p-6 mb-6 transition-opacity ${canConfirm ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}>
           <div className="flex items-center gap-3 mb-4">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-[14px] ${canConfirm ? 'bg-[#c1a0fd] text-white' : 'bg-[#e5e7eb] text-[#9ca3af]'}`}>
               5
-            </div>
-            <h2 className="text-[18px] font-semibold text-[#111125]">
-              Paiement
-            </h2>
-          </div>
-
-          <p className="text-[13px] text-[#6b7280] mb-4">
-            Votre carte sera pré-autorisée. Le montant ne sera débité que lorsque le kooker acceptera votre réservation.
-          </p>
-
-          {stripeInstance ? (
-            <Elements stripe={stripeInstance}>
-              <StripePaymentForm ref={paymentFormRef} />
-            </Elements>
-          ) : (
-            <div className="flex items-center gap-2 text-[13px] text-[#9ca3af]">
-              <div className="w-4 h-4 border-2 border-[#c1a0fd] border-t-transparent rounded-full animate-spin" />
-              Chargement du module de paiement...
-            </div>
-          )}
-
-          <div className="mt-3 flex items-center gap-2 text-[12px] text-[#9ca3af]">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-            </svg>
-            Paiement sécurisé par Stripe
-          </div>
-        </section>
-
-        {/* ═══════════════════════════════════════════════════════════════ */}
-        {/* STEP 6 - Summary & Confirm                                     */}
-        {/* ═══════════════════════════════════════════════════════════════ */}
-        <section className={`bg-white rounded-[20px] shadow-sm border border-[#e5e7eb]/50 p-5 md:p-6 mb-6 transition-opacity ${canConfirm ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}>
-          <div className="flex items-center gap-3 mb-4">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-[14px] ${canConfirm ? 'bg-[#c1a0fd] text-white' : 'bg-[#e5e7eb] text-[#9ca3af]'}`}>
-              6
             </div>
             <h2 className="text-[18px] font-semibold text-[#111125]">
               Recapitulatif
@@ -830,13 +900,13 @@ export default function BookingPage() {
                 {isKours && service.koursDifficulty && (
                   <div className="flex justify-between items-center">
                     <span className="text-[14px] text-[#6b7280]">Niveau</span>
-                    <span className="text-[14px] font-semibold text-[#111125]">🎓 {service.koursDifficulty}</span>
+                    <span className="text-[14px] font-semibold text-[#111125]">{service.koursDifficulty}</span>
                   </div>
                 )}
                 {isKours && service.koursLocation && (
                   <div className="flex justify-between items-center">
                     <span className="text-[14px] text-[#6b7280]">Lieu du cours</span>
-                    <span className="text-[14px] font-semibold text-[#111125]">📍 {service.koursLocation}</span>
+                    <span className="text-[14px] font-semibold text-[#111125]">{service.koursLocation}</span>
                   </div>
                 )}
                 <div className="flex justify-between items-center">
@@ -862,20 +932,10 @@ export default function BookingPage() {
               </div>
 
               <button
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-                className="w-full py-3.5 bg-[#c1a0fd] text-white font-semibold rounded-[12px] hover:bg-[#b090ed] transition-all text-[16px] shadow-sm disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                onClick={handleReserveClick}
+                className="w-full py-3.5 bg-[#c1a0fd] text-white font-semibold rounded-[12px] hover:bg-[#b090ed] transition-all text-[16px] shadow-sm flex items-center justify-center gap-2"
               >
-                {isSubmitting ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Reservation en cours...
-                  </>
-                ) : (
-                  <>
-                    Payer et réserver — {formatPrice(totalPriceCents)}&euro;
-                  </>
-                )}
+                Confirmer la reservation — {formatPrice(totalPriceCents)}&euro;
               </button>
             </>
           )}

@@ -259,14 +259,48 @@ export default function BookingPage() {
 
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-  // ─── Handle "Réserver" click → show payment step ────────────────────────
+  // ─── Handle "Réserver" click → show payment step or direct booking ──────
   const handleReserveClick = async () => {
-    setShowPayment(true);
-    if (!stripeInstance) {
-      setStripeLoading(true);
-      const s = await getStripe();
+    // Try to load Stripe
+    setStripeLoading(true);
+    const s = await getStripe();
+    setStripeLoading(false);
+
+    if (s) {
+      // Stripe available → show payment form
       setStripeInstance(s);
-      setStripeLoading(false);
+      setShowPayment(true);
+    } else {
+      // Stripe not configured → create booking directly (no payment)
+      await handleDirectBooking();
+    }
+  };
+
+  // ─── Direct booking (when Stripe is not configured) ───────────────────
+  const handleDirectBooking = async () => {
+    if (!selectedDate || !selectedTime || !service) return;
+
+    setIsSubmitting(true);
+    try {
+      const res = await api.post<{ booking: CreatedBooking; clientSecret?: string }>('/bookings', {
+        serviceId: service.id,
+        date: selectedDate,
+        startTime: selectedTime,
+        guests,
+        notes: notes.trim() || undefined,
+      });
+
+      if (!res.success || !res.data) {
+        toast.error(res.error || 'Une erreur est survenue.');
+        return;
+      }
+
+      setCreatedBooking(res.data.booking);
+      toast.success('Réservation confirmée !');
+    } catch (err: any) {
+      toast.error(err?.error || 'Une erreur est survenue.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -933,9 +967,17 @@ export default function BookingPage() {
 
               <button
                 onClick={handleReserveClick}
-                className="w-full py-3.5 bg-[#c1a0fd] text-white font-semibold rounded-[12px] hover:bg-[#b090ed] transition-all text-[16px] shadow-sm flex items-center justify-center gap-2"
+                disabled={isSubmitting || stripeLoading}
+                className="w-full py-3.5 bg-[#c1a0fd] text-white font-semibold rounded-[12px] hover:bg-[#b090ed] transition-all text-[16px] shadow-sm flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Confirmer la reservation — {formatPrice(totalPriceCents)}&euro;
+                {isSubmitting || stripeLoading ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    {stripeLoading ? 'Chargement...' : 'Réservation en cours...'}
+                  </>
+                ) : (
+                  <>Confirmer la reservation — {formatPrice(totalPriceCents)}&euro;</>
+                )}
               </button>
             </>
           )}

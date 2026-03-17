@@ -39,6 +39,7 @@ router.post(
         const account = await stripe.accounts.create({
           type: 'express',
           country: 'FR',
+          business_type: 'individual',
           capabilities: {
             card_payments: { requested: true },
             transfers: { requested: true },

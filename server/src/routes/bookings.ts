@@ -255,17 +255,12 @@ router.post(
         },
       });
 
-      // Create Stripe PaymentIntent with manual capture + transfer to kooker
-      // Platform keeps 15% commission, 85% goes to kooker
-      const applicationFee = Math.round(totalPriceInCents * 0.15);
+      // Create Stripe PaymentIntent with manual capture
+      // Payment stays on platform until prestation is completed, then transferred to kooker
       const paymentIntent = await stripe.paymentIntents.create({
         amount: totalPriceInCents,
         currency: 'eur',
         capture_method: 'manual',
-        application_fee_amount: applicationFee,
-        transfer_data: {
-          destination: kookerProfile.stripeAccountId,
-        },
         metadata: {
           bookingId: String(booking.id),
           userId: String(userId),

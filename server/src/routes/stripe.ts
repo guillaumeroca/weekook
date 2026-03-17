@@ -40,6 +40,11 @@ router.post(
           type: 'express',
           country: 'FR',
           business_type: 'individual',
+          business_profile: {
+            mcc: '5812',
+            url: 'https://weekook.com',
+            product_description: 'Services de cuisine à domicile via la plateforme Weekook',
+          },
           capabilities: {
             card_payments: { requested: true },
             transfers: { requested: true },

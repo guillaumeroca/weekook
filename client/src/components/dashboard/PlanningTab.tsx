@@ -16,7 +16,7 @@ interface Availability {
 interface BookingInfo {
   id: number;
   date: string;
-  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'awaiting_confirmation';
   startTime: string;
   guests: number;
   service: { title: string };

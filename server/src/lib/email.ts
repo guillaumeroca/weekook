@@ -267,3 +267,108 @@ export async function sendBookingCancelledToKooker(
   );
   await sendEmail(kookerEmail, `Annulation de ${clientName} — ${serviceName}`, html, 'booking-cancelled-to-kooker');
 }
+
+// ─── Post-prestation confirmation emails ─────────────────────────────────────
+
+export async function sendConfirmationRequestToUser(
+  userEmail: string,
+  userName: string,
+  kookerName: string,
+  serviceName: string,
+  date: Date | string,
+  startTime: string,
+  bookingId: number
+): Promise<void> {
+  const html = emailWrapper(
+    '🔔',
+    `Confirmez que la prestation a eu lieu`,
+    `<p style="color:#6b7280;font-size:14px;margin:0 0 16px 0;">Bonjour ${userName}, la prestation <strong>${serviceName}</strong> avec <strong>${kookerName}</strong> est terminée.</p>
+    ${infoBox([
+      { label: 'Prestation', value: serviceName },
+      { label: 'Date', value: formatDate(date) },
+      { label: 'Heure', value: startTime },
+    ])}
+    <p style="color:#6b7280;font-size:13px;margin:12px 0 0 0;">Merci de confirmer que tout s'est bien passé. Sans action de votre part, la prestation sera automatiquement validée sous 48h.</p>`,
+    `${env.APP_URL}/reservation/${bookingId}`,
+    'Confirmer la prestation'
+  );
+  await sendEmail(userEmail, `Confirmez votre prestation — ${serviceName}`, html, 'confirmation-request');
+}
+
+export async function sendConfirmationReminder1ToUser(
+  userEmail: string,
+  userName: string,
+  kookerName: string,
+  serviceName: string,
+  bookingId: number
+): Promise<void> {
+  const html = emailWrapper(
+    '⏰',
+    `Rappel : confirmez votre prestation`,
+    `<p style="color:#6b7280;font-size:14px;margin:0 0 16px 0;">Bonjour ${userName}, n'oubliez pas de confirmer que la prestation <strong>${serviceName}</strong> avec <strong>${kookerName}</strong> a bien eu lieu.</p>
+    <p style="color:#6b7280;font-size:13px;margin:0;">Sans confirmation, elle sera automatiquement validée dans <strong>24 heures</strong>.</p>`,
+    `${env.APP_URL}/reservation/${bookingId}`,
+    'Confirmer maintenant'
+  );
+  await sendEmail(userEmail, `Rappel — Confirmez votre prestation ${serviceName}`, html, 'confirmation-reminder-1');
+}
+
+export async function sendConfirmationReminder2ToUser(
+  userEmail: string,
+  userName: string,
+  kookerName: string,
+  serviceName: string,
+  bookingId: number
+): Promise<void> {
+  const html = emailWrapper(
+    '⚠️',
+    `Dernier rappel avant validation automatique`,
+    `<p style="color:#6b7280;font-size:14px;margin:0 0 16px 0;">Bonjour ${userName}, c'est votre <strong>dernier rappel</strong> pour confirmer la prestation <strong>${serviceName}</strong> avec <strong>${kookerName}</strong>.</p>
+    <p style="color:#6b7280;font-size:13px;margin:0;">Elle sera automatiquement validée dans <strong>12 heures</strong> et le paiement sera versé au kooker.</p>`,
+    `${env.APP_URL}/reservation/${bookingId}`,
+    'Confirmer maintenant'
+  );
+  await sendEmail(userEmail, `Dernier rappel — ${serviceName}`, html, 'confirmation-reminder-2');
+}
+
+export async function sendAutoConfirmationToUser(
+  userEmail: string,
+  userName: string,
+  kookerName: string,
+  serviceName: string,
+  bookingId: number
+): Promise<void> {
+  const html = emailWrapper(
+    '✅',
+    `Prestation validée automatiquement`,
+    `<p style="color:#6b7280;font-size:14px;margin:0 0 16px 0;">Bonjour ${userName}, la prestation <strong>${serviceName}</strong> avec <strong>${kookerName}</strong> a été automatiquement validée après 48h.</p>
+    <p style="color:#6b7280;font-size:13px;margin:0;">Le paiement va être versé au kooker. Vous pouvez encore laisser un avis sur votre expérience.</p>`,
+    `${env.APP_URL}/reservation/${bookingId}`,
+    'Laisser un avis'
+  );
+  await sendEmail(userEmail, `Prestation validée — ${serviceName}`, html, 'auto-confirmation');
+}
+
+export async function sendCompletionToKooker(
+  kookerEmail: string,
+  kookerName: string,
+  clientName: string,
+  serviceName: string,
+  date: Date | string,
+  totalPriceInCents: number
+): Promise<void> {
+  const html = emailWrapper(
+    '💰',
+    `Prestation confirmée — paiement en cours`,
+    `<p style="color:#6b7280;font-size:14px;margin:0 0 16px 0;">Bonjour ${kookerName}, <strong>${clientName}</strong> a confirmé la réalisation de la prestation.</p>
+    ${infoBox([
+      { label: 'Prestation', value: serviceName },
+      { label: 'Date', value: formatDate(date) },
+      { label: 'Montant total', value: formatPrice(totalPriceInCents) },
+    ])}
+    <p style="color:#6b7280;font-size:13px;margin:12px 0 0 0;">Le paiement (moins la commission) va être versé sur votre compte Stripe.</p>`,
+    `${env.APP_URL}/tableau-de-bord`,
+    'Voir mon tableau de bord'
+  );
+  await sendEmail(kookerEmail, `Paiement en cours — ${serviceName}`, html, 'completion-to-kooker');
+}

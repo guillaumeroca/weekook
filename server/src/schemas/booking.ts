@@ -9,7 +9,7 @@ export const createBookingSchema = z.object({
 });
 
 export const updateBookingStatusSchema = z.object({
-  status: z.enum(['confirmed', 'cancelled', 'completed'], {
+  status: z.enum(['confirmed', 'cancelled'], {
     required_error: 'Le statut est requis',
     invalid_type_error: 'Statut invalide',
   }),

@@ -16,7 +16,7 @@ interface Booking {
   date: string;
   time: string;
   guests: number;
-  status: 'confirmed' | 'pending' | 'cancelled' | 'completed';
+  status: 'confirmed' | 'pending' | 'cancelled' | 'completed' | 'awaiting_confirmation';
   totalPrice: number;
 }
 
@@ -38,7 +38,7 @@ interface ApiBooking {
   startTime: string;
   guests: number;
   totalPriceInCents: number;
-  status: 'confirmed' | 'pending' | 'cancelled' | 'completed';
+  status: 'confirmed' | 'pending' | 'cancelled' | 'completed' | 'awaiting_confirmation';
   notes?: string;
   service: {
     id: number;
@@ -81,6 +81,7 @@ const StatusBadge = ({ status }: { status: Booking['status'] }) => {
     pending: { label: 'en attente', bg: 'bg-[#fff3e0]', text: 'text-orange-600' },
     cancelled: { label: 'annulé', bg: 'bg-red-50', text: 'text-red-600' },
     completed: { label: 'terminé', bg: 'bg-[#f5f5f5]', text: 'text-[#828294]' },
+    awaiting_confirmation: { label: 'À confirmer', bg: 'bg-[#fef3c7]', text: 'text-[#d97706]' },
   };
   const s = config[status];
   return (
@@ -101,7 +102,7 @@ const formatPrice = (cents: number) => {
 
 // ────────────────────────── Booking Card ──────────────────────────
 
-const BookingCard = ({ booking, showActions = false, onCancel, onViewDetails, onReview, hasReview }: { booking: Booking; showActions?: boolean; onCancel?: (id: number) => void; onViewDetails?: (id: number) => void; onReview?: (booking: Booking) => void; hasReview?: boolean }) => {
+const BookingCard = ({ booking, showActions = false, onCancel, onViewDetails, onReview, hasReview, onConfirmCompletion }: { booking: Booking; showActions?: boolean; onCancel?: (id: number) => void; onViewDetails?: (id: number) => void; onReview?: (booking: Booking) => void; hasReview?: boolean; onConfirmCompletion?: (id: number) => void }) => {
   const isKours = Array.isArray(booking.serviceType)
     ? (booking.serviceType as unknown as string[]).includes('KOURS')
     : String(booking.serviceType || '').includes('KOURS');
@@ -195,6 +196,14 @@ const BookingCard = ({ booking, showActions = false, onCancel, onViewDetails, on
             : <button onClick={() => onReview?.(booking)} className="px-4 py-2 bg-[#c1a0fd] hover:bg-[#b090ed] text-white text-[14px] font-medium rounded-[8px] transition-all">
                 Laisser un avis
               </button>
+        )}
+        {booking.status === 'awaiting_confirmation' && (
+          <button
+            onClick={() => onConfirmCompletion?.(booking.id)}
+            className="px-4 py-2 bg-[#16a34a] hover:bg-[#15803d] text-white text-[14px] font-medium rounded-[8px] transition-all"
+          >
+            Confirmer la réalisation
+          </button>
         )}
       </div>
     </div>
@@ -316,7 +325,7 @@ const UserDashboardPage = () => {
           const mapped = bookingsRes.data.map(mapApiBookingToBooking);
 
           const upcoming = mapped.filter(
-            b => (b.status === 'pending' || b.status === 'confirmed') && b.date >= today
+            b => (b.status === 'pending' || b.status === 'confirmed' || b.status === 'awaiting_confirmation') && b.date >= today
           );
           const past = mapped.filter(
             b => b.status === 'completed' || b.status === 'cancelled' || b.date < today
@@ -412,6 +421,21 @@ const UserDashboardPage = () => {
       toast.success('Réservation annulée');
     } catch {
       toast.error('Erreur lors de l\'annulation');
+    }
+  };
+
+  const handleConfirmCompletion = async (id: number) => {
+    try {
+      await api.put<{ success: boolean }>(`/bookings/${id}/confirm-completion`);
+      // Move booking from upcoming to history as completed
+      const booking = upcomingBookings.find(b => b.id === id);
+      if (booking) {
+        setUpcomingBookings(prev => prev.filter(b => b.id !== id));
+        setHistoryBookings(prev => [...prev, { ...booking, status: 'completed' as const }]);
+      }
+      toast.success('Prestation confirmée !');
+    } catch {
+      toast.error('Erreur lors de la confirmation');
     }
   };
 
@@ -597,7 +621,7 @@ const UserDashboardPage = () => {
               </div>
             ) : (
               upcomingBookings.map(booking => (
-                <BookingCard key={booking.id} booking={booking} showActions onCancel={handleCancelBooking} onViewDetails={(id) => navigate(`/reservation/${id}`)} />
+                <BookingCard key={booking.id} booking={booking} showActions onCancel={handleCancelBooking} onViewDetails={(id) => navigate(`/reservation/${id}`)} onConfirmCompletion={handleConfirmCompletion} />
               ))
             )}
           </div>

@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import prisma from '../lib/prisma.js';
 import stripe from '../lib/stripe.js';
-import { getCommissionRate } from '../lib/commission.js';
+import { executeStripeTransfer } from '../lib/bookingTransfer.js';
 import { authenticate, requireKooker } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { createBookingSchema, updateBookingStatusSchema, updateBookingDetailsSchema } from '../schemas/booking.js';
@@ -13,6 +13,7 @@ import {
   sendBookingCancelledToKooker,
   sendBookingModifiedToKooker,
   sendBookingModifiedToUser,
+  sendCompletionToKooker,
 } from '../lib/email.js';
 
 // Envoie un message système dans la messagerie interne (fire-and-forget)
@@ -569,59 +570,9 @@ router.put(
         }
       }
 
-      // ── Stripe: Transfer on completion ──
-      if (status === 'completed' && stripe && booking.stripePaymentIntentId && booking.paymentStatus === 'captured') {
-        const commissionRate = await getCommissionRate();
-        const commissionInCents = Math.round(booking.totalPriceInCents * commissionRate / 100);
-        const transferAmount = booking.totalPriceInCents - commissionInCents;
-
-        const kProfile = await prisma.kookerProfile.findUnique({
-          where: { id: booking.kookerProfileId },
-          select: { stripeAccountId: true },
-        });
-
-        if (kProfile?.stripeAccountId && transferAmount > 0) {
-          try {
-            const transfer = await stripe.transfers.create({
-              amount: transferAmount,
-              currency: 'eur',
-              destination: kProfile.stripeAccountId,
-              transfer_group: `booking_${booking.id}`,
-              metadata: {
-                bookingId: String(booking.id),
-                totalAmount: String(booking.totalPriceInCents),
-                commission: String(commissionInCents),
-                commissionRate: String(commissionRate),
-              },
-            });
-            await prisma.booking.update({ where: { id }, data: { paymentStatus: 'transferred' } });
-            await prisma.payment.create({
-              data: {
-                bookingId: id,
-                stripePaymentIntentId: booking.stripePaymentIntentId,
-                type: 'transfer',
-                amountInCents: transferAmount,
-                commissionInCents,
-                stripeTransferId: transfer.id,
-                status: 'succeeded',
-                metadata: { commissionRate },
-              },
-            });
-          } catch (transferError) {
-            console.error('[booking] Stripe transfer failed:', transferError);
-            await prisma.payment.create({
-              data: {
-                bookingId: id,
-                stripePaymentIntentId: booking.stripePaymentIntentId,
-                type: 'transfer',
-                amountInCents: transferAmount,
-                commissionInCents,
-                status: 'failed',
-                metadata: { error: String(transferError) },
-              },
-            });
-          }
-        }
+      // ── Stripe: Transfer on completion (safety net, normally triggered by user confirm-completion) ──
+      if (status === 'completed' && booking.paymentStatus === 'captured') {
+        await executeStripeTransfer(id);
       }
 
       const updated = await prisma.booking.update({
@@ -809,6 +760,72 @@ router.put(
         success: true,
         data: updated,
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// PUT /:id/confirm-completion - User confirms the prestation happened
+router.put(
+  '/:id/confirm-completion',
+  authenticate,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) throw new AppError('ID invalide', 400);
+
+      const userId = req.user!.userId;
+
+      const booking = await prisma.booking.findUnique({
+        where: { id },
+        include: {
+          service: { select: { title: true } },
+          kookerProfile: {
+            include: { user: { select: { id: true, email: true, firstName: true, lastName: true } } },
+          },
+          user: { select: { id: true, firstName: true, lastName: true } },
+        },
+      });
+
+      if (!booking) throw new NotFoundError('Réservation non trouvée');
+      if (booking.userId !== userId) throw new ForbiddenError('Accès refusé');
+      if (booking.status !== 'awaiting_confirmation') {
+        throw new AppError('Cette réservation n\'est pas en attente de confirmation.', 400);
+      }
+
+      // Mark as completed
+      const updated = await prisma.booking.update({
+        where: { id },
+        data: { status: 'completed' },
+      });
+
+      // Transfer funds to kooker
+      await executeStripeTransfer(id);
+
+      // Notifications
+      const kookerUser = (booking.kookerProfile as any).user as { id: number; email: string; firstName: string; lastName: string };
+      const clientName = `${booking.user.firstName} ${booking.user.lastName}`.trim();
+      const kookerName = `${kookerUser.firstName} ${kookerUser.lastName}`.trim();
+
+      sendCompletionToKooker(
+        kookerUser.email,
+        kookerName,
+        clientName,
+        booking.service.title,
+        booking.date,
+        booking.totalPriceInCents
+      );
+
+      sendSystemMessage(
+        userId,
+        kookerUser.id,
+        `✅ ${clientName} a confirmé la réalisation de la prestation "${booking.service.title}". Le paiement va être versé sur votre compte.`,
+        booking.kookerProfileId,
+        id
+      );
+
+      res.json({ success: true, data: updated });
     } catch (error) {
       next(error);
     }

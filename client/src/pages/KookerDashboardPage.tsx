@@ -22,7 +22,7 @@ interface KookerBooking {
   startTime: string;
   guests: number;
   totalPriceInCents: number;
-  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'awaiting_confirmation';
   paymentStatus?: string;
   user: { id: number; firstName: string; lastName: string; email: string };
   service: { title: string; type?: string };
@@ -136,6 +136,7 @@ const StatusBadge = ({ status }: { status: KookerBooking['status'] }) => {
     pending: { label: 'en attente', bg: 'bg-[#fff3e0]', text: 'text-orange-600' },
     cancelled: { label: 'annulé', bg: 'bg-red-50', text: 'text-red-600' },
     completed: { label: 'terminé', bg: 'bg-[#f5f5f5]', text: 'text-[#828294]' },
+    awaiting_confirmation: { label: 'À confirmer', bg: 'bg-[#fef3c7]', text: 'text-[#d97706]' },
   };
   const s = config[status];
   return (
@@ -146,10 +147,11 @@ const StatusBadge = ({ status }: { status: KookerBooking['status'] }) => {
 };
 
 const PAYMENT_BADGE_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
-  authorized:  { label: 'Pré-autorisé', bg: 'bg-[#fff7ed]', text: 'text-orange-500' },
-  captured:    { label: 'Payé', bg: 'bg-[#e8f5e9]', text: 'text-green-600' },
-  transferred: { label: 'Versé', bg: 'bg-[#d1fae5]', text: 'text-green-700' },
-  refunded:    { label: 'Remboursé', bg: 'bg-[#f5f5f5]', text: 'text-[#828294]' },
+  authorized:             { label: 'Pré-autorisé', bg: 'bg-[#fff7ed]', text: 'text-orange-500' },
+  captured:               { label: 'Payé', bg: 'bg-[#e8f5e9]', text: 'text-green-600' },
+  transferred:            { label: 'Versé', bg: 'bg-[#d1fae5]', text: 'text-green-700' },
+  refunded:               { label: 'Remboursé', bg: 'bg-[#f5f5f5]', text: 'text-[#828294]' },
+  awaiting_confirmation:  { label: 'À confirmer', bg: 'bg-[#fef3c7]', text: 'text-[#d97706]' },
 };
 
 const PaymentBadge = ({ paymentStatus }: { paymentStatus?: string }) => {
@@ -198,7 +200,7 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
   const [activeTab, setActiveTab] = useState<'bookings' | 'planning' | 'services' | 'profile'>(
     (location.state as any)?.tab || 'bookings'
   );
-  const [bookingFilter, setBookingFilter] = useState<'all' | 'pending' | 'confirmed' | 'completed' | 'cancelled'>('all');
+  const [bookingFilter, setBookingFilter] = useState<'all' | 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'awaiting_confirmation'>('all');
 
   // Data states
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -752,6 +754,7 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
               {[
                 { key: 'all' as const, label: 'Toutes' },
                 { key: 'pending' as const, label: 'En attente' },
+                { key: 'awaiting_confirmation' as const, label: 'À confirmer' },
                 { key: 'confirmed' as const, label: 'Confirmées' },
                 { key: 'completed' as const, label: 'Terminées' },
                 { key: 'cancelled' as const, label: 'Annulées' },
@@ -793,7 +796,7 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
                       <div
                         key={booking.id}
                         className={`bg-white rounded-[20px] p-5 md:p-6 shadow-sm transition-shadow hover:shadow-md ${
-                          booking.status === 'pending' ? 'border-l-4 border-l-yellow-400' : ''
+                          booking.status === 'pending' ? 'border-l-4 border-l-yellow-400' : booking.status === 'awaiting_confirmation' ? 'border-l-4 border-l-[#d97706]' : ''
                         }`}
                       >
                         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
@@ -892,6 +895,12 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
                                   </svg>
                                   Refuser
                                 </button>
+                              </div>
+                            )}
+
+                            {booking.status === 'awaiting_confirmation' && (
+                              <div className="bg-yellow-50 border border-yellow-200 rounded-[12px] p-3 text-[13px] text-yellow-800">
+                                En attente de confirmation du client. Validation automatique sous 48h.
                               </div>
                             )}
 

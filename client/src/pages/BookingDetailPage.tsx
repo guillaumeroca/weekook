@@ -16,7 +16,7 @@ interface BookingDetail {
   endTime: string | null;
   guests: number;
   totalPriceInCents: number;
-  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'awaiting_confirmation';
   paymentStatus?: string;
   notes: string | null;
   createdAt: string;
@@ -72,10 +72,11 @@ const REFUSAL_REASONS = [
 ];
 
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
-  pending:   { label: 'En attente',  color: '#d97706', bg: '#fef3c7' },
-  confirmed: { label: 'Confirmée',   color: '#16a34a', bg: '#dcfce7' },
-  cancelled: { label: 'Annulée',     color: '#dc2626', bg: '#fee2e2' },
-  completed: { label: 'Terminée',    color: '#6b7280', bg: '#f3f4f6' },
+  pending:                { label: 'En attente',                  color: '#d97706', bg: '#fef3c7' },
+  confirmed:              { label: 'Confirmée',                   color: '#16a34a', bg: '#dcfce7' },
+  awaiting_confirmation:  { label: 'En attente de confirmation',  color: '#d97706', bg: '#fef3c7' },
+  cancelled:              { label: 'Annulée',                     color: '#dc2626', bg: '#fee2e2' },
+  completed:              { label: 'Terminée',                    color: '#6b7280', bg: '#f3f4f6' },
 };
 
 const PAYMENT_STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
@@ -123,6 +124,16 @@ export default function BookingDetailPage() {
   const [reviewComment, setReviewComment] = useState('');
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
 
+  // Kooker review state (kooker_to_user)
+  const [showKookerReviewModal, setShowKookerReviewModal] = useState(false);
+  const [kookerHasReviewed, setKookerHasReviewed] = useState(false);
+  const [userHasReviewed, setUserHasReviewed] = useState(false);
+  const [kookerReviewRating, setKookerReviewRating] = useState(0);
+  const [kookerReviewHovered, setKookerReviewHovered] = useState(0);
+  const [kookerReviewComment, setKookerReviewComment] = useState('');
+  const [kookerReviewSubmitting, setKookerReviewSubmitting] = useState(false);
+  const [confirmingCompletion, setConfirmingCompletion] = useState(false);
+
   const [showTestimonialModal, setShowTestimonialModal] = useState(false);
   const [testimonialName, setTestimonialName] = useState('');
   const [testimonialRole, setTestimonialRole] = useState('');
@@ -158,6 +169,20 @@ export default function BookingDetailPage() {
       .finally(() => setLoading(false));
   }, [id]);
 
+  // Fetch booking reviews when completed (for kooker-to-user review feature)
+  useEffect(() => {
+    if (!booking || booking.status !== 'completed') return;
+    api.get<{ success: boolean; data: Array<{ id: number; type: string; userId: number; rating: number; comment?: string }> }>(`/reviews/booking/${booking.id}`)
+      .then((res: any) => {
+        const reviews: Array<{ id: number; type: string }> = res.data || res;
+        if (Array.isArray(reviews)) {
+          setUserHasReviewed(reviews.some(r => r.type === 'user_to_kooker'));
+          setKookerHasReviewed(reviews.some(r => r.type === 'kooker_to_user'));
+        }
+      })
+      .catch(() => { /* silently ignore */ });
+  }, [booking?.id, booking?.status]);
+
   if (!booking) {
     return (
       <div className="min-h-screen bg-[#f2f4fc] flex items-center justify-center">
@@ -178,7 +203,7 @@ export default function BookingDetailPage() {
   const canEdit = isOwner
     ? booking.status === 'pending'
     : isKooker
-      ? booking.status !== 'completed' && booking.status !== 'cancelled'
+      ? booking.status !== 'completed' && booking.status !== 'cancelled' && booking.status !== 'awaiting_confirmation'
       : false;
 
   const statusInfo = STATUS_LABELS[booking.status] || STATUS_LABELS.pending;
@@ -245,6 +270,7 @@ export default function BookingDetailPage() {
     setReviewSubmitting(true);
     try {
       await api.post('/reviews', {
+        bookingId: booking.id,
         kookerProfileId: booking.kookerProfileId,
         rating: reviewRating,
         comment: reviewComment.trim() || undefined,
@@ -345,6 +371,41 @@ export default function BookingDetailPage() {
       toast.error(e?.error || 'Erreur lors de l\'annulation');
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleConfirmCompletion = async () => {
+    if (!id) return;
+    setConfirmingCompletion(true);
+    try {
+      await api.put<{ success: boolean }>(`/bookings/${id}/confirm-completion`);
+      setBooking(prev => prev ? { ...prev, status: 'completed' } : prev);
+      toast.success('Prestation confirmée — merci !');
+    } catch (err: unknown) {
+      const e = err as { error?: string };
+      toast.error(e?.error || 'Erreur lors de la confirmation');
+    } finally {
+      setConfirmingCompletion(false);
+    }
+  };
+
+  const handleSubmitKookerReview = async () => {
+    if (!booking || kookerReviewRating === 0) return;
+    setKookerReviewSubmitting(true);
+    try {
+      await api.post('/reviews/kooker-to-user', {
+        bookingId: booking.id,
+        rating: kookerReviewRating,
+        comment: kookerReviewComment.trim() || undefined,
+      });
+      setKookerHasReviewed(true);
+      setShowKookerReviewModal(false);
+      toast.success('Avis sur le client publié — merci !');
+    } catch (err: unknown) {
+      const e = err as { error?: string };
+      toast.error(e?.error || 'Erreur lors de la publication');
+    } finally {
+      setKookerReviewSubmitting(false);
     }
   };
 
@@ -646,17 +707,24 @@ export default function BookingDetailPage() {
                 </button>
               )}
 
-              {/* Kooker: Mark confirmed booking as completed */}
-              {isKooker && booking.status === 'confirmed' && (
+              {/* Owner: Confirm completion when awaiting_confirmation */}
+              {isOwner && booking.status === 'awaiting_confirmation' && (
                 <button
-                  onClick={() => setShowCompleteModal(true)}
-                  className="flex items-center gap-2 px-5 py-3 bg-[#c1a0fd] hover:bg-[#b090ed] text-white text-[14px] font-semibold rounded-[12px] transition-all shadow-sm"
+                  onClick={handleConfirmCompletion}
+                  disabled={confirmingCompletion}
+                  className="flex items-center gap-2 px-5 py-3 bg-[#16a34a] hover:bg-[#15803d] text-white text-[14px] font-semibold rounded-[12px] transition-all shadow-sm disabled:opacity-40"
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                    <polyline points="22 4 12 14.01 9 11.01"/>
-                  </svg>
-                  Marquer comme terminée
+                  {confirmingCompletion ? (
+                    <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Confirmation...</>
+                  ) : (
+                    <>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                        <polyline points="22 4 12 14.01 9 11.01"/>
+                      </svg>
+                      Confirmer la réalisation
+                    </>
+                  )}
                 </button>
               )}
 
@@ -701,8 +769,32 @@ export default function BookingDetailPage() {
                     </button>
               )}
 
+              {/* Kooker: info box when awaiting_confirmation */}
+              {isKooker && booking.status === 'awaiting_confirmation' && (
+                <div className="w-full p-4 bg-[#fef3c7] border border-[#fde68a] rounded-[12px] text-[13px] text-[#92400e] leading-relaxed">
+                  <span className="font-semibold">En attente de confirmation du client.</span> La prestation sera automatiquement validée sous 48h.
+                </div>
+              )}
+
+              {/* Kooker: "Noter le client" section when completed */}
+              {isKooker && booking.status === 'completed' && (
+                kookerHasReviewed
+                  ? <span className="flex items-center gap-1.5 px-5 py-3 text-[14px] font-semibold text-green-600 bg-white border border-green-200 rounded-[12px] shadow-sm">✓ Avis laissé</span>
+                  : userHasReviewed
+                    ? <button
+                        onClick={() => { setShowKookerReviewModal(true); setKookerReviewRating(0); setKookerReviewComment(''); }}
+                        className="flex items-center gap-2 px-5 py-3 bg-[#c1a0fd] hover:bg-[#b090ed] text-white text-[14px] font-semibold rounded-[12px] transition-all shadow-sm"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                        </svg>
+                        Noter le client
+                      </button>
+                    : <span className="px-5 py-3 text-[13px] text-[#9ca3af]">Vous pourrez noter le client après qu'il ait laissé un avis.</span>
+              )}
+
               {/* Cancel button (both roles, pending or confirmed) */}
-              {booking.status !== 'cancelled' && booking.status !== 'completed' && (
+              {booking.status !== 'cancelled' && booking.status !== 'completed' && booking.status !== 'awaiting_confirmation' && (
                 <button
                   onClick={() => setShowCancelModal(true)}
                   className="flex items-center gap-2 px-5 py-3 bg-white border border-[#fca5a5] text-[#ef4444] text-[14px] font-semibold rounded-[12px] hover:bg-[#fee2e2] transition-all shadow-sm"
@@ -1085,6 +1177,64 @@ export default function BookingDetailPage() {
                 {actionLoading
                   ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Annulation...</>
                   : 'Confirmer l\'annulation'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Kooker Review Modal (kooker_to_user) ── */}
+      {showKookerReviewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-[20px] p-6 w-full max-w-[420px] shadow-xl">
+            <h2 className="text-[20px] font-semibold text-[#111125] mb-1">Noter le client</h2>
+            <p className="text-[14px] text-[#828294] mb-5">pour {clientUser.firstName} {clientUser.lastName}</p>
+
+            {/* Stars */}
+            <div className="flex gap-2 justify-center mb-5">
+              {[1, 2, 3, 4, 5].map(star => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => setKookerReviewRating(star)}
+                  onMouseEnter={() => setKookerReviewHovered(star)}
+                  onMouseLeave={() => setKookerReviewHovered(0)}
+                  className="text-[40px] leading-none transition-transform hover:scale-110 focus:outline-none"
+                >
+                  <span className={(kookerReviewHovered || kookerReviewRating) >= star ? 'text-yellow-400' : 'text-[#e0e2ef]'}>★</span>
+                </button>
+              ))}
+            </div>
+            {kookerReviewRating > 0 && (
+              <p className="text-center text-[13px] text-[#828294] mb-4">
+                {['', 'Décevant', 'Peut mieux faire', 'Bien', 'Très bien', 'Excellent !'][kookerReviewRating]}
+              </p>
+            )}
+
+            {/* Comment */}
+            <textarea
+              value={kookerReviewComment}
+              onChange={e => setKookerReviewComment(e.target.value)}
+              placeholder="Partagez votre expérience avec ce client (facultatif)..."
+              rows={3}
+              className="w-full rounded-[12px] border border-[#e0e2ef] px-4 py-3 text-[14px] text-[#111125] placeholder-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd] focus:border-transparent resize-none mb-5"
+            />
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowKookerReviewModal(false)}
+                className="flex-1 h-[48px] rounded-[12px] border border-[#e0e2ef] text-[14px] font-medium text-[#6b7280] hover:border-[#c1a0fd] transition-all"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleSubmitKookerReview}
+                disabled={kookerReviewRating === 0 || kookerReviewSubmitting}
+                className="flex-1 h-[48px] rounded-[12px] bg-[#c1a0fd] hover:bg-[#b090ed] text-white text-[14px] font-semibold transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+              >
+                {kookerReviewSubmitting
+                  ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Envoi...</>
+                  : 'Publier l\'avis'}
               </button>
             </div>
           </div>

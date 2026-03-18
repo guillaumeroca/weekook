@@ -26,6 +26,7 @@ model User {
   favorites       Favorite[]
   sentMessages    Message[]       @relation("SentMessages")
   receivedMessages Message[]      @relation("ReceivedMessages")
+  reviewsReceived Review[]        @relation("ReviewsReceived")
 
   @@map("users")
 }
@@ -177,6 +178,10 @@ model Booking {
   notes           String?   @db.Text
   stripePaymentIntentId String? @map("stripe_payment_intent_id")
   paymentStatus   String    @default("none") @map("payment_status")
+  awaitingConfirmationAt DateTime? @map("awaiting_confirmation_at")
+  reminderSentAt1 DateTime? @map("reminder_sent_at_1")
+  reminderSentAt2 DateTime? @map("reminder_sent_at_2")
+  reminderSentAt3 DateTime? @map("reminder_sent_at_3")
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
@@ -184,6 +189,7 @@ model Booking {
   kookerProfile   KookerProfile @relation("KookerBookings", fields: [kookerProfileId], references: [id])
   service         Service   @relation(fields: [serviceId], references: [id])
   payments        Payment[]
+  reviews         Review[]
 
   @@map("bookings")
 }
@@ -209,12 +215,17 @@ model Review {
   id              Int       @id @default(autoincrement())
   userId          Int       @map("user_id")
   kookerProfileId Int       @map("kooker_profile_id")
+  bookingId       Int?      @map("booking_id")
+  type            String    @default("user_to_kooker")
+  targetUserId    Int?      @map("target_user_id")
   rating          Int
   comment         String?   @db.Text
   createdAt       DateTime  @default(now()) @map("created_at")
 
   user            User      @relation(fields: [userId], references: [id])
   kookerProfile   KookerProfile @relation("KookerReviews", fields: [kookerProfileId], references: [id])
+  booking         Booking?  @relation(fields: [bookingId], references: [id])
+  targetUser      User?     @relation("ReviewsReceived", fields: [targetUserId], references: [id])
 
   @@map("reviews")
 }

@@ -6,6 +6,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import path from 'path';
 
+import { startBookingCompletionCron } from './cron/bookingCompletion.js';
 import authRoutes from './routes/auth.js';
 import kookersRoutes from './routes/kookers.js';
 import servicesRoutes from './routes/services.js';
@@ -120,6 +121,7 @@ app.listen(env.PORT, async () => {
     await prisma.$queryRaw`SELECT 1`;
     console.log('Database connection ready');
     await seedConfig();
+    startBookingCompletionCron();
   } catch (e) {
     console.error('Database connection failed:', e);
   }

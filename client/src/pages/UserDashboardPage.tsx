@@ -397,6 +397,7 @@ const UserDashboardPage = () => {
     try {
       await api.post('/reviews', {
         kookerProfileId: reviewTarget.kookerProfileId,
+        bookingId: reviewTarget.bookingId,
         rating: reviewRating,
         comment: reviewComment.trim() || undefined,
       });

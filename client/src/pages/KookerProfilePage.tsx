@@ -42,6 +42,7 @@ interface Review {
   rating: number;
   comment: string;
   date: string;
+  serviceTitle?: string;
 }
 
 interface Availability {
@@ -130,6 +131,7 @@ function mapApiToProfile(data: any): KookerProfile {
       rating: r.rating || 0,
       comment: r.comment || '',
       date: r.createdAt || '',
+      serviceTitle: r.booking?.service?.title || '',
     })),
     availabilities: (data.availabilities || [])
       .filter((a: any) => a.isAvailable)
@@ -559,7 +561,10 @@ export default function KookerProfilePage() {
                     </span>
                   </div>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-[14px] text-[#6b7280]">
-                    <span className="flex items-center gap-1">
+                    <span
+                      className="flex items-center gap-1 cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => document.getElementById('section-avis')?.scrollIntoView({ behavior: 'smooth' })}
+                    >
                       <svg className="w-4 h-4 text-[#facc15]" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                       </svg>
@@ -838,7 +843,7 @@ export default function KookerProfilePage() {
             {/* ============================================================= */}
             {/* AVIS                                                           */}
             {/* ============================================================= */}
-            <section className="pb-12">
+            <section id="section-avis" className="pb-12 scroll-mt-24">
               <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
                 <h2 className="text-[22px] md:text-[26px] font-semibold text-[#111125] tracking-[-0.5px]">
                   Avis
@@ -889,7 +894,10 @@ export default function KookerProfilePage() {
                           </div>
                           <div>
                             <div className="text-[14px] font-semibold text-[#111125]">{review.userName}</div>
-                            <div className="text-[12px] text-[#9ca3af]">{formatDate(review.date)}</div>
+                            <div className="text-[12px] text-[#9ca3af]">
+                              {formatDate(review.date)}
+                              {review.serviceTitle && <> · <span className="text-[#6b7280]">{review.serviceTitle}</span></>}
+                            </div>
                           </div>
                         </div>
                         <StarRating rating={review.rating} size={14} />

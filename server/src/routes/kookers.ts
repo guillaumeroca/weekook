@@ -235,6 +235,7 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
           },
         },
         reviewsReceived: {
+          where: { type: 'user_to_kooker' },
           include: {
             user: {
               select: {
@@ -242,6 +243,11 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
                 firstName: true,
                 lastName: true,
                 avatar: true,
+              },
+            },
+            booking: {
+              select: {
+                service: { select: { title: true } },
               },
             },
           },

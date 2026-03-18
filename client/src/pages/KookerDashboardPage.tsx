@@ -758,19 +758,34 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
                 { key: 'confirmed' as const, label: 'Confirmées' },
                 { key: 'completed' as const, label: 'Terminées' },
                 { key: 'cancelled' as const, label: 'Annulées' },
-              ].map(filter => (
-                <button
-                  key={filter.key}
-                  onClick={() => setBookingFilter(filter.key)}
-                  className={`px-4 py-2 text-[13px] font-medium rounded-[10px] transition-all ${
-                    bookingFilter === filter.key
-                      ? 'bg-[#c1a0fd] text-white'
-                      : 'bg-white border border-[#e0e2ef] text-[#111125]/60 hover:border-[#c1a0fd]/30 hover:text-[#111125]'
-                  }`}
-                >
-                  {filter.label}
-                </button>
-              ))}
+              ].map(filter => {
+                const count = filter.key === 'all' ? bookings.length : bookings.filter(b => b.status === filter.key).length;
+                const isAction = filter.key === 'pending' || filter.key === 'awaiting_confirmation';
+                return (
+                  <button
+                    key={filter.key}
+                    onClick={() => setBookingFilter(filter.key)}
+                    className={`relative px-4 py-2 text-[13px] font-medium rounded-[10px] transition-all ${
+                      bookingFilter === filter.key
+                        ? 'bg-[#c1a0fd] text-white'
+                        : 'bg-white border border-[#e0e2ef] text-[#111125]/60 hover:border-[#c1a0fd]/30 hover:text-[#111125]'
+                    }`}
+                  >
+                    {filter.label}
+                    {count > 0 && (
+                      <span className={`ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[11px] font-bold rounded-full ${
+                        bookingFilter === filter.key
+                          ? 'bg-white/25 text-white'
+                          : isAction && count > 0
+                            ? 'bg-red-500 text-white'
+                            : 'bg-[#e0e2ef] text-[#111125]/60'
+                      }`}>
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
 
             {/* Bookings List */}

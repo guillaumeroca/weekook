@@ -61,6 +61,10 @@ router.get(
               },
             },
           },
+          reviews: {
+            where: { userId, type: 'user_to_kooker' },
+            select: { id: true },
+          },
         },
         orderBy: { date: 'desc' },
       });

@@ -54,6 +54,7 @@ interface ApiBooking {
       avatar: string | null;
     };
   };
+  reviews?: { id: number }[];
 }
 
 interface ApiFavorite {
@@ -330,6 +331,13 @@ const UserDashboardPage = () => {
           const past = mapped.filter(
             b => b.status === 'completed' || b.status === 'cancelled' || ((b.status === 'pending' || b.status === 'confirmed') && b.date < today)
           );
+
+          // Initialize reviewed booking IDs from API data
+          const reviewed = new Set<number>();
+          bookingsRes.data.forEach(b => {
+            if (b.reviews && b.reviews.length > 0) reviewed.add(b.id);
+          });
+          setReviewedBookingIds(reviewed);
 
           setUpcomingBookings(upcoming);
           setHistoryBookings(past);

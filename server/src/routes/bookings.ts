@@ -382,6 +382,72 @@ router.post(
   }
 );
 
+// PUT /:id/confirm-completion - User confirms the prestation happened
+router.put(
+  '/:id/confirm-completion',
+  authenticate,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) throw new AppError('ID invalide', 400);
+
+      const userId = req.user!.userId;
+
+      const booking = await prisma.booking.findUnique({
+        where: { id },
+        include: {
+          service: { select: { title: true } },
+          kookerProfile: {
+            include: { user: { select: { id: true, email: true, firstName: true, lastName: true } } },
+          },
+          user: { select: { id: true, firstName: true, lastName: true } },
+        },
+      });
+
+      if (!booking) throw new NotFoundError('Réservation non trouvée');
+      if (booking.userId !== userId) throw new ForbiddenError('Accès refusé');
+      if (booking.status !== 'awaiting_confirmation') {
+        throw new AppError('Cette réservation n\'est pas en attente de confirmation.', 400);
+      }
+
+      // Mark as completed
+      const updated = await prisma.booking.update({
+        where: { id },
+        data: { status: 'completed' },
+      });
+
+      // Transfer funds to kooker
+      await executeStripeTransfer(id);
+
+      // Notifications
+      const kookerUser = (booking.kookerProfile as any).user as { id: number; email: string; firstName: string; lastName: string };
+      const clientName = `${booking.user.firstName} ${booking.user.lastName}`.trim();
+      const kookerName = `${kookerUser.firstName} ${kookerUser.lastName}`.trim();
+
+      sendCompletionToKooker(
+        kookerUser.email,
+        kookerName,
+        clientName,
+        booking.service.title,
+        booking.date,
+        booking.totalPriceInCents
+      );
+
+      sendSystemMessage(
+        userId,
+        kookerUser.id,
+        `✅ ${clientName} a confirmé la réalisation de la prestation "${booking.service.title}". Le paiement va être versé sur votre compte.`,
+        booking.kookerProfileId,
+        id
+      );
+
+      res.json({ success: true, data: updated });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 // PUT /:id - Edit booking details (user if pending, kooker if not completed/cancelled)
 router.put(
   '/:id',
@@ -760,72 +826,6 @@ router.put(
         success: true,
         data: updated,
       });
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-// PUT /:id/confirm-completion - User confirms the prestation happened
-router.put(
-  '/:id/confirm-completion',
-  authenticate,
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const id = parseInt(req.params.id, 10);
-      if (isNaN(id)) throw new AppError('ID invalide', 400);
-
-      const userId = req.user!.userId;
-
-      const booking = await prisma.booking.findUnique({
-        where: { id },
-        include: {
-          service: { select: { title: true } },
-          kookerProfile: {
-            include: { user: { select: { id: true, email: true, firstName: true, lastName: true } } },
-          },
-          user: { select: { id: true, firstName: true, lastName: true } },
-        },
-      });
-
-      if (!booking) throw new NotFoundError('Réservation non trouvée');
-      if (booking.userId !== userId) throw new ForbiddenError('Accès refusé');
-      if (booking.status !== 'awaiting_confirmation') {
-        throw new AppError('Cette réservation n\'est pas en attente de confirmation.', 400);
-      }
-
-      // Mark as completed
-      const updated = await prisma.booking.update({
-        where: { id },
-        data: { status: 'completed' },
-      });
-
-      // Transfer funds to kooker
-      await executeStripeTransfer(id);
-
-      // Notifications
-      const kookerUser = (booking.kookerProfile as any).user as { id: number; email: string; firstName: string; lastName: string };
-      const clientName = `${booking.user.firstName} ${booking.user.lastName}`.trim();
-      const kookerName = `${kookerUser.firstName} ${kookerUser.lastName}`.trim();
-
-      sendCompletionToKooker(
-        kookerUser.email,
-        kookerName,
-        clientName,
-        booking.service.title,
-        booking.date,
-        booking.totalPriceInCents
-      );
-
-      sendSystemMessage(
-        userId,
-        kookerUser.id,
-        `✅ ${clientName} a confirmé la réalisation de la prestation "${booking.service.title}". Le paiement va être versé sur votre compte.`,
-        booking.kookerProfileId,
-        id
-      );
-
-      res.json({ success: true, data: updated });
     } catch (error) {
       next(error);
     }

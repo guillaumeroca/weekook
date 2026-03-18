@@ -95,8 +95,8 @@ export default function MessagesPage() {
   const [msgLoading, setMsgLoading] = useState(false);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
-  // Pour les kookers : filtre de contexte
-  const [kookerFilter, setKookerFilter] = useState<'user' | 'kooker'>('user');
+  // Pour les kookers : filtre de contexte (default kooker si l'user est kooker)
+  const [kookerFilter, setKookerFilter] = useState<'user' | 'kooker'>(user?.kookerProfileId ? 'kooker' : 'user');
   // Confirmation suppression
   const [pendingDelete, setPendingDelete] = useState<
     { type: 'message'; id: number } | { type: 'conversation'; id: number } | null

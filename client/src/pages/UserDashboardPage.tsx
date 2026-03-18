@@ -327,10 +327,10 @@ const UserDashboardPage = () => {
 
           const upcoming = mapped.filter(
             b => b.status === 'awaiting_confirmation' || ((b.status === 'pending' || b.status === 'confirmed') && b.date >= today)
-          );
+          ).sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
           const past = mapped.filter(
             b => b.status === 'completed' || b.status === 'cancelled' || ((b.status === 'pending' || b.status === 'confirmed') && b.date < today)
-          );
+          ).sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time));
 
           // Initialize reviewed booking IDs from API data
           const reviewed = new Set<number>();

@@ -518,8 +518,8 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
   };
 
   const filteredBookings = useMemo(() => {
-    if (bookingFilter === 'all') return bookings;
-    return bookings.filter(b => b.status === bookingFilter);
+    const filtered = bookingFilter === 'all' ? bookings : bookings.filter(b => b.status === bookingFilter);
+    return [...filtered].sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
   }, [bookingFilter, bookings]);
 
   const tabs = [

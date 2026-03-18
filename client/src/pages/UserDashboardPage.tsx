@@ -325,10 +325,10 @@ const UserDashboardPage = () => {
           const mapped = bookingsRes.data.map(mapApiBookingToBooking);
 
           const upcoming = mapped.filter(
-            b => (b.status === 'pending' || b.status === 'confirmed' || b.status === 'awaiting_confirmation') && b.date >= today
+            b => b.status === 'awaiting_confirmation' || ((b.status === 'pending' || b.status === 'confirmed') && b.date >= today)
           );
           const past = mapped.filter(
-            b => b.status === 'completed' || b.status === 'cancelled' || b.date < today
+            b => b.status === 'completed' || b.status === 'cancelled' || ((b.status === 'pending' || b.status === 'confirmed') && b.date < today)
           );
 
           setUpcomingBookings(upcoming);

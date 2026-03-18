@@ -380,7 +380,11 @@ export default function BookingDetailPage() {
     try {
       await api.put<{ success: boolean }>(`/bookings/${id}/confirm-completion`);
       setBooking(prev => prev ? { ...prev, status: 'completed' } : prev);
-      toast.success('Prestation confirmée — merci !');
+      toast.success('Prestation confirmée ! Laissez un avis sur votre expérience.');
+      // Open review modal immediately
+      setShowReviewModal(true);
+      setReviewRating(0);
+      setReviewComment('');
     } catch (err: unknown) {
       const e = err as { error?: string };
       toast.error(e?.error || 'Erreur lors de la confirmation');

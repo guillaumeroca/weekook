@@ -431,9 +431,12 @@ const UserDashboardPage = () => {
       const booking = upcomingBookings.find(b => b.id === id);
       if (booking) {
         setUpcomingBookings(prev => prev.filter(b => b.id !== id));
-        setHistoryBookings(prev => [...prev, { ...booking, status: 'completed' as const }]);
+        const completedBooking = { ...booking, status: 'completed' as const };
+        setHistoryBookings(prev => [...prev, completedBooking]);
+        // Open review modal immediately
+        openReviewModal(completedBooking);
       }
-      toast.success('Prestation confirmée !');
+      toast.success('Prestation confirmée ! Laissez un avis sur votre expérience.');
     } catch {
       toast.error('Erreur lors de la confirmation');
     }

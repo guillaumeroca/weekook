@@ -33,11 +33,19 @@ router.get(
     try {
       const userId = req.user!.userId;
 
+      // Load recent messages only (last 500) to avoid loading entire history
       const messages = await prisma.message.findMany({
         where: {
           OR: [{ senderId: userId }, { receiverId: userId }],
         },
-        include: {
+        select: {
+          id: true,
+          senderId: true,
+          receiverId: true,
+          content: true,
+          read: true,
+          kookerRecipientId: true,
+          createdAt: true,
           sender: {
             select: {
               id: true, firstName: true, lastName: true, avatar: true,
@@ -52,6 +60,7 @@ router.get(
           },
         },
         orderBy: { createdAt: 'desc' },
+        take: 500,
       });
 
       // Group par partenaire de conversation
@@ -122,33 +131,34 @@ router.get(
         throw new AppError('ID utilisateur invalide', 400);
       }
 
-      const messages = await prisma.message.findMany({
-        where: {
-          OR: [
-            { senderId: currentUserId, receiverId: otherUserId },
-            { senderId: otherUserId, receiverId: currentUserId },
-          ],
-        },
-        include: {
-          sender: {
-            select: { id: true, firstName: true, lastName: true, avatar: true },
+      // Fetch messages and mark as read in parallel
+      const [messages] = await Promise.all([
+        prisma.message.findMany({
+          where: {
+            OR: [
+              { senderId: currentUserId, receiverId: otherUserId },
+              { senderId: otherUserId, receiverId: currentUserId },
+            ],
           },
-          receiver: {
-            select: { id: true, firstName: true, lastName: true, avatar: true },
+          include: {
+            sender: {
+              select: { id: true, firstName: true, lastName: true, avatar: true },
+            },
+            receiver: {
+              select: { id: true, firstName: true, lastName: true, avatar: true },
+            },
           },
-        },
-        orderBy: { createdAt: 'asc' },
-      });
-
-      // Marquer les messages reçus comme lus
-      await prisma.message.updateMany({
-        where: {
-          senderId: otherUserId,
-          receiverId: currentUserId,
-          read: false,
-        },
-        data: { read: true },
-      });
+          orderBy: { createdAt: 'asc' },
+        }),
+        prisma.message.updateMany({
+          where: {
+            senderId: otherUserId,
+            receiverId: currentUserId,
+            read: false,
+          },
+          data: { read: true },
+        }),
+      ]);
 
       res.json({ success: true, data: messages });
     } catch (error) {
@@ -173,6 +183,7 @@ router.post(
 
       const receiver = await prisma.user.findUnique({
         where: { id: receiverId },
+        select: { id: true, email: true, firstName: true, lastName: true },
       });
 
       if (!receiver) {
@@ -196,14 +207,8 @@ router.post(
         },
       });
 
-      // Notification email async (ne bloque pas la réponse)
-      const sender = await prisma.user.findUnique({
-        where: { id: senderId },
-        select: { firstName: true, lastName: true },
-      });
-      const senderName = sender
-        ? `${sender.firstName} ${sender.lastName}`.trim()
-        : 'Un utilisateur';
+      // Use sender data from the created message include (no extra query needed)
+      const senderName = `${message.sender.firstName} ${message.sender.lastName}`.trim();
       const receiverName = `${receiver.firstName} ${receiver.lastName}`.trim();
 
       sendNewMessageNotification(

@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import prisma from '../lib/prisma.js';
 import { Prisma } from '@prisma/client';
-import { authenticate, requireKooker } from '../middleware/auth.js';
+import { authenticate, requireKooker, invalidateAuthCache } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { becomeKookerSchema, updateKookerProfileSchema } from '../schemas/kooker.js';
 import { AppError, NotFoundError } from '../utils/errors.js';
@@ -309,7 +309,7 @@ router.post(
         throw new AppError('Vous etes deja kooker', 409);
       }
 
-      const { bio, specialties, type, city, experience } = req.body;
+      const { bio, specialties, type, city, experience, isCompany } = req.body;
 
       const kookerProfile = await prisma.kookerProfile.create({
         data: {
@@ -319,6 +319,8 @@ router.post(
           type,
           city,
           experience,
+          isCompany: isCompany ?? false,
+          active: false,
         },
       });
 
@@ -327,6 +329,9 @@ router.post(
         where: { id: userId },
         data: { role: 'kooker' },
       });
+
+      // Invalidate auth cache so next request picks up new role + kookerProfileId
+      invalidateAuthCache(userId);
 
       res.status(201).json({
         success: true,
@@ -347,7 +352,7 @@ router.put(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const kookerProfileId = req.user!.kookerProfileId!;
-      const { bio, specialties, type, city, experience, address } = req.body;
+      const { bio, specialties, type, city, experience, address, isCompany } = req.body;
 
       const data: Record<string, unknown> = {};
       if (bio !== undefined) data.bio = bio;
@@ -356,6 +361,7 @@ router.put(
       if (city !== undefined) data.city = city;
       if (experience !== undefined) data.experience = experience;
       if (address !== undefined) data.address = address;
+      if (isCompany !== undefined) data.isCompany = isCompany;
 
       const updated = await prisma.kookerProfile.update({
         where: { id: kookerProfileId },

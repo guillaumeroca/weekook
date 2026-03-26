@@ -1,5 +1,6 @@
 import { Resend } from 'resend';
 import { env } from '../config/env.js';
+import prisma from './prisma.js';
 
 // Initialisation lazy — ne pas créer le client si pas de clé API
 let _resend: Resend | null = null;
@@ -268,6 +269,98 @@ export async function sendBookingCancelledToKooker(
   await sendEmail(kookerEmail, `Annulation de ${clientName} — ${serviceName}`, html, 'booking-cancelled-to-kooker');
 }
 
+// ─── Kooker pending reminders ─────────────────────────────────────────────────
+
+export async function sendPendingReminderToKooker1(
+  kookerEmail: string,
+  kookerName: string,
+  clientName: string,
+  serviceTitle: string,
+  date: Date | string
+): Promise<void> {
+  const html = emailWrapper(
+    '📅',
+    `Nouvelle demande en attente`,
+    `<p style="color:#6b7280;font-size:14px;margin:0 0 16px 0;">Bonjour ${kookerName}, <strong>${clientName}</strong> vous a envoyé une demande de réservation pour <strong>${serviceTitle}</strong> le <strong>${formatDate(date)}</strong>.</p>
+    <p style="color:#6b7280;font-size:13px;margin:0;">Connectez-vous pour accepter ou refuser cette demande.</p>`,
+    `${env.APP_URL}/tableau-de-bord`,
+    'Voir la demande'
+  );
+  await sendEmail(kookerEmail, `Demande en attente — ${serviceTitle}`, html, 'pending-reminder-1');
+}
+
+export async function sendPendingReminderToKooker2(
+  kookerEmail: string,
+  kookerName: string,
+  clientName: string,
+  serviceTitle: string,
+  date: Date | string
+): Promise<void> {
+  const html = emailWrapper(
+    '⏰',
+    `Répondez sous 48h`,
+    `<p style="color:#6b7280;font-size:14px;margin:0 0 16px 0;">Bonjour ${kookerName}, la demande de <strong>${clientName}</strong> pour <strong>${serviceTitle}</strong> le <strong>${formatDate(date)}</strong> est toujours en attente.</p>
+    <p style="color:#6b7280;font-size:13px;margin:0;">Merci de répondre sous <strong>48 heures</strong>, sinon la réservation sera automatiquement annulée.</p>`,
+    `${env.APP_URL}/tableau-de-bord`,
+    'Répondre maintenant'
+  );
+  await sendEmail(kookerEmail, `Rappel — Répondez à ${clientName} pour ${serviceTitle}`, html, 'pending-reminder-2');
+}
+
+export async function sendPendingReminderToKooker3(
+  kookerEmail: string,
+  kookerName: string,
+  clientName: string,
+  serviceTitle: string,
+  date: Date | string
+): Promise<void> {
+  const html = emailWrapper(
+    '⚠️',
+    `Dernier rappel — annulation dans 24h`,
+    `<p style="color:#6b7280;font-size:14px;margin:0 0 16px 0;">Bonjour ${kookerName}, c'est votre <strong>dernier rappel</strong> pour la demande de <strong>${clientName}</strong> pour <strong>${serviceTitle}</strong> le <strong>${formatDate(date)}</strong>.</p>
+    <p style="color:#6b7280;font-size:13px;margin:0;">Sans réponse de votre part dans les <strong>24 prochaines heures</strong>, la réservation sera automatiquement annulée.</p>`,
+    `${env.APP_URL}/tableau-de-bord`,
+    'Répondre maintenant'
+  );
+  await sendEmail(kookerEmail, `Dernier rappel — ${serviceTitle} avec ${clientName}`, html, 'pending-reminder-3');
+}
+
+export async function sendBookingExpiredToUser(
+  userEmail: string,
+  userName: string,
+  kookerName: string,
+  serviceTitle: string,
+  date: Date | string
+): Promise<void> {
+  const html = emailWrapper(
+    '❌',
+    `Réservation annulée — pas de réponse du kooker`,
+    `<p style="color:#6b7280;font-size:14px;margin:0 0 16px 0;">Bonjour ${userName}, votre réservation pour <strong>${serviceTitle}</strong> le <strong>${formatDate(date)}</strong> avec <strong>${kookerName}</strong> a été automatiquement annulée.</p>
+    <p style="color:#6b7280;font-size:13px;margin:0;">Le kooker n'a pas répondu dans le délai imparti. Votre pré-autorisation bancaire a été libérée — aucun montant n'a été débité.</p>`,
+    `${env.APP_URL}/recherche`,
+    'Trouver un autre kooker'
+  );
+  await sendEmail(userEmail, `Réservation annulée — ${serviceTitle}`, html, 'booking-expired-to-user');
+}
+
+export async function sendBookingExpiredToKooker(
+  kookerEmail: string,
+  kookerName: string,
+  clientName: string,
+  serviceTitle: string,
+  date: Date | string
+): Promise<void> {
+  const html = emailWrapper(
+    '❌',
+    `Réservation annulée faute de réponse`,
+    `<p style="color:#6b7280;font-size:14px;margin:0 0 16px 0;">Bonjour ${kookerName}, la réservation de <strong>${clientName}</strong> pour <strong>${serviceTitle}</strong> le <strong>${formatDate(date)}</strong> a été automatiquement annulée car vous n'avez pas répondu dans les 72 heures.</p>
+    <p style="color:#6b7280;font-size:13px;margin:0;">Pensez à répondre rapidement aux prochaines demandes pour ne pas perdre de clients.</p>`,
+    `${env.APP_URL}/tableau-de-bord`,
+    'Voir mon tableau de bord'
+  );
+  await sendEmail(kookerEmail, `Réservation annulée — ${serviceTitle} avec ${clientName}`, html, 'booking-expired-to-kooker');
+}
+
 // ─── Post-prestation confirmation emails ─────────────────────────────────────
 
 export async function sendConfirmationRequestToUser(
@@ -371,4 +464,35 @@ export async function sendCompletionToKooker(
     'Voir mon tableau de bord'
   );
   await sendEmail(kookerEmail, `Paiement en cours — ${serviceName}`, html, 'completion-to-kooker');
+}
+
+// ─── Kooker auto-validation notification ─────────────────────────────────────
+
+export async function sendKookerAutoValidatedToAdmins(
+  kookerName: string,
+  kookerId: number
+): Promise<void> {
+  const admins = await prisma.user.findMany({
+    where: { role: 'admin' },
+    select: { email: true },
+  });
+
+  if (admins.length === 0) return;
+
+  const html = emailWrapper(
+    '✅',
+    'Kooker auto-validé',
+    `<p style="color:#374151;font-size:14px;line-height:1.6;">
+      Le kooker <strong>${kookerName}</strong> (#${String(kookerId).padStart(5, '0')}) a été automatiquement validé.
+    </p>
+    <p style="color:#6b7280;font-size:13px;margin-top:8px;">
+      Toutes les conditions sont remplies : données complètes, au moins une spécialité, et identité vérifiée via Stripe.
+    </p>`,
+    `${env.APP_URL}/admin/kookers`,
+    'Voir les kookers'
+  );
+
+  for (const admin of admins) {
+    await sendEmail(admin.email, `Kooker auto-validé : ${kookerName}`, html, 'kooker-auto-validated');
+  }
 }

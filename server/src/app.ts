@@ -104,13 +104,15 @@ const CONFIG_DEFAULTS: Record<string, unknown> = {
 };
 
 async function seedConfig() {
-  for (const [key, value] of Object.entries(CONFIG_DEFAULTS)) {
-    await prisma.config.upsert({
-      where: { key },
-      update: {},
-      create: { key, value: JSON.stringify(value) },
-    });
-  }
+  await Promise.all(
+    Object.entries(CONFIG_DEFAULTS).map(([key, value]) =>
+      prisma.config.upsert({
+        where: { key },
+        update: {},
+        create: { key, value: JSON.stringify(value) },
+      })
+    )
+  );
 }
 
 // ── Start server ──
@@ -126,14 +128,14 @@ app.listen(env.PORT, async () => {
     console.error('Database connection failed:', e);
   }
 
-  // Keepalive : single ping toutes les 30s pour maintenir la connexion
+  // Keepalive : single ping toutes les 60s pour maintenir la connexion
   setInterval(async () => {
     try {
       await prisma.$queryRaw`SELECT 1`;
     } catch (e) {
       console.error('DB keepalive failed:', e);
     }
-  }, 30_000);
+  }, 60_000);
 });
 
 export default app;

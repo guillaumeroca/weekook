@@ -430,7 +430,7 @@ export default function BookingDetailPage() {
           Retour
         </button>
 
-        <div className="max-w-[680px]">
+        <div className="max-w-[680px] mx-auto">
 
           {/* ── Header card ── */}
           <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm mb-4">

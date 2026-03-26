@@ -176,6 +176,14 @@ router.post(
       const userId = req.user!.userId;
       const { serviceId, date, startTime, guests, notes } = req.body;
 
+      // Validate date is not in the past
+      const bookingDate = new Date(date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (bookingDate < today) {
+        throw new AppError('La date de réservation est dépassée', 400);
+      }
+
       // Get the service to calculate total price and find kooker
       const service = await prisma.service.findUnique({
         where: { id: serviceId },
@@ -319,6 +327,7 @@ router.post(
         where: { id },
         include: {
           service: { select: { title: true } },
+          user: { select: { firstName: true, lastName: true } },
           kookerProfile: {
             include: { user: { select: { id: true, email: true, firstName: true, lastName: true } } },
           },
@@ -332,6 +341,18 @@ router.post(
         return res.json({ success: true, data: { status: booking.paymentStatus } });
       }
 
+      // Check booking date is not in the past
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (new Date(booking.date) < today) {
+        // Cancel PaymentIntent and booking
+        if (stripe && booking.stripePaymentIntentId) {
+          try { await stripe.paymentIntents.cancel(booking.stripePaymentIntentId); } catch (e) { console.error('[booking] Stripe cancel error:', e); }
+        }
+        await prisma.booking.update({ where: { id }, data: { status: 'cancelled', paymentStatus: 'cancelled' } });
+        throw new AppError('La date de réservation est dépassée, la réservation a été annulée', 400);
+      }
+
       // Verify PaymentIntent status with Stripe
       if (stripe && booking.stripePaymentIntentId) {
         const pi = await stripe.paymentIntents.retrieve(booking.stripePaymentIntentId);
@@ -340,24 +361,23 @@ router.post(
         }
       }
 
-      // Update payment status
-      await prisma.booking.update({
-        where: { id },
-        data: { paymentStatus: 'authorized' },
-      });
-
-      // Update audit record
-      if (booking.stripePaymentIntentId) {
-        await prisma.payment.updateMany({
-          where: { bookingId: id, type: 'authorization', status: 'pending' },
-          data: { status: 'succeeded' },
-        });
-      }
+      // Update payment status + audit record in parallel
+      await Promise.all([
+        prisma.booking.update({
+          where: { id },
+          data: { paymentStatus: 'authorized' },
+        }),
+        booking.stripePaymentIntentId
+          ? prisma.payment.updateMany({
+              where: { bookingId: id, type: 'authorization', status: 'pending' },
+              data: { status: 'succeeded' },
+            })
+          : Promise.resolve(),
+      ]);
 
       // Send notifications to kooker (moved here from booking creation)
       const kookerUser = booking.kookerProfile.user as { id: number; email: string; firstName: string; lastName: string };
-      const clientUser = await prisma.user.findUnique({ where: { id: userId }, select: { firstName: true, lastName: true } });
-      const clientName = clientUser ? `${clientUser.firstName} ${clientUser.lastName}`.trim() : 'Un utilisateur';
+      const clientName = `${booking.user.firstName} ${booking.user.lastName}`.trim();
       const kookerName = `${kookerUser.firstName} ${kookerUser.lastName}`.trim();
 
       sendBookingRequestToKooker(
@@ -590,6 +610,20 @@ router.put(
       }
       if (booking.kookerProfileId !== kookerProfileId) {
         throw new ForbiddenError('Vous ne pouvez modifier que vos propres reservations');
+      }
+
+      // ── Date validation: block acceptance if date is past ──
+      if (status === 'confirmed') {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (new Date(booking.date) < today) {
+          // Auto-cancel booking + release pre-auth
+          if (stripe && booking.stripePaymentIntentId && (booking.paymentStatus === 'authorized' || booking.paymentStatus === 'pending_authorization')) {
+            try { await stripe.paymentIntents.cancel(booking.stripePaymentIntentId); } catch (e) { console.error('[booking] Stripe cancel error:', e); }
+          }
+          await prisma.booking.update({ where: { id }, data: { status: 'cancelled', paymentStatus: 'cancelled' } });
+          throw new AppError('La date est dépassée, la réservation a été annulée automatiquement', 400);
+        }
       }
 
       // ── Stripe: Capture on confirmation ──

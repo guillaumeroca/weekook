@@ -6,6 +6,7 @@ export const becomeKookerSchema = z.object({
   type: z.array(z.string()),
   city: z.string().min(1, 'La ville est requise'),
   experience: z.string().optional(),
+  isCompany: z.boolean().optional(),
 });
 
 export const updateKookerProfileSchema = z.object({
@@ -15,6 +16,7 @@ export const updateKookerProfileSchema = z.object({
   city: z.string().optional(),
   experience: z.string().optional(),
   address: z.string().optional(),
+  isCompany: z.boolean().optional(),
 });
 
 export const updateUserProfileSchema = z.object({

@@ -4,6 +4,7 @@ import stripe from '../lib/stripe.js';
 import { env } from '../config/env.js';
 import { authenticate, requireKooker } from '../middleware/auth.js';
 import { AppError } from '../utils/errors.js';
+import { tryAutoValidateKooker } from '../utils/kookerAutoValidate.js';
 import Stripe from 'stripe';
 
 const router = Router();
@@ -29,17 +30,50 @@ router.post(
 
       const kookerProfile = await prisma.kookerProfile.findUnique({
         where: { id: kookerProfileId },
-        select: { stripeAccountId: true },
+        select: { stripeAccountId: true, isCompany: true },
       });
 
+      const businessType: 'company' | 'individual' = kookerProfile?.isCompany ? 'company' : 'individual';
       let stripeAccountId = kookerProfile?.stripeAccountId;
+
+      // If a Stripe account exists, check if business_type matches
+      if (stripeAccountId) {
+        const existingAccount = await stripe.accounts.retrieve(stripeAccountId);
+        if (existingAccount.business_type !== businessType) {
+          // Business type changed — create a new Stripe account
+          const newAccount = await stripe.accounts.create({
+            type: 'express',
+            country: 'FR',
+            business_type: businessType,
+            business_profile: {
+              mcc: '5812',
+              url: 'https://weekook.com',
+              product_description: 'Services de cuisine à domicile via la plateforme Weekook',
+            },
+            capabilities: {
+              card_payments: { requested: true },
+              transfers: { requested: true },
+            },
+            metadata: {
+              kookerProfileId: String(kookerProfileId),
+            },
+          });
+
+          stripeAccountId = newAccount.id;
+
+          await prisma.kookerProfile.update({
+            where: { id: kookerProfileId },
+            data: { stripeAccountId, stripeOnboardingComplete: false },
+          });
+        }
+      }
 
       // Create a new Express account if none exists
       if (!stripeAccountId) {
         const account = await stripe.accounts.create({
           type: 'express',
           country: 'FR',
-          business_type: 'individual',
+          business_type: businessType,
           business_profile: {
             mcc: '5812',
             url: 'https://weekook.com',
@@ -109,6 +143,11 @@ router.get(
           where: { id: kookerProfileId },
           data: { stripeOnboardingComplete: true },
         });
+
+        // Try auto-validation
+        tryAutoValidateKooker(kookerProfileId).catch((err) => {
+          console.error('[stripe/status] Auto-validate error:', err);
+        });
       }
 
       res.json({
@@ -171,6 +210,17 @@ router.post('/webhook', async (req: Request, res: Response) => {
             where: { stripeAccountId: account.id },
             data: { stripeOnboardingComplete: true },
           });
+
+          // Try auto-validation
+          const kp = await prisma.kookerProfile.findFirst({
+            where: { stripeAccountId: account.id },
+            select: { id: true },
+          });
+          if (kp) {
+            tryAutoValidateKooker(kp.id).catch((err) => {
+              console.error('[stripe/webhook] Auto-validate error:', err);
+            });
+          }
         }
         break;
       }

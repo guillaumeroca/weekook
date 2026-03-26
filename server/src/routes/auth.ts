@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import prisma from '../lib/prisma.js';
 import bcrypt from 'bcrypt';
-import { signToken } from '../utils/jwt.js';
+import { signToken, INACTIVITY_TIMEOUT_MS } from '../utils/jwt.js';
 import { authenticate } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { rateLimit } from '../middleware/rateLimit.js';
@@ -15,7 +15,7 @@ const COOKIE_OPTIONS = {
   httpOnly: true,
   secure: env.NODE_ENV === 'production',
   sameSite: 'strict' as const,
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  maxAge: INACTIVITY_TIMEOUT_MS, // 2h inactivity timeout
   path: '/',
 };
 

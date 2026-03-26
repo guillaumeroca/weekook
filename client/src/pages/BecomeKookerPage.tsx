@@ -22,6 +22,7 @@ export default function BecomeKookerPage() {
     experience: 0,
     maxCapacity: 1,
     availability: '',
+    isCompany: false,
   });
 
   const [newSpecialty, setNewSpecialty] = useState('');
@@ -65,19 +66,10 @@ export default function BecomeKookerPage() {
         type: ['KOOK', 'KOURS'],
         city: formData.city,
         experience: formData.experience + ' ans',
+        isCompany: formData.isCompany,
       });
-      toast.success('Félicitations ! Vous êtes maintenant Kooker !');
-      // Refresh user to get kookerProfileId
+      toast.success('Votre profil Kooker a été créé ! Il sera visible après validation.');
       await refreshUser();
-      // Try to redirect to Stripe onboarding
-      try {
-        const stripeRes = await api.post<{ url: string }>('/stripe/connect/onboard');
-        if (stripeRes.success && stripeRes.data?.url) {
-          toast.info('Configurez vos paiements via Stripe pour recevoir vos revenus.');
-          window.location.href = stripeRes.data.url;
-          return;
-        }
-      } catch { /* If Stripe onboarding fails, just go to dashboard */ }
       navigate('/kooker-dashboard');
     } catch (err) {
       toast.error('Erreur lors de la création du profil kooker');
@@ -166,6 +158,27 @@ export default function BecomeKookerPage() {
                       required
                       className="h-[48px] bg-white border-[#e0e2ef] rounded-[12px] text-[14px] text-[#111125] placeholder:text-[#111125]/30 focus-visible:border-[#c1a0fd] focus-visible:ring-[#c1a0fd]/20"
                     />
+                  </div>
+
+                  <div>
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.isCompany}
+                        onChange={(e) =>
+                          setFormData((prev) => ({ ...prev, isCompany: e.target.checked }))
+                        }
+                        className="mt-0.5 w-5 h-5 rounded-[4px] border-[#e0e2ef] text-[#c1a0fd] focus:ring-[#c1a0fd]/20 cursor-pointer accent-[#c1a0fd]"
+                      />
+                      <div>
+                        <span className="text-[14px] font-semibold text-[#111125]">
+                          J'exerce en tant que société
+                        </span>
+                        <p className="text-[12px] text-[#828294] mt-0.5">
+                          Cochez si vous exercez sous forme de société (SARL, SAS, auto-entrepreneur avec SIRET...)
+                        </p>
+                      </div>
+                    </label>
                   </div>
                 </div>
               </div>

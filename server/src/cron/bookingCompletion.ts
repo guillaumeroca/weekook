@@ -1,12 +1,18 @@
 import cron from 'node-cron';
 import prisma from '../lib/prisma.js';
 import { executeStripeTransfer } from '../lib/bookingTransfer.js';
+import stripe from '../lib/stripe.js';
 import {
   sendConfirmationRequestToUser,
   sendConfirmationReminder1ToUser,
   sendConfirmationReminder2ToUser,
   sendAutoConfirmationToUser,
   sendCompletionToKooker,
+  sendPendingReminderToKooker1,
+  sendPendingReminderToKooker2,
+  sendPendingReminderToKooker3,
+  sendBookingExpiredToUser,
+  sendBookingExpiredToKooker,
 } from '../lib/email.js';
 
 // Timezone Europe/Paris
@@ -222,6 +228,147 @@ async function autoConfirm(): Promise<void> {
 }
 
 /**
+ * Task 4: Send reminders to kookers for pending bookings.
+ * +4h → reminder 1, +24h → reminder 2, +48h → reminder 3.
+ * Runs every 15 minutes.
+ */
+async function sendKookerPendingReminders(): Promise<void> {
+  try {
+    const now = new Date();
+
+    const pendingBookings = await prisma.booking.findMany({
+      where: {
+        status: 'pending',
+        paymentStatus: 'authorized',
+      },
+      include: {
+        service: { select: { title: true } },
+        user: { select: { firstName: true, lastName: true } },
+        kookerProfile: {
+          include: { user: { select: { email: true, firstName: true, lastName: true } } },
+        },
+      },
+    });
+
+    for (const booking of pendingBookings) {
+      const hoursSinceCreated = (now.getTime() - new Date(booking.createdAt).getTime()) / (1000 * 60 * 60);
+      const kookerUser = (booking.kookerProfile as any).user as { email: string; firstName: string; lastName: string };
+      const kookerName = `${kookerUser.firstName} ${kookerUser.lastName}`.trim();
+      const clientName = `${booking.user.firstName} ${booking.user.lastName}`.trim();
+
+      // Reminder 1: after 4h
+      if (hoursSinceCreated >= 4 && !booking.kookerReminderSentAt1) {
+        await prisma.booking.update({
+          where: { id: booking.id },
+          data: { kookerReminderSentAt1: now },
+        });
+        sendPendingReminderToKooker1(kookerUser.email, kookerName, clientName, booking.service.title, booking.date);
+        console.log(`[cron] Booking ${booking.id}: kooker reminder 1 sent`);
+      }
+
+      // Reminder 2: after 24h
+      if (hoursSinceCreated >= 24 && !booking.kookerReminderSentAt2) {
+        await prisma.booking.update({
+          where: { id: booking.id },
+          data: { kookerReminderSentAt2: now },
+        });
+        sendPendingReminderToKooker2(kookerUser.email, kookerName, clientName, booking.service.title, booking.date);
+        console.log(`[cron] Booking ${booking.id}: kooker reminder 2 sent`);
+      }
+
+      // Reminder 3: after 48h
+      if (hoursSinceCreated >= 48 && !booking.kookerReminderSentAt3) {
+        await prisma.booking.update({
+          where: { id: booking.id },
+          data: { kookerReminderSentAt3: now },
+        });
+        sendPendingReminderToKooker3(kookerUser.email, kookerName, clientName, booking.service.title, booking.date);
+        console.log(`[cron] Booking ${booking.id}: kooker reminder 3 (last) sent`);
+      }
+    }
+  } catch (err) {
+    console.error('[cron] sendKookerPendingReminders error:', err);
+  }
+}
+
+/**
+ * Task 5: Auto-expire pending bookings after 72h without kooker response, or if date is past.
+ * Cancels Stripe pre-auth + sends emails to both parties + system message.
+ * Runs every 15 minutes.
+ */
+async function autoExpirePendingBookings(): Promise<void> {
+  try {
+    const now = new Date();
+    const cutoff72h = new Date(now.getTime() - 72 * 60 * 60 * 1000);
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const expiredBookings = await prisma.booking.findMany({
+      where: {
+        status: 'pending',
+        paymentStatus: { in: ['authorized', 'pending_authorization'] },
+        OR: [
+          { createdAt: { lte: cutoff72h } },
+          { date: { lt: todayStart } },
+        ],
+      },
+      include: {
+        service: { select: { title: true } },
+        user: { select: { id: true, email: true, firstName: true, lastName: true } },
+        kookerProfile: {
+          include: { user: { select: { id: true, email: true, firstName: true, lastName: true } } },
+        },
+      },
+    });
+
+    for (const booking of expiredBookings) {
+      // Cancel Stripe pre-auth
+      if (stripe && booking.stripePaymentIntentId) {
+        try {
+          await stripe.paymentIntents.cancel(booking.stripePaymentIntentId);
+        } catch (e) {
+          console.error(`[cron] Stripe cancel error for booking ${booking.id}:`, e);
+        }
+      }
+
+      // Update booking
+      const result = await prisma.booking.updateMany({
+        where: { id: booking.id, status: 'pending' },
+        data: { status: 'cancelled', paymentStatus: 'cancelled' },
+      });
+      if (result.count === 0) continue;
+
+      const userName = `${booking.user.firstName} ${booking.user.lastName}`.trim();
+      const kookerUser = (booking.kookerProfile as any).user as { id: number; email: string; firstName: string; lastName: string };
+      const kookerName = `${kookerUser.firstName} ${kookerUser.lastName}`.trim();
+
+      // Emails
+      sendBookingExpiredToUser(booking.user.email, userName, kookerName, booking.service.title, booking.date);
+      sendBookingExpiredToKooker(kookerUser.email, kookerName, userName, booking.service.title, booking.date);
+
+      // System message
+      try {
+        await prisma.message.create({
+          data: {
+            senderId: kookerUser.id,
+            receiverId: booking.user.id,
+            content: `❌ Votre réservation pour "${booking.service.title}" du ${new Date(booking.date).toLocaleDateString('fr-FR')} a été automatiquement annulée (pas de réponse du kooker dans le délai imparti).`,
+            kookerRecipientId: booking.kookerProfileId,
+            bookingId: booking.id,
+          },
+        });
+      } catch (err) {
+        console.error('[cron] System message error:', err);
+      }
+
+      console.log(`[cron] Booking ${booking.id}: auto-expired (pending too long or date past)`);
+    }
+  } catch (err) {
+    console.error('[cron] autoExpirePendingBookings error:', err);
+  }
+}
+
+/**
  * Start all booking completion cron jobs.
  */
 export function startBookingCompletionCron(): void {
@@ -233,6 +380,12 @@ export function startBookingCompletionCron(): void {
 
   // Every 15 minutes: auto-confirm after 48h
   cron.schedule('*/15 * * * *', autoConfirm, { timezone: TZ });
+
+  // Every 15 minutes: send kooker reminders for pending bookings
+  cron.schedule('*/15 * * * *', sendKookerPendingReminders, { timezone: TZ });
+
+  // Every 15 minutes: auto-expire pending bookings (72h or date past)
+  cron.schedule('*/15 * * * *', autoExpirePendingBookings, { timezone: TZ });
 
   console.log('[cron] Booking completion cron jobs started');
 }

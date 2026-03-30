@@ -1,0 +1,25 @@
+name: Deploy to val.weekook.com
+
+on:
+  push:
+    branches:
+      - staging
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /var/www/weekook-val
+            git pull origin staging
+            npm install --workspaces --if-present
+            npx prisma generate
+            npx prisma db push --accept-data-loss
+            npm run build
+            pm2 reload weekook-val

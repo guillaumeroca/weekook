@@ -10,7 +10,7 @@ Chaque environnement est lié à une **branche Git** et se déploie automatiquem
  ───────────         ─────────────           ──────────             ──────────
  localhost:5173  →   dev.weekook.com    →    val.weekook.com   →   weekook.com
  localhost:3001      branche: develop        branche: staging       branche: main
-                     auto-deploy ✓           auto-deploy ✓          auto-deploy (futur)
+                     auto-deploy ✓           auto-deploy ✓          auto-deploy + approbation ✓
 ```
 
 ---
@@ -54,16 +54,19 @@ Le frontend Vite proxifie automatiquement `/api` et `/uploads` vers le backend l
 | Process PM2  | `weekook-val`                   |
 | Workflow     | `.github/workflows/deploy-val.yml` |
 
-### 1.4 PROD (weekook.com) — futur
+### 1.4 PROD (weekook.com)
 
-| Élément      | Valeur (prévue)                 |
+| Élément      | Valeur                          |
 |--------------|---------------------------------|
 | URL          | https://weekook.com             |
 | Branche Git  | `main`                          |
+| Serveur      | 91.99.128.31 (Hetzner)         |
 | Répertoire   | `/var/www/weekook-prod/`        |
 | Base de données | `weekook_PRD`               |
 | Port backend | 3003                            |
 | Process PM2  | `weekook-prod`                  |
+| Workflow     | `.github/workflows/deploy-prod.yml` |
+| Particularité | **Approbation manuelle requise** via GitHub Environment `production` |
 
 ---
 
@@ -76,7 +79,7 @@ develop    ← développement quotidien, auto-deploy sur dev.weekook.com
    ↓ merge
 staging    ← validation client/métier, auto-deploy sur val.weekook.com
    ↓ merge
-main       ← production (futur), auto-deploy sur weekook.com
+main       ← production, auto-deploy + approbation manuelle sur weekook.com
 ```
 
 ### 2.2 Flux de travail quotidien
@@ -111,13 +114,15 @@ git push origin staging
 # → GitHub Actions déploie automatiquement sur val.weekook.com (≈30s)
 ```
 
-**Promouvoir en production (futur) :**
+**Promouvoir en production :**
 
 ```bash
 git checkout main
 git merge staging
 git push origin main
-# → GitHub Actions déploiera automatiquement sur weekook.com
+# → GitHub Actions crée un run en attente d'approbation
+# → Aller sur GitHub → Actions → Cliquer "Review deployments" → Approuver
+# → Le déploiement s'exécute sur weekook.com
 ```
 
 ### 2.3 Résumé en une commande
@@ -129,7 +134,7 @@ git push origin develop
 # Déployer sur VAL :
 git checkout staging && git merge develop && git push origin staging
 
-# Déployer sur PROD (futur) :
+# Déployer sur PROD (nécessite approbation dans GitHub Actions) :
 git checkout main && git merge staging && git push origin main
 ```
 
@@ -145,6 +150,7 @@ Chaque environnement a un fichier workflow dans `.github/workflows/` :
 |---------------------------|----------------------------|----------------------|
 | `deploy-dev.yml`          | Push sur `develop`         | dev.weekook.com      |
 | `deploy-val.yml`          | Push sur `staging`         | val.weekook.com      |
+| `deploy-prod.yml`         | Push sur `main` + approbation | weekook.com       |
 
 ### 3.2 Ce que fait un déploiement
 
@@ -222,6 +228,7 @@ Chaque environnement a sa config Nginx :
 ```
 /etc/nginx/sites-available/weekook-dev    → dev.weekook.com
 /etc/nginx/sites-available/weekook-val    → val.weekook.com
+/etc/nginx/sites-available/weekook.com    → weekook.com (+ www redirect)
 ```
 
 Nginx gère :
@@ -241,10 +248,12 @@ pm2 status
 # Logs d'un processus
 pm2 logs weekook-dev
 pm2 logs weekook-val
+pm2 logs weekook-prod
 
 # Redémarrer manuellement
 pm2 reload weekook-dev
 pm2 reload weekook-val
+pm2 reload weekook-prod
 
 # Sauvegarder la config PM2 (persist au reboot)
 pm2 save
@@ -257,18 +266,19 @@ Chaque environnement a son propre `.env` (jamais committé) :
 ```
 /var/www/weekook-dev/.env    → config DEV
 /var/www/weekook-val/.env    → config VAL
+/var/www/weekook-prod/.env   → config PROD
 ```
 
 Variables clés qui changent entre environnements :
 
-| Variable         | DEV                              | VAL                              |
-|-----------------|----------------------------------|----------------------------------|
-| DATABASE_URL    | mysql://...@localhost/weekook_DEV | mysql://...@localhost/weekook_VAL |
-| PORT            | 3001                             | 3002                             |
-| CORS_ORIGIN     | https://dev.weekook.com          | https://val.weekook.com          |
-| COOKIE_DOMAIN   | dev.weekook.com                  | val.weekook.com                  |
-| APP_URL         | https://dev.weekook.com          | https://val.weekook.com          |
-| JWT_SECRET      | (secret unique DEV)              | (secret unique VAL)              |
+| Variable         | DEV                              | VAL                              | PROD                             |
+|-----------------|----------------------------------|----------------------------------|----------------------------------|
+| DATABASE_URL    | mysql://...@localhost/weekook_DEV | mysql://...@localhost/weekook_VAL | mysql://...@localhost/weekook_PRD |
+| PORT            | 3001                             | 3002                             | 3003                             |
+| CORS_ORIGIN     | https://dev.weekook.com          | https://val.weekook.com          | https://weekook.com              |
+| COOKIE_DOMAIN   | dev.weekook.com                  | val.weekook.com                  | weekook.com                      |
+| APP_URL         | https://dev.weekook.com          | https://val.weekook.com          | https://weekook.com              |
+| JWT_SECRET      | (secret unique DEV)              | (secret unique VAL)              | (secret unique PROD)             |
 
 ---
 
@@ -286,6 +296,10 @@ git add . && git commit -m "fix: description" && git push origin develop
 # Propager immédiatement en VAL
 git checkout staging && git merge develop && git push origin staging
 # → VAL mis à jour
+
+# Propager en PROD (si validé en VAL)
+git checkout main && git merge staging && git push origin main
+# → Approuver dans GitHub Actions → PROD mis à jour
 ```
 
 ### 5.2 Vérifier l'état du serveur
@@ -379,6 +393,7 @@ sudo nginx -t
 # 3. Vérifier le port
 curl http://localhost:3001/api/v1/auth/me   # DEV
 curl http://localhost:3002/api/v1/auth/me   # VAL
+curl http://localhost:3003/api/v1/auth/me   # PROD
 ```
 
 ### Problème de certificat SSL

@@ -300,3 +300,26 @@ model Testimonial {
 
   @@map("testimonials")
 }
+
+model ErrorLog {
+  id         Int      @id @default(autoincrement())
+  message    String   @db.Text
+  stack      String?  @db.LongText
+  route      String?
+  method     String?
+  statusCode Int?     @map("status_code")
+  userId     Int?     @map("user_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("error_logs")
+}
+
+model PageViewLog {
+  id         Int      @id @default(autoincrement())
+  page       String
+  loadTimeMs Int      @map("load_time_ms")
+  userId     Int?     @map("user_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("page_view_logs")
+}

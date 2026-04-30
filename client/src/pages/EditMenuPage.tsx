@@ -14,6 +14,7 @@ import {
   Trash2,
   Loader2,
 } from 'lucide-react';
+import { usePageTiming } from '@/hooks/usePageTiming';
 
 // ────────────────────────── Types ──────────────────────────
 
@@ -37,6 +38,7 @@ export default function EditMenuPage() {
   const { id } = useParams();
 
   const [isLoading, setIsLoading] = useState(true);
+  usePageTiming('Modifier une offre', !isLoading);
 
   // Service type selection
   const [serviceTypes, setServiceTypes] = useState<string[]>([]);

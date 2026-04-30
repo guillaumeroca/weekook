@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { usePageTiming } from '@/hooks/usePageTiming';
 
 const KOOKER_PLACEHOLDER_IMAGES = [
   'https://images.unsplash.com/photo-1496952286950-c36951138af4?w=600&h=400&fit=crop',
@@ -251,6 +252,7 @@ export default function KookerProfilePage() {
   const { user } = useAuth();
 
   const [isLoading, setIsLoading] = useState(true);
+  usePageTiming('Profil Kooker', !isLoading);
   const [profile, setProfile] = useState<KookerProfile | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
 

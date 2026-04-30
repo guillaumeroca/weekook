@@ -2,6 +2,8 @@ import { Router, Request, Response, NextFunction } from 'express';
 import prisma from '../lib/prisma.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
 import { NotFoundError } from '../utils/errors.js';
+import fs from 'fs';
+import path from 'path';
 
 const router = Router();
 
@@ -373,6 +375,239 @@ router.put('/config/:key', async (req: Request, res: Response, next: NextFunctio
     });
 
     res.json({ success: true, data: { key: config.key, value: JSON.parse(config.value) } });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ── Business KPIs ─────────────────────────────────────────────────────────────
+
+function getPeriodDates(period: string) {
+  const now = new Date();
+  let currentStart: Date, previousStart: Date, previousEnd: Date;
+  if (period === 'day') {
+    currentStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    previousStart = new Date(currentStart.getTime() - 86_400_000);
+    previousEnd = new Date(currentStart);
+  } else if (period === 'week') {
+    const dayOfWeek = (now.getDay() + 6) % 7; // 0=Mon
+    currentStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek);
+    previousStart = new Date(currentStart.getTime() - 7 * 86_400_000);
+    previousEnd = new Date(currentStart);
+  } else {
+    currentStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    previousStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    previousEnd = new Date(currentStart);
+  }
+  return { currentStart, previousStart, previousEnd, now };
+}
+
+function pctDelta(current: number, previous: number): number {
+  if (previous === 0) return current > 0 ? 100 : 0;
+  return Math.round(((current - previous) / previous) * 100);
+}
+
+// GET /kpis?period=day|week|month
+router.get('/kpis', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const period = (['day', 'week', 'month'].includes(req.query.period as string) ? req.query.period : 'month') as string;
+    const { currentStart, previousStart, previousEnd, now } = getPeriodDates(period);
+
+    const [
+      curRevenue, prevRevenue,
+      curUsers, prevUsers,
+      curBookings, prevBookings,
+      curKookers, prevKookers,
+    ] = await Promise.all([
+      prisma.booking.aggregate({ _sum: { totalPriceInCents: true }, where: { status: { in: ['confirmed', 'completed'] }, createdAt: { gte: currentStart, lte: now } } }),
+      prisma.booking.aggregate({ _sum: { totalPriceInCents: true }, where: { status: { in: ['confirmed', 'completed'] }, createdAt: { gte: previousStart, lt: previousEnd } } }),
+      prisma.user.count({ where: { createdAt: { gte: currentStart, lte: now } } }),
+      prisma.user.count({ where: { createdAt: { gte: previousStart, lt: previousEnd } } }),
+      prisma.booking.count({ where: { createdAt: { gte: currentStart, lte: now } } }),
+      prisma.booking.count({ where: { createdAt: { gte: previousStart, lt: previousEnd } } }),
+      prisma.kookerProfile.count({ where: { createdAt: { gte: currentStart, lte: now } } }),
+      prisma.kookerProfile.count({ where: { createdAt: { gte: previousStart, lt: previousEnd } } }),
+    ]);
+
+    const curRev = curRevenue._sum.totalPriceInCents ?? 0;
+    const prevRev = prevRevenue._sum.totalPriceInCents ?? 0;
+
+    res.json({
+      success: true,
+      data: {
+        period,
+        revenue: { current: curRev, previous: prevRev, delta: pctDelta(curRev, prevRev) },
+        users: { current: curUsers, previous: prevUsers, delta: pctDelta(curUsers, prevUsers) },
+        bookings: { current: curBookings, previous: prevBookings, delta: pctDelta(curBookings, prevBookings) },
+        kookers: { current: curKookers, previous: prevKookers, delta: pctDelta(curKookers, prevKookers) },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /business-charts
+router.get('/business-charts', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const now = new Date();
+    const dayOfWeek = (now.getDay() + 6) % 7;
+    const thisMonday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek);
+    const twelveWeeksAgo = new Date(thisMonday.getTime() - 11 * 7 * 86_400_000);
+
+    const [rawUsers, rawKookers, bookingStatuses, kookerRevGroups, ratingAgg, totalBookings, cancelledCount, completedCount, recentBookings] = await Promise.all([
+      prisma.user.findMany({ where: { createdAt: { gte: twelveWeeksAgo } }, select: { createdAt: true } }),
+      prisma.kookerProfile.findMany({ where: { createdAt: { gte: twelveWeeksAgo } }, select: { createdAt: true } }),
+      prisma.booking.groupBy({ by: ['status'], _count: { id: true } }),
+      prisma.booking.groupBy({
+        by: ['kookerProfileId'],
+        where: { status: { in: ['confirmed', 'completed'] } },
+        _sum: { totalPriceInCents: true },
+        _count: { id: true },
+        orderBy: { _sum: { totalPriceInCents: 'desc' } },
+        take: 5,
+      }),
+      prisma.kookerProfile.aggregate({ _avg: { rating: true }, where: { reviewCount: { gt: 0 } } }),
+      prisma.booking.count(),
+      prisma.booking.count({ where: { status: 'cancelled' } }),
+      prisma.booking.count({ where: { status: 'completed' } }),
+      prisma.booking.findMany({
+        take: 5,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: { select: { firstName: true, lastName: true } },
+          service: { select: { title: true } },
+        },
+      }),
+    ]);
+
+    // Build 12-week acquisition chart
+    const weeks: Array<{ label: string; start: Date; end: Date; users: number; kookers: number }> = [];
+    for (let i = 11; i >= 0; i--) {
+      const start = new Date(thisMonday.getTime() - i * 7 * 86_400_000);
+      const end = new Date(start.getTime() + 7 * 86_400_000);
+      const dd = String(start.getDate()).padStart(2, '0');
+      const mm = String(start.getMonth() + 1).padStart(2, '0');
+      weeks.push({ label: `${dd}/${mm}`, start, end, users: 0, kookers: 0 });
+    }
+    for (const u of rawUsers) {
+      const w = weeks.find(w => u.createdAt >= w.start && u.createdAt < w.end);
+      if (w) w.users++;
+    }
+    for (const k of rawKookers) {
+      const w = weeks.find(w => k.createdAt >= w.start && k.createdAt < w.end);
+      if (w) w.kookers++;
+    }
+    const acquisition = weeks.map(({ label, users, kookers }) => ({ label, users, kookers }));
+
+    // Top kookers
+    const kookerIds = kookerRevGroups.map(k => k.kookerProfileId);
+    const kookerDetails = await prisma.kookerProfile.findMany({
+      where: { id: { in: kookerIds } },
+      select: { id: true, city: true, user: { select: { firstName: true, lastName: true } } },
+    });
+    const topKookers = kookerRevGroups.map(k => {
+      const detail = kookerDetails.find(d => d.id === k.kookerProfileId);
+      return {
+        id: k.kookerProfileId,
+        name: detail ? `${detail.user.firstName} ${detail.user.lastName}` : '—',
+        city: detail?.city ?? '—',
+        revenueInCents: k._sum.totalPriceInCents ?? 0,
+        bookingCount: k._count.id,
+      };
+    });
+
+    res.json({
+      success: true,
+      data: {
+        acquisition,
+        bookingsByStatus: bookingStatuses.map(b => ({ status: b.status, count: b._count.id })),
+        topKookers,
+        platformHealth: {
+          avgRating: Math.round((ratingAgg._avg.rating ?? 0) * 10) / 10,
+          cancellationRate: totalBookings > 0 ? Math.round((cancelledCount / totalBookings) * 100) : 0,
+          completionRate: totalBookings > 0 ? Math.round((completedCount / totalBookings) * 100) : 0,
+        },
+        recentBookings: recentBookings.map(b => ({
+          id: b.id,
+          user: `${b.user.firstName} ${b.user.lastName}`,
+          service: b.service.title,
+          status: b.status,
+          totalPriceInCents: b.totalPriceInCents,
+          date: b.date,
+          createdAt: b.createdAt,
+        })),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ── Technical Stats ────────────────────────────────────────────────────────────
+
+function getDirSizeBytes(dirPath: string): number {
+  let total = 0;
+  try {
+    for (const entry of fs.readdirSync(dirPath, { withFileTypes: true })) {
+      const full = path.join(dirPath, entry.name);
+      total += entry.isDirectory() ? getDirSizeBytes(full) : fs.statSync(full).size;
+    }
+  } catch {}
+  return total;
+}
+
+// GET /tech-stats
+router.get('/tech-stats', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const pingStart = Date.now();
+    await prisma.$queryRaw`SELECT 1`;
+    const dbPingMs = Date.now() - pingStart;
+
+    const sevenDaysAgo = new Date(Date.now() - 7 * 86_400_000);
+
+    const [userCount, kookerCount, serviceCount, bookingCount, messageCount, reviewCount, errorLogs, pageTimings] = await Promise.all([
+      prisma.user.count(),
+      prisma.kookerProfile.count(),
+      prisma.service.count(),
+      prisma.booking.count(),
+      prisma.message.count(),
+      prisma.review.count(),
+      prisma.errorLog.findMany({ orderBy: { createdAt: 'desc' }, take: 10 }),
+      prisma.pageViewLog.groupBy({
+        by: ['page'],
+        where: { createdAt: { gte: sevenDaysAgo } },
+        _avg: { loadTimeMs: true },
+        _count: { loadTimeMs: true },
+        orderBy: { _avg: { loadTimeMs: 'desc' } },
+      }),
+    ]);
+
+    const uploadsPath = path.resolve(__dirname, '../../../uploads');
+    const uploadSizeBytes = getDirSizeBytes(uploadsPath);
+    const uploadSizeMb = Math.round(uploadSizeBytes / (1024 * 1024) * 100) / 100;
+
+    res.json({
+      success: true,
+      data: {
+        dbPingMs,
+        tableCounts: { users: userCount, kookers: kookerCount, services: serviceCount, bookings: bookingCount, messages: messageCount, reviews: reviewCount },
+        uploadSizeMb,
+        errorLogs: errorLogs.map(e => ({
+          id: e.id,
+          message: e.message,
+          route: e.route,
+          method: e.method,
+          statusCode: e.statusCode,
+          createdAt: e.createdAt,
+        })),
+        pageTimings: pageTimings.map(p => ({
+          page: p.page,
+          avgLoadTimeMs: Math.round(p._avg.loadTimeMs ?? 0),
+          count: p._count.loadTimeMs,
+        })),
+      },
+    });
   } catch (error) {
     next(error);
   }

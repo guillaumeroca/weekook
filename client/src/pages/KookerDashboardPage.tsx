@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import PlanningTab from '@/components/dashboard/PlanningTab';
+import { usePageTiming } from '@/hooks/usePageTiming';
 
 // ────────────────────────── Types ──────────────────────────
 
@@ -220,6 +221,7 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
 
   // Loading states
   const [loading, setLoading] = useState(true);
+  usePageTiming('Dashboard Kooker', !loading);
   const [statsLoading, setStatsLoading] = useState(true);
   const [bookingsLoading, setBookingsLoading] = useState(true);
   const [servicesLoading, setServicesLoading] = useState(true);

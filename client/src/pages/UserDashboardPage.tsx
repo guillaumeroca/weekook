@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { api } from '../lib/api';
 import { toast } from 'sonner';
 import KookerDashboardPage from './KookerDashboardPage';
+import { usePageTiming } from '@/hooks/usePageTiming';
 
 // ────────────────────────── Types ──────────────────────────
 interface Booking {
@@ -304,6 +305,7 @@ const UserDashboardPage = () => {
   const [historyBookings, setHistoryBookings] = useState<Booking[]>([]);
   const [favorites, setFavorites] = useState<FavoriteKooker[]>([]);
   const [loading, setLoading] = useState(true);
+  usePageTiming('Dashboard Utilisateur', !loading);
   const [reviewTarget, setReviewTarget] = useState<{ kookerProfileId: number; kookerName: string; bookingId: number } | null>(null);
   const [reviewedBookingIds, setReviewedBookingIds] = useState<Set<number>>(new Set());
   const [reviewRating, setReviewRating] = useState(0);

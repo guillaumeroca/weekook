@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import KookerCard from '@/components/common/KookerCard';
 import { api } from '@/lib/api';
+import { usePageTiming } from '@/hooks/usePageTiming';
 
 const KOOKER_PLACEHOLDER_IMAGES = [
   'https://images.unsplash.com/photo-1496952286950-c36951138af4?w=600&h=400&fit=crop',
@@ -113,6 +114,7 @@ export default function SearchPage() {
   const [difficulty, setDifficulty] = useState(initialDifficulty);
 
   const [isLoading, setIsLoading] = useState(true);
+  usePageTiming('Recherche', !isLoading);
   const [results, setResults] = useState<Kooker[]>([]);
   const [totalResults, setTotalResults] = useState(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();

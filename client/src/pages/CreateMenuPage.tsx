@@ -13,6 +13,7 @@ import {
   Trash2,
   Loader2,
 } from 'lucide-react';
+import { usePageTiming } from '@/hooks/usePageTiming';
 
 // ────────────────────────── Types ──────────────────────────
 
@@ -34,6 +35,7 @@ const ALL_ALLERGENS = [
 // ────────────────────────── Component ──────────────────────────
 
 export default function CreateMenuPage() {
+  usePageTiming('Créer une offre', true);
   const navigate = useNavigate();
 
   // Service type selection

@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { getStripe } from '@/lib/stripe';
 import { StripePaymentForm, StripePaymentFormHandle } from '@/components/payment/StripePaymentForm';
 import type { Stripe } from '@stripe/stripe-js';
+import { usePageTiming } from '@/hooks/usePageTiming';
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 interface ServiceDetail {
@@ -112,6 +113,7 @@ export default function BookingPage() {
   const [availabilities, setAvailabilities] = useState<Availability[]>([]);
   const [confirmedSlotsMap, setConfirmedSlotsMap] = useState<Map<string, Set<string>>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
+  usePageTiming('Réservation', !isLoading);
   const [loadError, setLoadError] = useState(false);
 
   // Selection state

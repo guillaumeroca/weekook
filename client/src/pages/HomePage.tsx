@@ -8,6 +8,7 @@ import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import heroImage from '@/assets/d44ea553455097a6377797d27e1f725103cf1bcf.png';
 import kookerImage from '@/assets/daf59a7b2f5cb369dff77dcdb101b9bb2386564d.png';
+import { usePageTiming } from '@/hooks/usePageTiming';
 
 // ─── Placeholder images for kooker cards ────────────────────────────────────
 
@@ -148,6 +149,7 @@ export default function HomePage() {
   const [kookers, setKookers] = useState<DisplayKooker[]>([]);
   const [testimonials, setTestimonials] = useState<DisplayTestimonial[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  usePageTiming('Accueil', !isLoading);
 
   // Testimonial submission modal
   const [showTestimonialModal, setShowTestimonialModal] = useState(false);

@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { ChefHat, Eye, EyeOff, ChevronLeft } from 'lucide-react';
+import { api } from '@/lib/api';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -29,6 +31,22 @@ const LoginPage = () => {
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
   const [showRegisterConfirm, setShowRegisterConfirm] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
+
+  // Forgot password state
+  const [showForgotDialog, setShowForgotDialog] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotStatus, setForgotStatus] = useState<'idle' | 'loading' | 'sent' | 'error'>('idle');
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotStatus('loading');
+    try {
+      await api.post('/auth/forgot-password', { email: forgotEmail });
+      setForgotStatus('sent');
+    } catch {
+      setForgotStatus('error');
+    }
+  };
 
   const handleTabChange = (tab: 'login' | 'register') => {
     setActiveTab(tab);
@@ -165,6 +183,7 @@ const LoginPage = () => {
                   </label>
                   <button
                     type="button"
+                    onClick={() => { setForgotEmail(loginEmail); setForgotStatus('idle'); setShowForgotDialog(true); }}
                     className="font-medium text-[13px] text-[#c1a0fd] hover:text-[#b090ed] transition-colors"
                   >
                     Mot de passe oublié ?
@@ -551,6 +570,53 @@ const LoginPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Forgot password dialog */}
+      <Dialog open={showForgotDialog} onOpenChange={(open) => { setShowForgotDialog(open); if (!open) setForgotStatus('idle'); }}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>Mot de passe oublié</DialogTitle>
+          </DialogHeader>
+
+          {forgotStatus === 'sent' ? (
+            <div className="py-4 text-center space-y-3">
+              <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center mx-auto">
+                <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+              </div>
+              <p className="text-[#111125] font-medium">Email envoyé</p>
+              <p className="text-sm text-gray-500">Si cette adresse est associée à un compte, vous recevrez un lien de réinitialisation. Vérifiez vos spams.</p>
+              <button onClick={() => setShowForgotDialog(false)} className="w-full h-[44px] bg-[#c1a0fd] text-white rounded-[12px] font-medium text-sm hover:bg-[#b090ed] transition-colors mt-2">
+                Fermer
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleForgotPassword} className="space-y-4 py-2">
+              <p className="text-sm text-gray-500">Entrez votre adresse email et nous vous enverrons un lien pour réinitialiser votre mot de passe.</p>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-[#303044]">Email</label>
+                <input
+                  type="email"
+                  required
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  placeholder="votre@email.com"
+                  className="w-full h-[48px] px-4 border border-[#e6e6f0] rounded-[8px] text-[14px] text-[#111125] placeholder:text-[#828294] focus:outline-none focus:border-[#c1a0fd] focus:ring-2 focus:ring-[#c1a0fd]/20 transition-all"
+                />
+              </div>
+              {forgotStatus === 'error' && (
+                <p className="text-sm text-red-500">Une erreur est survenue. Réessayez.</p>
+              )}
+              <button
+                type="submit"
+                disabled={forgotStatus === 'loading'}
+                className="w-full h-[48px] bg-[#c1a0fd] text-white rounded-[12px] font-medium text-sm hover:bg-[#b090ed] transition-colors disabled:opacity-60"
+              >
+                {forgotStatus === 'loading' ? 'Envoi...' : 'Envoyer le lien'}
+              </button>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -126,6 +126,24 @@ async function sendEmail(to: string, subject: string, html: string, label: strin
   }
 }
 
+// ─── Password reset ───────────────────────────────────────────────────────────
+
+export async function sendPasswordResetEmail(
+  userEmail: string,
+  userName: string,
+  resetUrl: string
+): Promise<void> {
+  const html = emailWrapper(
+    '🔑',
+    `Réinitialisez votre mot de passe`,
+    `<p style="color:#6b7280;font-size:14px;margin:0 0 16px 0;">Bonjour ${userName}, vous avez demandé à réinitialiser votre mot de passe Weekook.</p>
+    <p style="color:#6b7280;font-size:13px;margin:0 0 16px 0;">Ce lien est valable <strong>1 heure</strong>. Si vous n'avez pas fait cette demande, ignorez cet email.</p>`,
+    resetUrl,
+    'Réinitialiser mon mot de passe'
+  );
+  await sendEmail(userEmail, 'Réinitialisation de votre mot de passe Weekook', html, 'password-reset');
+}
+
 // ─── Booking notifications ────────────────────────────────────────────────────
 
 export async function sendBookingRequestToKooker(

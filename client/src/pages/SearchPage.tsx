@@ -259,7 +259,7 @@ export default function SearchPage() {
 
           {/* Titre visiteurs non connectés */}
           {!user && (
-            <h1 className="text-[26px] md:text-[32px] font-bold text-[#111125] mb-4 tracking-[-0.5px]">
+            <h1 className="text-[18px] font-semibold text-[#111125] mb-4">
               Je cherche un Kooker
             </h1>
           )}
@@ -310,7 +310,7 @@ export default function SearchPage() {
           </div>
 
           {/* Results count */}
-          <p className="text-[13px] text-[#828294] mb-4">
+          <p className="text-[18px] font-semibold text-[#111125] mb-4">
             {isLoading ? (
               <span className="inline-block w-32 h-4 bg-[#e5e7eb] rounded animate-pulse" />
             ) : (

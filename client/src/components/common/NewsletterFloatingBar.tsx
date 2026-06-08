@@ -29,20 +29,20 @@ export function NewsletterFloatingBar() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-[#e6e6f0] shadow-[0_-4px_24px_rgba(0,0,0,0.08)] animate-slide-up">
-      <div className="px-4 md:px-8 lg:px-[96px] py-3 flex flex-col sm:flex-row items-center gap-3">
+      <div className="px-10 py-3 flex flex-col sm:flex-row items-center justify-center gap-3">
 
         {status === 'success' ? (
-          <p className="flex-1 text-center text-[14px] font-semibold text-[#303044]">
+          <p className="text-center text-[14px] font-semibold text-[#303044]">
             Merci ! Vous êtes bien inscrit à notre newsletter.
           </p>
         ) : (
           <>
             <p className="text-[13px] md:text-[14px] text-[#303044] font-medium shrink-0">
-              Restez informé des nouveaux kookers près de chez vous
+              Recevoir notre Newsletter
             </p>
 
-            <form onSubmit={handleSubmit} className="flex-1 flex items-center gap-2 w-full sm:w-auto">
-              <div className="flex flex-1 items-center h-[40px] bg-[#f3ecff] rounded-[8px] overflow-hidden max-w-[420px]">
+            <form onSubmit={handleSubmit} className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="flex items-center h-[40px] bg-[#f3ecff] rounded-[8px] overflow-hidden w-full sm:w-[320px]">
                 <input
                   type="email"
                   required

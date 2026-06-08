@@ -2,6 +2,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
 import { Navbar } from './Navbar';
 import { Footer } from './Footer';
+import { NewsletterFloatingBar } from '@/components/common/NewsletterFloatingBar';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -20,6 +21,7 @@ export function PageLayout() {
         <Outlet />
       </main>
       <Footer />
+      <NewsletterFloatingBar />
     </div>
   );
 }

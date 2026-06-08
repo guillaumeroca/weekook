@@ -152,6 +152,20 @@ const LoginPage = () => {
             </button>
           </div>
 
+          {/* Switch link — sous les onglets */}
+          {activeTab === 'register' && (
+            <p className="text-center text-[13px] text-[#828294] mb-4 -mt-2">
+              Déjà un compte ?{' '}
+              <button
+                type="button"
+                onClick={() => handleTabChange('login')}
+                className="text-[#c1a0fd] hover:text-[#b090ed] font-semibold transition-colors"
+              >
+                Se connecter
+              </button>
+            </p>
+          )}
+
           {/* Login Form */}
           {activeTab === 'login' && (
             <form onSubmit={handleLogin} className="space-y-4">
@@ -468,17 +482,6 @@ const LoginPage = () => {
                 </button>
               </div>
 
-              {/* Login link */}
-              <p className="text-center text-[13px] text-[#828294] mt-6">
-                Déjà un compte ?{' '}
-                <button
-                  type="button"
-                  onClick={() => handleTabChange('login')}
-                  className="text-[#c1a0fd] hover:text-[#b090ed] font-semibold transition-colors"
-                >
-                  Se connecter
-                </button>
-              </p>
             </form>
           )}
         </div>

@@ -345,69 +345,72 @@ const LoginPage = () => {
                 />
               </div>
 
-              <div className="space-y-2">
-                <label htmlFor="signup-password" className="font-medium text-[14px] text-[#303044] block">
-                  Mot de passe
-                </label>
-                <div className="relative">
-                  <input
-                    id="signup-password"
-                    type={showRegisterPassword ? 'text' : 'password'}
-                    value={registerPassword}
-                    onChange={(e) => setRegisterPassword(e.target.value)}
-                    placeholder="Minimum 8 caractères"
-                    required
-                    minLength={8}
-                    className="w-full h-[48px] px-4 pr-12 border border-[#e6e6f0] rounded-[8px] text-[14px] text-[#111125] placeholder:text-[#828294] focus:outline-none focus:border-[#c1a0fd] focus:ring-2 focus:ring-[#c1a0fd]/20 transition-all"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowRegisterPassword(!showRegisterPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#828294] hover:text-[#303044] transition-colors"
-                  >
-                    {showRegisterPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                  </button>
-                </div>
-                {/* Password strength indicator */}
-                {registerPassword.length > 0 && (
-                  <div className="mt-2 flex gap-1.5">
-                    <div className={`h-1 flex-1 rounded-full ${registerPassword.length >= 2 ? (registerPassword.length >= 8 ? 'bg-green-400' : 'bg-yellow-400') : 'bg-[#e6e6f0]'}`} />
-                    <div className={`h-1 flex-1 rounded-full ${registerPassword.length >= 5 ? (registerPassword.length >= 8 ? 'bg-green-400' : 'bg-yellow-400') : 'bg-[#e6e6f0]'}`} />
-                    <div className={`h-1 flex-1 rounded-full ${registerPassword.length >= 8 ? 'bg-green-400' : 'bg-[#e6e6f0]'}`} />
-                    <div className={`h-1 flex-1 rounded-full ${registerPassword.length >= 12 ? 'bg-green-400' : 'bg-[#e6e6f0]'}`} />
+              <div className="grid grid-cols-2 gap-4">
+                {/* Mot de passe */}
+                <div className="space-y-2">
+                  <label htmlFor="signup-password" className="font-medium text-[14px] text-[#303044] block">
+                    Mot de passe
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="signup-password"
+                      type={showRegisterPassword ? 'text' : 'password'}
+                      value={registerPassword}
+                      onChange={(e) => setRegisterPassword(e.target.value)}
+                      placeholder="Min. 8 caractères"
+                      required
+                      minLength={8}
+                      className="w-full h-[48px] px-4 pr-12 border border-[#e6e6f0] rounded-[8px] text-[14px] text-[#111125] placeholder:text-[#828294] focus:outline-none focus:border-[#c1a0fd] focus:ring-2 focus:ring-[#c1a0fd]/20 transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowRegisterPassword(!showRegisterPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-[#828294] hover:text-[#303044] transition-colors"
+                    >
+                      {showRegisterPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    </button>
                   </div>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="signup-confirm" className="font-medium text-[14px] text-[#303044] block">
-                  Confirmer le mot de passe
-                </label>
-                <div className="relative">
-                  <input
-                    id="signup-confirm"
-                    type={showRegisterConfirm ? 'text' : 'password'}
-                    value={registerConfirmPassword}
-                    onChange={(e) => setRegisterConfirmPassword(e.target.value)}
-                    placeholder="Confirmez votre mot de passe"
-                    required
-                    className={`w-full h-[48px] px-4 pr-12 border rounded-[8px] text-[14px] text-[#111125] placeholder:text-[#828294] focus:outline-none focus:ring-2 transition-all ${
-                      registerConfirmPassword.length > 0 && registerPassword !== registerConfirmPassword
-                        ? 'border-red-300 focus:border-red-400 focus:ring-red-200'
-                        : 'border-[#e6e6f0] focus:border-[#c1a0fd] focus:ring-[#c1a0fd]/20'
-                    }`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowRegisterConfirm(!showRegisterConfirm)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#828294] hover:text-[#303044] transition-colors"
-                  >
-                    {showRegisterConfirm ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                  </button>
+                  {registerPassword.length > 0 && (
+                    <div className="flex gap-1.5">
+                      <div className={`h-1 flex-1 rounded-full ${registerPassword.length >= 2 ? (registerPassword.length >= 8 ? 'bg-green-400' : 'bg-yellow-400') : 'bg-[#e6e6f0]'}`} />
+                      <div className={`h-1 flex-1 rounded-full ${registerPassword.length >= 5 ? (registerPassword.length >= 8 ? 'bg-green-400' : 'bg-yellow-400') : 'bg-[#e6e6f0]'}`} />
+                      <div className={`h-1 flex-1 rounded-full ${registerPassword.length >= 8 ? 'bg-green-400' : 'bg-[#e6e6f0]'}`} />
+                      <div className={`h-1 flex-1 rounded-full ${registerPassword.length >= 12 ? 'bg-green-400' : 'bg-[#e6e6f0]'}`} />
+                    </div>
+                  )}
                 </div>
-                {registerConfirmPassword.length > 0 && registerPassword !== registerConfirmPassword && (
-                  <p className="text-[12px] text-red-500 mt-1">Les mots de passe ne correspondent pas</p>
-                )}
+
+                {/* Confirmer */}
+                <div className="space-y-2">
+                  <label htmlFor="signup-confirm" className="font-medium text-[14px] text-[#303044] block">
+                    Confirmer
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="signup-confirm"
+                      type={showRegisterConfirm ? 'text' : 'password'}
+                      value={registerConfirmPassword}
+                      onChange={(e) => setRegisterConfirmPassword(e.target.value)}
+                      placeholder="••••••••"
+                      required
+                      className={`w-full h-[48px] px-4 pr-12 border rounded-[8px] text-[14px] text-[#111125] placeholder:text-[#828294] focus:outline-none focus:ring-2 transition-all ${
+                        registerConfirmPassword.length > 0 && registerPassword !== registerConfirmPassword
+                          ? 'border-red-300 focus:border-red-400 focus:ring-red-200'
+                          : 'border-[#e6e6f0] focus:border-[#c1a0fd] focus:ring-[#c1a0fd]/20'
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowRegisterConfirm(!showRegisterConfirm)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-[#828294] hover:text-[#303044] transition-colors"
+                    >
+                      {showRegisterConfirm ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    </button>
+                  </div>
+                  {registerConfirmPassword.length > 0 && registerPassword !== registerConfirmPassword && (
+                    <p className="text-[12px] text-red-500 mt-1">Les mots de passe ne correspondent pas</p>
+                  )}
+                </div>
               </div>
 
               {/* Terms */}

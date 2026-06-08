@@ -165,6 +165,18 @@ const LoginPage = () => {
               </button>
             </p>
           )}
+          {activeTab === 'login' && (
+            <p className="text-center text-[13px] text-[#828294] mb-4 -mt-2">
+              Pas encore de compte ?{' '}
+              <button
+                type="button"
+                onClick={() => handleTabChange('register')}
+                className="text-[#c1a0fd] hover:text-[#b090ed] font-semibold transition-colors"
+              >
+                Créer un compte
+              </button>
+            </p>
+          )}
 
           {/* Login Form */}
           {activeTab === 'login' && (
@@ -275,17 +287,6 @@ const LoginPage = () => {
                 </button>
               </div>
 
-              {/* Register link */}
-              <p className="text-center text-[13px] text-[#828294] mt-6">
-                Pas encore de compte ?{' '}
-                <button
-                  type="button"
-                  onClick={() => handleTabChange('register')}
-                  className="text-[#c1a0fd] hover:text-[#b090ed] font-semibold transition-colors"
-                >
-                  Créer un compte
-                </button>
-              </p>
             </form>
           )}
 

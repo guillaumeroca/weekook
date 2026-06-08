@@ -523,7 +523,7 @@ export default function SearchPage() {
       <section className="px-4 md:px-8 lg:px-[96px] pb-8 md:pb-12">
         {/* Empty State */}
         {!isLoading && results.length === 0 && (
-          <div className="flex flex-col items-center justify-center -mt-7 pb-24">
+          <div className="flex flex-col items-center justify-center -mt-6 pb-24">
             <h3 className="text-[18px] font-semibold text-[#111125] mb-2">Aucun résultat</h3>
             <p className="text-[14px] text-[#6b7280] text-center max-w-[400px] mb-5">
               Aucun kooker ne correspond à vos critères. Essayez de modifier vos filtres.

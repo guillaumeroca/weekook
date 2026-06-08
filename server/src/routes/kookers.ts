@@ -97,21 +97,32 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       });
     }
 
-    // Post-filter by type (JSON field)
+    // Post-filter by type (JSON field — may be stored as string or parsed array)
     if (type) {
       const typeFilter = type as string;
       filtered = filtered.filter((k) => {
-        const kType = k.type as string[] | null;
-        return kType && Array.isArray(kType) && kType.includes(typeFilter);
+        const kType: string[] = Array.isArray(k.type)
+          ? (k.type as string[])
+          : JSON.parse((k.type as string) || '[]');
+        // Match on kooker profile type OR on any active service type
+        if (kType.includes(typeFilter)) return true;
+        return k.services.some((s: any) => {
+          const sTypes: string[] = Array.isArray(s.type)
+            ? s.type
+            : JSON.parse((s.type as string) || '[]');
+          return sTypes.includes(typeFilter);
+        });
       });
     }
 
-    // Post-filter by specialty (JSON field)
+    // Post-filter by specialty (JSON field — may be stored as string or parsed array)
     if (specialty) {
       const specialtyFilter = specialty as string;
       filtered = filtered.filter((k) => {
-        const kSpec = k.specialties as string[] | null;
-        return kSpec && Array.isArray(kSpec) && kSpec.includes(specialtyFilter);
+        const kSpec: string[] = Array.isArray(k.specialties)
+          ? (k.specialties as string[])
+          : JSON.parse((k.specialties as string) || '[]');
+        return kSpec.includes(specialtyFilter);
       });
     }
 

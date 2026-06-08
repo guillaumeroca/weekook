@@ -516,10 +516,27 @@ export default function SearchPage() {
             </div>
           )}
         </div>
+
       </section>
 
       {/* Results Section */}
       <section className="px-4 md:px-8 lg:px-[96px] pb-8 md:pb-12">
+        {/* Empty State */}
+        {!isLoading && results.length === 0 && (
+          <div className="flex flex-col items-center justify-center pt-6 pb-24">
+            <h3 className="text-[18px] font-semibold text-[#111125] mb-2">Aucun résultat</h3>
+            <p className="text-[14px] text-[#6b7280] text-center max-w-[400px] mb-5">
+              Aucun kooker ne correspond à vos critères. Essayez de modifier vos filtres.
+            </p>
+            <button
+              onClick={resetFilters}
+              className="px-6 py-3 bg-[#c1a0fd] text-white font-semibold rounded-[12px] hover:bg-[#b090ed] transition-all shadow-sm"
+            >
+              Réinitialiser les filtres
+            </button>
+          </div>
+        )}
+
         {/* Loading State */}
         {isLoading && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 justify-items-center">
@@ -569,21 +586,6 @@ export default function SearchPage() {
           </div>
         )}
 
-        {/* Empty State */}
-        {!isLoading && results.length === 0 && (
-          <div className="flex flex-col items-center justify-center pt-2 pb-20">
-            <h3 className="text-[18px] font-semibold text-[#111125] mb-2">Aucun résultat</h3>
-            <p className="text-[14px] text-[#6b7280] text-center max-w-[400px] mb-5">
-              Aucun kooker ne correspond à vos critères. Essayez de modifier vos filtres.
-            </p>
-            <button
-              onClick={resetFilters}
-              className="px-6 py-3 bg-[#c1a0fd] text-white font-semibold rounded-[12px] hover:bg-[#b090ed] transition-all shadow-sm"
-            >
-              Réinitialiser les filtres
-            </button>
-          </div>
-        )}
       </section>
     </div>
   );

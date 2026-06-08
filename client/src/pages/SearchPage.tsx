@@ -122,18 +122,17 @@ export default function SearchPage() {
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   // Map API kooker to local Kooker format
+  const parseJsonField = (val: any): string[] => {
+    if (Array.isArray(val)) return val;
+    try { const parsed = JSON.parse(val); return Array.isArray(parsed) ? parsed : JSON.parse(parsed); } catch { return []; }
+  };
+
   const mapKooker = (k: ApiKooker): Kooker => {
-    const specialties = (() => {
-      try { return JSON.parse(k.specialties); } catch { return []; }
-    })();
-    const typeArr: string[] = (() => {
-      try { return JSON.parse(k.type); } catch { return []; }
-    })();
+    const specialties = parseJsonField(k.specialties);
+    const typeArr = parseJsonField(k.type);
     // Collect all service types across all services
     const allServiceTypes = Array.from(new Set(
-      k.services.flatMap((s) => {
-        try { return JSON.parse(s.type); } catch { return []; }
-      })
+      k.services.flatMap((s) => parseJsonField(s.type))
     )) as string[];
     const lowestPrice = k.services.length > 0
       ? Math.min(...k.services.map((s) => s.priceInCents)) / 100

@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import KookerCard from '@/components/common/KookerCard';
 import { api } from '@/lib/api';
 import { usePageTiming } from '@/hooks/usePageTiming';
+import { useAuth } from '@/contexts/AuthContext';
 
 const KOOKER_PLACEHOLDER_IMAGES = [
   'https://images.unsplash.com/photo-1496952286950-c36951138af4?w=600&h=400&fit=crop',
@@ -113,6 +114,7 @@ export default function SearchPage() {
   const [maxPrice, setMaxPrice] = useState(initialMaxPrice);
   const [difficulty, setDifficulty] = useState(initialDifficulty);
 
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   usePageTiming('Recherche', !isLoading);
   const [results, setResults] = useState<Kooker[]>([]);
@@ -255,6 +257,13 @@ export default function SearchPage() {
       <section className="bg-[#f2f4fc]">
         <div className="px-4 md:px-8 lg:px-[96px] py-6 md:py-8">
 
+          {/* Titre visiteurs non connectés */}
+          {!user && (
+            <h1 className="text-[26px] md:text-[32px] font-bold text-[#111125] mb-4 tracking-[-0.5px]">
+              Je cherche un Kooker
+            </h1>
+          )}
+
           {/* Search bar + Masquer les filtres */}
           <div className="flex items-center gap-3 mb-6">
             <div className="relative flex-1">
@@ -300,14 +309,14 @@ export default function SearchPage() {
             </button>
           </div>
 
-          {/* Results count title */}
-          <h1 className="text-[24px] md:text-[28px] font-bold text-[#111125] mb-4 tracking-[-0.5px]">
+          {/* Results count */}
+          <p className="text-[13px] text-[#828294] mb-4">
             {isLoading ? (
-              <span className="inline-block w-48 h-7 bg-[#e5e7eb] rounded animate-pulse" />
+              <span className="inline-block w-32 h-4 bg-[#e5e7eb] rounded animate-pulse" />
             ) : (
               <>{totalResults} Kooker{totalResults !== 1 ? 's' : ''} trouvé{totalResults !== 1 ? 's' : ''}</>
             )}
-          </h1>
+          </p>
 
           {/* Filter Panel */}
           {showFilters && (

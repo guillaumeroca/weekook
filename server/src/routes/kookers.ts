@@ -97,22 +97,17 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       });
     }
 
-    // Post-filter by type (JSON field — may be stored as string or parsed array)
+    // Post-filter by type — se base uniquement sur les types des services actifs
+    // (le profil kooker peut avoir un type déclaré qui ne correspond pas aux services réels)
     if (type) {
       const typeFilter = type as string;
-      filtered = filtered.filter((k) => {
-        const kType: string[] = Array.isArray(k.type)
-          ? (k.type as string[])
-          : JSON.parse((k.type as string) || '[]');
-        // Match on kooker profile type OR on any active service type
-        if (kType.includes(typeFilter)) return true;
-        return k.services.some((s: any) => {
-          const sTypes: string[] = Array.isArray(s.type)
-            ? s.type
-            : JSON.parse((s.type as string) || '[]');
-          return sTypes.includes(typeFilter);
-        });
-      });
+      const parseTypes = (val: any): string[] => {
+        if (Array.isArray(val)) return val;
+        try { const p = JSON.parse(val || '[]'); return Array.isArray(p) ? p : JSON.parse(p); } catch { return []; }
+      };
+      filtered = filtered.filter((k) =>
+        k.services.some((s: any) => parseTypes(s.type).includes(typeFilter))
+      );
     }
 
     // Post-filter by specialty (JSON field — may be stored as string or parsed array)

@@ -591,7 +591,7 @@ export default function KookerProfilePage() {
                 {/* Action buttons */}
                 <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
                   <button
-                    onClick={() => { if (!user) { navigate('/login'); return; } setShowMessageModal(true); }}
+                    onClick={() => { if (!user) { navigate('/connexion'); return; } setShowMessageModal(true); }}
                     className="flex items-center gap-2 px-4 py-2.5 bg-[#c1a0fd] text-white rounded-[12px] text-[14px] font-semibold hover:bg-[#b090ed] transition-all"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -764,7 +764,7 @@ export default function KookerProfilePage() {
                                 À partir de {service.price}€
                               </span>
                               <button
-                                onClick={() => navigate(`/reservation?service=${service.id}&kooker=${profile.id}`)}
+                                onClick={() => { if (!user) { navigate('/connexion'); return; } navigate(`/reservation?service=${service.id}&kooker=${profile.id}`); }}
                                 className="px-4 py-2 bg-[#c1a0fd] text-white text-[13px] font-semibold rounded-[10px] hover:bg-[#b090ed] transition-all whitespace-nowrap flex-shrink-0"
                               >
                                 {service.types.includes('KOURS') ? 'Réserver ce cours' : 'Réserver'}
@@ -832,7 +832,7 @@ export default function KookerProfilePage() {
                 Vous pouvez envoyer un message à ce Kooker pour poser vos questions ou discuter de votre projet.
               </p>
               <button
-                onClick={() => { if (!user) { navigate('/login'); return; } setShowMessageModal(true); }}
+                onClick={() => { if (!user) { navigate('/connexion'); return; } setShowMessageModal(true); }}
                 className="flex items-center gap-2 px-5 py-2.5 bg-[#c1a0fd] text-white text-[14px] font-semibold rounded-[12px] hover:bg-[#b090ed] transition-all"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -125,7 +125,7 @@ function mapApiToProfile(data: any): KookerProfile {
         koursLocation: s.koursLocation || null,
         equipmentProvided: s.equipmentProvided || false,
       })),
-    reviews: (data.reviews || []).map((r: any) => ({
+    reviews: (data.reviewsReceived || []).map((r: any) => ({
       id: r.id,
       userName: `${r.user?.firstName || ''} ${r.user?.lastName || ''}`.trim() || 'Anonyme',
       userAvatar: r.user?.avatar || '',

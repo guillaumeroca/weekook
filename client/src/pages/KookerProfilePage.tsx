@@ -290,6 +290,7 @@ export default function KookerProfilePage() {
   }, [user, searchParams]);
 
   // Review modal
+  const [showAllReviews, setShowAllReviews] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [hasReview, setHasReview] = useState(false);
   const [reviewRating, setReviewRating] = useState(0);
@@ -890,7 +891,7 @@ export default function KookerProfilePage() {
               ) : (
                 <>
                 <div className="space-y-4">
-                  {profile.reviews.slice(0, 5).map((review) => (
+                  {(showAllReviews ? profile.reviews : profile.reviews.slice(0, 5)).map((review) => (
                     <div key={review.id} className="bg-[#f8f9fc] rounded-[16px] p-5">
                       <div className="flex items-start justify-between gap-4 mb-3">
                         <div className="flex items-center gap-3">
@@ -917,10 +918,13 @@ export default function KookerProfilePage() {
                     </div>
                   ))}
                 </div>
-                {profile.reviewCount > 5 && (
+                {profile.reviews.length > 5 && (
                   <div className="text-center mt-6">
-                    <button className="px-6 py-2.5 border border-[#c1a0fd] text-[#c1a0fd] text-[14px] font-semibold rounded-[12px] hover:bg-[#fdf4ff] transition-all">
-                      Voir tous les avis
+                    <button
+                      onClick={() => setShowAllReviews(v => !v)}
+                      className="px-6 py-2.5 border border-[#c1a0fd] text-[#c1a0fd] text-[14px] font-semibold rounded-[12px] hover:bg-[#fdf4ff] transition-all"
+                    >
+                      {showAllReviews ? 'Voir moins' : `Voir tous les avis (${profile.reviews.length})`}
                     </button>
                   </div>
                 )}

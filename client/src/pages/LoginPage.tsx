@@ -62,7 +62,9 @@ const LoginPage = () => {
 
     try {
       const loggedUser = await login(loginEmail, loginPassword);
-      if (loggedUser.role === 'admin') navigate('/admin');
+      const redirect = searchParams.get('redirect');
+      if (redirect) navigate(redirect);
+      else if (loggedUser.role === 'admin') navigate('/admin');
       else if (loggedUser.kookerProfileId) navigate('/tableau-de-bord');
       else navigate('/');
     } catch (err: any) {
@@ -95,7 +97,8 @@ const LoginPage = () => {
 
     try {
       await register({ email: registerEmail, password: registerPassword, firstName: registerFirstName, lastName: registerLastName });
-      navigate('/');
+      const redirect = searchParams.get('redirect');
+      navigate(redirect || '/');
     } catch (err: any) {
       setRegisterError(err?.error || err?.response?.data?.error || err?.message || 'Erreur lors de l\'inscription.');
     } finally {

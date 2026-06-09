@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -249,6 +249,7 @@ function getSlotLabel(startTime: string): string {
 export default function KookerProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
 
   const [isLoading, setIsLoading] = useState(true);
@@ -279,6 +280,14 @@ export default function KookerProfilePage() {
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [messageContent, setMessageContent] = useState('');
   const [messageSending, setMessageSending] = useState(false);
+
+  // Ouvrir le modal contact automatiquement après redirection post-login
+  useEffect(() => {
+    if (user && searchParams.get('action') === 'contact') {
+      setShowMessageModal(true);
+      setSearchParams({}, { replace: true });
+    }
+  }, [user, searchParams]);
 
   // Review modal
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -591,7 +600,7 @@ export default function KookerProfilePage() {
                 {/* Action buttons */}
                 <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
                   <button
-                    onClick={() => { if (!user) { navigate('/connexion'); return; } setShowMessageModal(true); }}
+                    onClick={() => { if (!user) { navigate(`/connexion?redirect=/kooker/${id}&action=contact`); return; } setShowMessageModal(true); }}
                     className="flex items-center gap-2 px-4 py-2.5 bg-[#c1a0fd] text-white rounded-[12px] text-[14px] font-semibold hover:bg-[#b090ed] transition-all"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -832,7 +841,7 @@ export default function KookerProfilePage() {
                 Vous pouvez envoyer un message à ce Kooker pour poser vos questions ou discuter de votre projet.
               </p>
               <button
-                onClick={() => { if (!user) { navigate('/connexion'); return; } setShowMessageModal(true); }}
+                onClick={() => { if (!user) { navigate(`/connexion?redirect=/kooker/${id}&action=contact`); return; } setShowMessageModal(true); }}
                 className="flex items-center gap-2 px-5 py-2.5 bg-[#c1a0fd] text-white text-[14px] font-semibold rounded-[12px] hover:bg-[#b090ed] transition-all"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

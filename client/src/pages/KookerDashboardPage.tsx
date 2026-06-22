@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '@/lib/api';
@@ -70,6 +70,7 @@ interface KookerProfile {
   experience: string;
   phone: string;
   address: string;
+  thumbnailImage: string;
 }
 
 interface KookerApiProfile {
@@ -197,7 +198,7 @@ const SectionSpinner = ({ text }: { text?: string }) => (
 const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const [activeTab, setActiveTab] = useState<'bookings' | 'planning' | 'services' | 'profile'>(
     (location.state as any)?.tab || 'bookings'
   );
@@ -216,8 +217,12 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
     experience: '',
     phone: '',
     address: '',
+    thumbnailImage: '',
   });
   const [originalProfile, setOriginalProfile] = useState<KookerProfile | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const thumbnailInputRef = useRef<HTMLInputElement>(null);
+  const [thumbnailUploading, setThumbnailUploading] = useState(false);
 
   // Loading states
   const [loading, setLoading] = useState(true);
@@ -315,6 +320,7 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
       const res = await api.get<KookerApiProfile>(`/kookers/${kookerProfileId}`);
       if (res.success && res.data) {
         const p = res.data;
+        const rawThumbnail = p.thumbnailImage as string | undefined;
         const parsed: KookerProfile = {
           bio: p.bio || '',
           specialties: safeParseJson(p.specialties),
@@ -323,6 +329,9 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
           experience: p.experience || '',
           phone: p.user?.phone || '',
           address: p.address || '',
+          thumbnailImage: rawThumbnail
+            ? (rawThumbnail.startsWith('http') ? rawThumbnail : `/uploads/${rawThumbnail}`)
+            : '',
         };
         setProfile(parsed);
         setOriginalProfile(parsed);
@@ -395,6 +404,49 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
   }, [activeTab, fetchServices, fetchAvailabilities, fetchProfile, servicesLoading, availabilitiesLoading, profileLoading, services.length, availabilities.length, originalProfile]);
 
   // ── Actions ──
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const uploadRes = await api.upload<{ url: string }>('/upload', formData);
+      if (uploadRes.success && uploadRes.data) {
+        await api.put('/users/avatar', { avatar: uploadRes.data.url });
+        await refreshUser();
+        toast.success('Avatar mis à jour');
+      }
+    } catch {
+      toast.error("Erreur lors de la mise à jour de l'avatar");
+    } finally {
+      if (avatarInputRef.current) avatarInputRef.current.value = '';
+    }
+  };
+
+  const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setThumbnailUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const uploadRes = await api.upload<{ url: string }>('/upload', formData);
+      if (uploadRes.success && uploadRes.data) {
+        const url = uploadRes.data.url;
+        await api.put('/kookers/profile', { thumbnailImage: url });
+        const displayUrl = url.startsWith('http') ? url : `/uploads/${url}`;
+        setProfile(prev => ({ ...prev, thumbnailImage: displayUrl }));
+        setOriginalProfile(prev => prev ? { ...prev, thumbnailImage: displayUrl } : prev);
+        toast.success('Photo de couverture mise à jour');
+      }
+    } catch {
+      toast.error('Erreur lors de la mise à jour de la photo de couverture');
+    } finally {
+      setThumbnailUploading(false);
+      if (thumbnailInputRef.current) thumbnailInputRef.current.value = '';
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -1177,7 +1229,17 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
                   <div className="bg-white rounded-[20px] p-6 shadow-sm sticky top-8">
                     {/* Avatar */}
                     <div className="flex flex-col items-center text-center mb-6">
-                      <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#c1a0fd] to-[#9171d9] flex items-center justify-center mb-4 relative group cursor-pointer">
+                      <input
+                        type="file"
+                        ref={avatarInputRef}
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleAvatarUpload}
+                      />
+                      <div
+                        className="w-24 h-24 rounded-full bg-gradient-to-br from-[#c1a0fd] to-[#9171d9] flex items-center justify-center mb-4 relative group cursor-pointer"
+                        onClick={() => avatarInputRef.current?.click()}
+                      >
                         {user?.avatar ? (
                           <img src={user.avatar} alt="Avatar" className="w-full h-full rounded-full object-cover" />
                         ) : (
@@ -1194,6 +1256,44 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
                       <h4 className="text-[17px] font-bold text-[#111125]">{user?.firstName} {user?.lastName}</h4>
                       <p className="text-[13px] text-[#c1a0fd] font-medium mt-1">{profile.type}</p>
                       <p className="text-[13px] text-[#111125]/50 mt-0.5">{profile.city}</p>
+                    </div>
+
+                    {/* Photo vignette / couverture */}
+                    <div className="mb-6 border-t border-[#e0e2ef] pt-6">
+                      <p className="text-[13px] font-semibold text-[#111125] mb-3">Photo de couverture</p>
+                      <input
+                        type="file"
+                        ref={thumbnailInputRef}
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleThumbnailUpload}
+                      />
+                      <div className="w-full h-[110px] rounded-[12px] overflow-hidden bg-[#f2f4fc] border border-[#e0e2ef] mb-3 flex items-center justify-center">
+                        {profile.thumbnailImage ? (
+                          <img src={profile.thumbnailImage} alt="Couverture" className="w-full h-full object-cover" />
+                        ) : (
+                          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#c1a0fd" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+                          </svg>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => thumbnailInputRef.current?.click()}
+                        disabled={thumbnailUploading}
+                        className="w-full flex items-center justify-center gap-2 h-[40px] border border-[#c1a0fd] text-[#c1a0fd] hover:bg-[#f3ecff] rounded-[10px] text-[13px] font-medium transition-all disabled:opacity-50"
+                      >
+                        {thumbnailUploading ? (
+                          <><div className="w-4 h-4 border-2 border-[#c1a0fd] border-t-transparent rounded-full animate-spin" />Envoi...</>
+                        ) : (
+                          <>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                            </svg>
+                            Modifier la photo
+                          </>
+                        )}
+                      </button>
+                      <p className="text-[11px] text-[#111125]/35 mt-2 text-center">Apparaît sur votre carte dans la recherche</p>
                     </div>
 
                     {/* Quick Stats */}

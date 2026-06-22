@@ -64,6 +64,7 @@ interface KookerProfile {
   name: string;
   avatarUrl: string;
   coverUrl: string;
+  thumbnailImage: string;
   city: string;
   bio: string;
   specialties: string[];
@@ -97,6 +98,9 @@ function mapApiToProfile(data: any): KookerProfile {
       ? (data.user.avatar.startsWith('http') ? data.user.avatar : `/uploads/${data.user.avatar}`)
       : KOOKER_PLACEHOLDER_IMAGES[data.id % KOOKER_PLACEHOLDER_IMAGES.length],
     coverUrl: '',
+    thumbnailImage: data.thumbnailImage
+      ? (data.thumbnailImage.startsWith('http') ? data.thumbnailImage : `/uploads/${data.thumbnailImage}`)
+      : '',
     city: data.city || '',
     bio: data.bio || '',
     specialties: safeJsonParse<string[]>(data.specialties, []),
@@ -550,7 +554,18 @@ export default function KookerProfilePage() {
           Retour aux résultats
         </button>
 
-        <div className="bg-white rounded-[20px] p-5 md:p-6 mb-6 border border-[#e0e0e0] shadow-sm">
+        <div className="bg-white rounded-[20px] mb-6 border border-[#e0e0e0] shadow-sm overflow-hidden">
+          {/* Bannière thumbnail */}
+          {profile.thumbnailImage ? (
+            <img
+              src={profile.thumbnailImage}
+              alt={profile.name}
+              className="w-full h-[180px] md:h-[220px] object-cover"
+            />
+          ) : (
+            <div className="w-full h-[100px] bg-gradient-to-br from-[#c1a0fd]/20 to-[#9171d9]/10" />
+          )}
+          <div className="p-5 md:p-6">
           <div className="flex flex-col sm:flex-row gap-5">
             {/* Avatar */}
             <div className="w-[110px] h-[110px] md:w-[130px] md:h-[130px] rounded-[16px] bg-[#f3ecff] overflow-hidden flex-shrink-0 self-start">
@@ -630,6 +645,7 @@ export default function KookerProfilePage() {
                 <p className="text-[14px] text-[#4b5563] leading-relaxed">{profile.bio}</p>
               </div>
             </div>
+          </div>
           </div>
         </div>
       </div>

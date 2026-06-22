@@ -39,6 +39,7 @@ interface ApiKooker {
   city: string;
   rating: number;
   reviewCount: number;
+  thumbnailImage?: string | null;
   user: { id: number; firstName: string; lastName: string; avatar: string | null };
   services: { id: number; priceInCents: number; type: string }[];
 }
@@ -141,7 +142,11 @@ export default function SearchPage() {
       ? (k.user.avatar.startsWith('http') ? k.user.avatar : `/uploads/${k.user.avatar}`)
       : '';
 
-    const imageUrl = avatarUrl || KOOKER_PLACEHOLDER_IMAGES[k.id % KOOKER_PLACEHOLDER_IMAGES.length];
+    const thumbnailUrl = k.thumbnailImage
+      ? (k.thumbnailImage.startsWith('http') ? k.thumbnailImage : `/uploads/${k.thumbnailImage}`)
+      : null;
+
+    const imageUrl = thumbnailUrl || avatarUrl || KOOKER_PLACEHOLDER_IMAGES[k.id % KOOKER_PLACEHOLDER_IMAGES.length];
     return {
       id: k.id,
       name: `${k.user.firstName} ${k.user.lastName}`,

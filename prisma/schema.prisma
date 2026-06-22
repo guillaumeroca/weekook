@@ -46,6 +46,7 @@ model KookerProfile {
   featured        Boolean   @default(false)
   verified        Boolean   @default(false)
   isCompany       Boolean   @default(false) @map("is_company")
+  thumbnailImage  String?   @map("thumbnail_image")
   active          Boolean   @default(true)
   stripeAccountId          String?   @map("stripe_account_id")
   stripeOnboardingComplete Boolean   @default(false) @map("stripe_onboarding_complete")

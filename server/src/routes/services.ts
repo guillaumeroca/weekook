@@ -151,6 +151,52 @@ router.post(
   }
 );
 
+// PUT /card-image/:imageId - Set card image for kooker (clears others)
+router.put(
+  '/card-image/:imageId',
+  authenticate,
+  requireKooker,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const imageId = parseInt(req.params.imageId, 10);
+      if (isNaN(imageId)) throw new AppError('ID invalide', 400);
+
+      const kookerProfileId = req.user!.kookerProfileId!;
+
+      // Verify the image belongs to a service owned by this kooker
+      const image = await prisma.serviceImage.findUnique({
+        where: { id: imageId },
+        include: { service: { select: { kookerProfileId: true } } },
+      });
+      if (!image) throw new NotFoundError('Image non trouvée');
+      if (image.service.kookerProfileId !== kookerProfileId) throw new ForbiddenError('Accès refusé');
+
+      // Get all service IDs for this kooker
+      const kookerServices = await prisma.service.findMany({
+        where: { kookerProfileId },
+        select: { id: true },
+      });
+      const serviceIds = kookerServices.map((s) => s.id);
+
+      // Clear all card images for this kooker's services
+      await prisma.serviceImage.updateMany({
+        where: { serviceId: { in: serviceIds } },
+        data: { isCardImage: false },
+      });
+
+      // Set this image as card image
+      await prisma.serviceImage.update({
+        where: { id: imageId },
+        data: { isCardImage: true },
+      });
+
+      res.json({ success: true, data: { imageId } });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 // PUT /:id - Update service
 router.put(
   '/:id',
@@ -227,9 +273,13 @@ router.put(
         }
       }
 
-      // If images provided, replace all
+      // If images provided, replace all (preserving isCardImage by URL match)
       const { images } = req.body;
       if (images !== undefined) {
+        const prevCardImage = await prisma.serviceImage.findFirst({
+          where: { serviceId: id, isCardImage: true },
+          select: { url: true },
+        });
         await prisma.serviceImage.deleteMany({ where: { serviceId: id } });
         if (Array.isArray(images) && images.length > 0) {
           await prisma.serviceImage.createMany({
@@ -238,6 +288,7 @@ router.put(
               url,
               alt: data.title as string || existing.title || '',
               sortOrder: index,
+              isCardImage: prevCardImage ? url === prevCardImage.url : false,
             })),
           });
         }

@@ -60,6 +60,11 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
               description: true,
               specialty: true,
               koursDifficulty: true,
+              images: {
+                where: { isCardImage: true },
+                select: { url: true },
+                take: 1,
+              },
             },
           },
         },
@@ -358,7 +363,7 @@ router.put(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const kookerProfileId = req.user!.kookerProfileId!;
-      const { bio, specialties, type, city, experience, address, isCompany, thumbnailImage } = req.body;
+      const { bio, specialties, type, city, experience, address, isCompany } = req.body;
 
       const data: Record<string, unknown> = {};
       if (bio !== undefined) data.bio = bio;
@@ -368,7 +373,6 @@ router.put(
       if (experience !== undefined) data.experience = experience;
       if (address !== undefined) data.address = address;
       if (isCompany !== undefined) data.isCompany = isCompany;
-      if (thumbnailImage !== undefined) data.thumbnailImage = thumbnailImage;
 
       const updated = await prisma.kookerProfile.update({
         where: { id: kookerProfileId },

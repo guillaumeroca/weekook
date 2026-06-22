@@ -46,7 +46,6 @@ model KookerProfile {
   featured        Boolean   @default(false)
   verified        Boolean   @default(false)
   isCompany       Boolean   @default(false) @map("is_company")
-  thumbnailImage  String?   @map("thumbnail_image")
   active          Boolean   @default(true)
   stripeAccountId          String?   @map("stripe_account_id")
   stripeOnboardingComplete Boolean   @default(false) @map("stripe_onboarding_complete")
@@ -147,6 +146,7 @@ model ServiceImage {
   url             String
   alt             String?
   sortOrder       Int       @default(0) @map("sort_order")
+  isCardImage     Boolean   @default(false) @map("is_card_image")
   createdAt       DateTime  @default(now()) @map("created_at")
 
   service         Service   @relation(fields: [serviceId], references: [id], onDelete: Cascade)

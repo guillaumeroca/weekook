@@ -17,7 +17,6 @@ export const updateKookerProfileSchema = z.object({
   experience: z.string().optional(),
   address: z.string().optional(),
   isCompany: z.boolean().optional(),
-  thumbnailImage: z.string().optional(),
 });
 
 export const updateUserProfileSchema = z.object({

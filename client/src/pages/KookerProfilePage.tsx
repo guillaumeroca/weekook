@@ -64,7 +64,7 @@ interface KookerProfile {
   name: string;
   avatarUrl: string;
   coverUrl: string;
-  thumbnailImage: string;
+  cardImageUrl: string;
   city: string;
   bio: string;
   specialties: string[];
@@ -103,7 +103,11 @@ function mapApiToProfile(data: any): KookerProfile {
     name: `${data.user?.firstName || ''} ${data.user?.lastName || ''}`.trim() || 'Kooker',
     avatarUrl: toUrl(data.user?.avatar) || KOOKER_PLACEHOLDER_IMAGES[data.id % KOOKER_PLACEHOLDER_IMAGES.length],
     coverUrl: '',
-    thumbnailImage: toUrl(data.thumbnailImage),
+    cardImageUrl: toUrl(
+      (data.services || [])
+        .flatMap((s: any) => (s.images || []).filter((img: any) => img.isCardImage))
+        [0]?.url
+    ),
     city: data.city || '',
     bio: data.bio || '',
     specialties: safeJsonParse<string[]>(data.specialties, []),
@@ -558,10 +562,10 @@ export default function KookerProfilePage() {
         </button>
 
         <div className="bg-white rounded-[20px] mb-6 border border-[#e0e0e0] shadow-sm overflow-hidden">
-          {/* Bannière thumbnail */}
-          {profile.thumbnailImage ? (
+          {/* Bannière : image de vignette sélectionnée par le kooker */}
+          {profile.cardImageUrl ? (
             <img
-              src={profile.thumbnailImage}
+              src={profile.cardImageUrl}
               alt={profile.name}
               className="w-full h-[180px] md:h-[220px] object-cover"
             />

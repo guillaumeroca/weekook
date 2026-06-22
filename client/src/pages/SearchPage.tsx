@@ -39,9 +39,8 @@ interface ApiKooker {
   city: string;
   rating: number;
   reviewCount: number;
-  thumbnailImage?: string | null;
   user: { id: number; firstName: string; lastName: string; avatar: string | null };
-  services: { id: number; priceInCents: number; type: string }[];
+  services: { id: number; priceInCents: number; type: string; images?: { url: string }[] }[];
 }
 
 interface KookersResponse {
@@ -146,9 +145,11 @@ export default function SearchPage() {
       ? Math.min(...k.services.map((s) => s.priceInCents)) / 100
       : 0;
     const avatarUrl = toUrl(k.user.avatar);
-    const thumbnailUrl = toUrl(k.thumbnailImage) || null;
-
-    const imageUrl = thumbnailUrl || avatarUrl || KOOKER_PLACEHOLDER_IMAGES[k.id % KOOKER_PLACEHOLDER_IMAGES.length];
+    // Image de vignette : image marquée isCardImage côté serveur (filtrée dans la réponse API)
+    const cardImageUrl = toUrl(
+      k.services.flatMap((s) => s.images || [])[0]?.url
+    ) || null;
+    const imageUrl = cardImageUrl || avatarUrl || KOOKER_PLACEHOLDER_IMAGES[k.id % KOOKER_PLACEHOLDER_IMAGES.length];
     return {
       id: k.id,
       name: `${k.user.firstName} ${k.user.lastName}`,

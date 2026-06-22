@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
+import { compressImage } from '@/lib/compressImage';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import {
   ArrowLeft,
@@ -206,36 +207,6 @@ export default function EditMenuPage() {
   };
 
   // ────────────────────────── Photo Helpers ──────────────────────────
-
-  const compressImage = (file: File): Promise<File> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = (e) => {
-        const img = new Image();
-        img.src = e.target?.result as string;
-        img.onload = () => {
-          const MAX_WIDTH = 1200;
-          let w = img.width;
-          let h = img.height;
-          if (w > MAX_WIDTH) { h = Math.round((h * MAX_WIDTH) / w); w = MAX_WIDTH; }
-          const canvas = document.createElement('canvas');
-          canvas.width = w; canvas.height = h;
-          const ctx = canvas.getContext('2d');
-          if (!ctx) { reject(new Error('canvas')); return; }
-          ctx.drawImage(img, 0, 0, w, h);
-          canvas.toBlob(
-            (blob) => {
-              if (!blob) { reject(new Error('blob')); return; }
-              resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }));
-            },
-            'image/jpeg', 0.82
-          );
-        };
-        img.onerror = reject;
-      };
-      reader.onerror = reject;
-    });
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

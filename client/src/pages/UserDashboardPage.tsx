@@ -5,6 +5,7 @@ import { api } from '../lib/api';
 import { toast } from 'sonner';
 import KookerDashboardPage from './KookerDashboardPage';
 import { usePageTiming } from '@/hooks/usePageTiming';
+import { compressImage } from '@/lib/compressImage';
 
 // ────────────────────────── Types ──────────────────────────
 interface Booking {
@@ -380,8 +381,9 @@ const UserDashboardPage = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
+      const compressed = await compressImage(file, 800);
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', compressed);
       const uploadRes = await api.upload<{ url: string }>('/upload', formData);
       if (uploadRes.success && uploadRes.data) {
         await api.put('/users/avatar', { avatar: uploadRes.data.url });

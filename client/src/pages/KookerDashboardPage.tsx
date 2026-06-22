@@ -6,6 +6,46 @@ import { toast } from 'sonner';
 import PlanningTab from '@/components/dashboard/PlanningTab';
 import { usePageTiming } from '@/hooks/usePageTiming';
 
+// ────────────────────────── Image compression ──────────────────────────
+
+async function compressImage(file: File, maxWidthPx = 1400, qualityStart = 0.82): Promise<File> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width, height } = img;
+      if (width > maxWidthPx) {
+        height = Math.round((height * maxWidthPx) / width);
+        width = maxWidthPx;
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0, width, height);
+      // Essaye plusieurs niveaux de qualité pour rester sous 900KB
+      const tryExport = (quality: number) => {
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) { resolve(file); return; }
+            if (blob.size > 900_000 && quality > 0.5) {
+              tryExport(quality - 0.1);
+            } else {
+              resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }));
+            }
+          },
+          'image/jpeg',
+          quality,
+        );
+      };
+      tryExport(qualityStart);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
+
 // ────────────────────────── Types ──────────────────────────
 
 interface DashboardStats {
@@ -409,8 +449,9 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
+      const compressed = await compressImage(file, 800);
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', compressed);
       const uploadRes = await api.upload<{ url: string }>('/upload', formData);
       if (uploadRes.success && uploadRes.data) {
         await api.put('/users/avatar', { avatar: uploadRes.data.url });
@@ -429,8 +470,9 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
     if (!file) return;
     setThumbnailUploading(true);
     try {
+      const compressed = await compressImage(file, 1400);
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', compressed);
       const uploadRes = await api.upload<{ url: string }>('/upload', formData);
       if (uploadRes.success && uploadRes.data) {
         const url = uploadRes.data.url;

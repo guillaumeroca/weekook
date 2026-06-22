@@ -40,7 +40,7 @@ interface ApiKooker {
   rating: number;
   reviewCount: number;
   user: { id: number; firstName: string; lastName: string; avatar: string | null };
-  services: { id: number; priceInCents: number; type: string; images?: { url: string }[] }[];
+  services: { id: number; priceInCents: number; type: string; images?: { url: string; isCardImage: boolean }[] }[];
 }
 
 interface KookersResponse {
@@ -145,10 +145,10 @@ export default function SearchPage() {
       ? Math.min(...k.services.map((s) => s.priceInCents)) / 100
       : 0;
     const avatarUrl = toUrl(k.user.avatar);
-    // Image de vignette : image marquée isCardImage côté serveur (filtrée dans la réponse API)
-    const cardImageUrl = toUrl(
-      k.services.flatMap((s) => s.images || [])[0]?.url
-    ) || null;
+    // Image de vignette : préférer isCardImage=true, sinon première image disponible
+    const allServiceImages = k.services.flatMap((s) => s.images || []);
+    const bestImage = allServiceImages.find((img) => img.isCardImage) || allServiceImages[0];
+    const cardImageUrl = toUrl(bestImage?.url) || null;
     const imageUrl = cardImageUrl || avatarUrl || KOOKER_PLACEHOLDER_IMAGES[k.id % KOOKER_PLACEHOLDER_IMAGES.length];
     return {
       id: k.id,

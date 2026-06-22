@@ -61,8 +61,8 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
               specialty: true,
               koursDifficulty: true,
               images: {
-                where: { isCardImage: true },
-                select: { url: true },
+                orderBy: [{ isCardImage: 'desc' }, { sortOrder: 'asc' }],
+                select: { url: true, isCardImage: true },
                 take: 1,
               },
             },

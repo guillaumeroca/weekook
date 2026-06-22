@@ -321,7 +321,11 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
       const res = await api.get<KookerApiProfile>(`/kookers/${kookerProfileId}`);
       if (res.success && res.data) {
         const p = res.data;
-        const rawThumbnail = p.thumbnailImage as string | undefined;
+        const toUrl = (raw: string | null | undefined) => {
+          if (!raw) return '';
+          if (raw.startsWith('http') || raw.startsWith('/')) return raw;
+          return `/uploads/${raw}`;
+        };
         const parsed: KookerProfile = {
           bio: p.bio || '',
           specialties: safeParseJson(p.specialties),
@@ -330,9 +334,7 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
           experience: p.experience || '',
           phone: p.user?.phone || '',
           address: p.address || '',
-          thumbnailImage: rawThumbnail
-            ? (rawThumbnail.startsWith('http') ? rawThumbnail : `/uploads/${rawThumbnail}`)
-            : '',
+          thumbnailImage: toUrl(p.thumbnailImage as string | undefined),
         };
         setProfile(parsed);
         setOriginalProfile(parsed);

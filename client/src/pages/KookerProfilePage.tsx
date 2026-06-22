@@ -88,19 +88,22 @@ function safeJsonParse<T>(value: unknown, fallback: T): T {
   }
 }
 
+// ─── Helper: Construit une URL depuis un chemin DB (peut être "filename.jpg" ou "/uploads/filename.jpg")
+const toUrl = (raw: string | null | undefined): string => {
+  if (!raw) return '';
+  if (raw.startsWith('http') || raw.startsWith('/')) return raw;
+  return `/uploads/${raw}`;
+};
+
 // ─── Helper: Map API response to KookerProfile ─────────────────────────────────
 function mapApiToProfile(data: any): KookerProfile {
   return {
     id: data.id,
     userId: data.user?.id || 0,
     name: `${data.user?.firstName || ''} ${data.user?.lastName || ''}`.trim() || 'Kooker',
-    avatarUrl: data.user?.avatar
-      ? (data.user.avatar.startsWith('http') ? data.user.avatar : `/uploads/${data.user.avatar}`)
-      : KOOKER_PLACEHOLDER_IMAGES[data.id % KOOKER_PLACEHOLDER_IMAGES.length],
+    avatarUrl: toUrl(data.user?.avatar) || KOOKER_PLACEHOLDER_IMAGES[data.id % KOOKER_PLACEHOLDER_IMAGES.length],
     coverUrl: '',
-    thumbnailImage: data.thumbnailImage
-      ? (data.thumbnailImage.startsWith('http') ? data.thumbnailImage : `/uploads/${data.thumbnailImage}`)
-      : '',
+    thumbnailImage: toUrl(data.thumbnailImage),
     city: data.city || '',
     bio: data.bio || '',
     specialties: safeJsonParse<string[]>(data.specialties, []),

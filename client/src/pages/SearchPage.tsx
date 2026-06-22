@@ -128,6 +128,13 @@ export default function SearchPage() {
     try { const parsed = JSON.parse(val); return Array.isArray(parsed) ? parsed : JSON.parse(parsed); } catch { return []; }
   };
 
+  // Gère les deux formats stockés en DB : juste "filename.jpg" ou déjà "/uploads/filename.jpg"
+  const toUrl = (raw: string | null | undefined): string => {
+    if (!raw) return '';
+    if (raw.startsWith('http') || raw.startsWith('/')) return raw;
+    return `/uploads/${raw}`;
+  };
+
   const mapKooker = (k: ApiKooker): Kooker => {
     const specialties = parseJsonField(k.specialties);
     const typeArr = parseJsonField(k.type);
@@ -138,13 +145,8 @@ export default function SearchPage() {
     const lowestPrice = k.services.length > 0
       ? Math.min(...k.services.map((s) => s.priceInCents)) / 100
       : 0;
-    const avatarUrl = k.user.avatar
-      ? (k.user.avatar.startsWith('http') ? k.user.avatar : `/uploads/${k.user.avatar}`)
-      : '';
-
-    const thumbnailUrl = k.thumbnailImage
-      ? (k.thumbnailImage.startsWith('http') ? k.thumbnailImage : `/uploads/${k.thumbnailImage}`)
-      : null;
+    const avatarUrl = toUrl(k.user.avatar);
+    const thumbnailUrl = toUrl(k.thumbnailImage) || null;
 
     const imageUrl = thumbnailUrl || avatarUrl || KOOKER_PLACEHOLDER_IMAGES[k.id % KOOKER_PLACEHOLDER_IMAGES.length];
     return {

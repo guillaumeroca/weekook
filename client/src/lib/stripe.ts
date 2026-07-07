@@ -17,6 +17,7 @@ export function getStripe(): Promise<Stripe | null> {
 }
 
 export const STRIPE_ELEMENT_OPTIONS = {
+  hidePostalCode: true,
   style: {
     base: {
       fontFamily: 'Inter, sans-serif',

@@ -503,62 +503,6 @@ export default function CreateMenuPage() {
                 </div>
               </div>
 
-              {/* Ce que vous allez apprendre — separate card */}
-              <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm mb-6">
-                <h3 className="text-[22px] font-bold text-[#111125] tracking-[-0.44px] mb-5">
-                  Ce que vous allez apprendre
-                </h3>
-
-                {koursMenuItems.length > 0 && (
-                  <div className="space-y-2 mb-4">
-                    {koursMenuItems.map((item, idx) => (
-                      <div key={idx} className="flex items-start justify-between gap-3 bg-[#f3ecff] rounded-[12px] p-4">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[14px] font-semibold text-[#111125]">{item.name}</p>
-                          {item.description && (
-                            <p className="text-[13px] text-[#303044]/50 mt-0.5">{item.description}</p>
-                          )}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => removeKoursItem(idx)}
-                          className="shrink-0 w-8 h-8 flex items-center justify-center rounded-[8px] hover:bg-red-50 text-[#303044]/30 hover:text-red-500 transition-all cursor-pointer"
-                        >
-                          <X size={16} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <div className="border-2 border-dashed border-[#e0e2ef] rounded-[16px] p-4">
-                  <div className="flex flex-col gap-3">
-                    <input
-                      type="text"
-                      value={koursNewItemName}
-                      onChange={(e) => setKoursNewItemName(e.target.value)}
-                      placeholder="Ex: Pâtes fraîches maison"
-                      className={inputClass}
-                    />
-                    <input
-                      type="text"
-                      value={koursNewItemDesc}
-                      onChange={(e) => setKoursNewItemDesc(e.target.value)}
-                      placeholder="Description (optionnel)"
-                      className={inputClass}
-                    />
-                    <button
-                      type="button"
-                      onClick={addKoursItem}
-                      disabled={!koursNewItemName.trim()}
-                      className="h-[48px] flex items-center justify-center gap-2 bg-white border-2 border-[#c1a0fd] text-[#c1a0fd] text-[14px] font-semibold rounded-[12px] transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#f3ecff] cursor-pointer"
-                    >
-                      <Plus size={16} />
-                      Ajouter un élément
-                    </button>
-                  </div>
-                </div>
-              </div>
             </>
           )}
 

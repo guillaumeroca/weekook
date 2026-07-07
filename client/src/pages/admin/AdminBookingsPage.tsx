@@ -115,7 +115,7 @@ export default function AdminBookingsPage() {
                         <span>{b.service.title}</span>
                         {(() => {
                           const t = String(b.service.type || '');
-                          if (t.includes('KOURS')) return <span className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold bg-[#c1a0fd] text-white">KOURS</span>;
+                          if (t.includes('COURS')) return <span className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold bg-[#c1a0fd] text-white">COURS</span>;
                           if (t.includes('KOOK')) return <span className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold bg-[#7c5cbf] text-white">KOOK</span>;
                           return null;
                         })()}

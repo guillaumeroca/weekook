@@ -101,7 +101,7 @@ const CONFIG_DEFAULTS: Record<string, unknown> = {
   specialties: ['Provençale', 'Méditerranéenne', 'Pâtisserie', 'Grillades', 'Végétarien', 'Fruits de mer', 'Italienne', 'Asiatique'],
   cities: ['Marseille', 'Aix-en-Provence', 'Cassis', 'La Ciotat', 'Toulon', 'Nice', 'Arles', 'Avignon'],
   allergens: ['Gluten', 'Crustacés', 'Œufs', 'Poisson', 'Arachides', 'Soja', 'Lait', 'Fruits à coque', 'Céleri', 'Moutarde', 'Sésame', 'Sulfites', 'Lupin', 'Mollusques'],
-  serviceTypes: ['KOOK', 'KOURS'],
+  serviceTypes: ['KOOK', 'COURS'],
   platformCommission: 20,
 };
 

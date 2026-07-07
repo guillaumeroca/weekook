@@ -877,10 +877,10 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
                                 <p className="text-[13px] text-[#c1a0fd] font-medium">{booking.service.title}</p>
                                 {(() => {
                                   const t = booking.service.type || '';
-                                  const isKours = Array.isArray(t) ? (t as string[]).includes('KOURS') : String(t).includes('KOURS');
+                                  const isKours = Array.isArray(t) ? (t as string[]).includes('COURS') : String(t).includes('COURS');
                                   const isKook = !isKours && String(t).includes('KOOK');
                                   return isKours
-                                    ? <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-bold bg-[#c1a0fd] text-white">KOURS</span>
+                                    ? <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-bold bg-[#c1a0fd] text-white">COURS</span>
                                     : isKook
                                       ? <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-bold bg-[#7c5cbf] text-white">KOOK</span>
                                       : null;
@@ -909,7 +909,7 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
                                     <path d="M9.91667 12.25V11.0833C9.91667 10.4645 9.67083 9.871 9.23325 9.43342C8.79567 8.99583 8.20217 8.75 7.58333 8.75H3.5C2.88116 8.75 2.28767 8.99583 1.85008 9.43342C1.4125 9.871 1.16667 10.4645 1.16667 11.0833V12.25" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
                                     <circle cx="5.54167" cy="4.08333" r="2.33333" stroke="currentColor" strokeWidth="1.1"/>
                                   </svg>
-                                  {booking.guests} {(() => { const t = String(booking.service.type || ''); return t.includes('KOURS') ? 'participant' : 'convive'; })()}{booking.guests > 1 ? 's' : ''}
+                                  {booking.guests} {(() => { const t = String(booking.service.type || ''); return t.includes('COURS') ? 'participant' : 'convive'; })()}{booking.guests > 1 ? 's' : ''}
                                 </span>
                               </div>
 
@@ -1050,7 +1050,7 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
                     const serviceTypes = safeParseJson(service.type);
                     const allergens = safeParseJson(service.allergens);
                     const isKook = serviceTypes.includes('KOOK');
-                    const isKours = serviceTypes.includes('KOURS');
+                    const isKours = serviceTypes.includes('COURS');
                     const typeLabel = serviceTypes[0] || '';
                     const allImages = service.images || [];
                     const mainImage = allImages[0]?.url || '';
@@ -1086,10 +1086,10 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
                                 </div>
                               )}
                             </div>
-                            {/* KOOK/KOURS badges */}
+                            {/* KOOK/COURS badges */}
                             <div className="absolute top-2 left-2 flex gap-1">
                               {isKook && <span className="px-2 py-0.5 bg-[#c1a0fd] text-white text-[10px] font-bold rounded-[6px]">KOOK</span>}
-                              {isKours && <span className="px-2 py-0.5 bg-[#c1a0fd] text-white text-[10px] font-bold rounded-[6px]">KOURS</span>}
+                              {isKours && <span className="px-2 py-0.5 bg-[#c1a0fd] text-white text-[10px] font-bold rounded-[6px]">COURS</span>}
                             </div>
                             {/* Allergen overlay */}
                             {allergens.length > 0 && (

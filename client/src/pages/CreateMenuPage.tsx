@@ -42,7 +42,7 @@ export default function CreateMenuPage() {
   // Service type selection
   const [serviceTypes, setServiceTypes] = useState<string[]>([]);
 
-  // KOURS fields
+  // COURS fields
   const [koursTitle, setKoursTitle] = useState('');
   const [koursDescription, setKoursDescription] = useState('');
   const [koursPrice, setKoursPrice] = useState('');
@@ -95,7 +95,7 @@ export default function CreateMenuPage() {
     });
   };
 
-  // ────────────────────────── KOURS completeness ──────────────────────────
+  // ────────────────────────── COURS completeness ──────────────────────────
 
   const isKoursComplete =
     koursTitle.trim() !== '' &&
@@ -105,7 +105,7 @@ export default function CreateMenuPage() {
     koursDuration.trim() !== '' &&
     koursMaxParticipants.trim() !== '';
 
-  const isKookDisabled = serviceTypes.includes('KOURS') && serviceTypes.includes('KOOK') && !isKoursComplete;
+  const isKookDisabled = serviceTypes.includes('COURS') && serviceTypes.includes('KOOK') && !isKoursComplete;
 
   // ────────────────────────── Menu Items Helpers ──────────────────────────
 
@@ -185,7 +185,7 @@ export default function CreateMenuPage() {
     setIsSubmitting(true);
     try {
       for (const type of serviceTypes) {
-        const isKours = type === 'KOURS';
+        const isKours = type === 'COURS';
         const data = {
           title: isKours ? koursTitle : kookTitle,
           description: isKours ? koursDescription : kookDescription,
@@ -284,15 +284,15 @@ export default function CreateMenuPage() {
               <div className="flex flex-col sm:flex-row gap-4">
                 <button
                   type="button"
-                  onClick={() => toggleType('KOURS')}
+                  onClick={() => toggleType('COURS')}
                   className={`flex-1 flex items-center justify-center gap-3 h-[52px] rounded-[12px] text-[15px] font-semibold transition-all cursor-pointer ${
-                    serviceTypes.includes('KOURS')
+                    serviceTypes.includes('COURS')
                       ? 'bg-[#f3ecff] border-2 border-[#c1a0fd] text-[#c1a0fd]'
                       : 'bg-white border-2 border-transparent text-[#303044] hover:border-[#c1a0fd]/40'
                   }`}
                 >
                   <GraduationCap size={20} />
-                  KOURS
+                  COURS
                 </button>
 
                 <button
@@ -311,20 +311,20 @@ export default function CreateMenuPage() {
             </div>
           </div>
 
-          {/* ── KOURS Form ── */}
-          {serviceTypes.includes('KOURS') && (
+          {/* ── COURS Form ── */}
+          {serviceTypes.includes('COURS') && (
             <>
-              {/* Main KOURS fields card */}
+              {/* Main COURS fields card */}
               <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm mb-6">
                 <h3 className="text-[22px] font-bold text-[#111125] tracking-[-0.44px] mb-6">
-                  Service KOURS - Cours de cuisine
+                  Service COURS - Cours de cuisine
                 </h3>
 
                 {/* Info box */}
                 <div className="bg-[#f3ecff] rounded-[12px] px-4 py-3 mb-6 flex items-center gap-2">
                   <span className="text-[16px] shrink-0">💜</span>
                   <p className="text-[13px] text-[#5c5c6f]">
-                    Service KOURS : Apprenez à cuisiner avec un kooker passionné
+                    Service COURS : Apprenez à cuisiner avec un kooker passionné
                   </p>
                 </div>
 
@@ -517,7 +517,7 @@ export default function CreateMenuPage() {
                 <div className="bg-orange-50 border border-orange-200 rounded-[12px] p-4 mb-6 flex items-center gap-3">
                   <Lock size={18} className="text-orange-500 shrink-0" />
                   <p className="text-[13px] text-orange-700 font-medium">
-                    Complétez d'abord le formulaire KOURS ci-dessus pour débloquer cette section.
+                    Complétez d'abord le formulaire COURS ci-dessus pour débloquer cette section.
                   </p>
                 </div>
               )}

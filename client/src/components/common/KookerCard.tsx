@@ -59,8 +59,8 @@ export default function KookerCard({
         {/* Type badges */}
         {types && types.length > 0 && (
           <div className="absolute top-[18px] right-[18px] flex flex-col gap-1">
-            {types.includes('KOURS') && (
-              <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-bold bg-[#c1a0fd] text-white shadow-sm">KOURS</span>
+            {types.includes('COURS') && (
+              <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-bold bg-[#c1a0fd] text-white shadow-sm">COURS</span>
             )}
             {types.includes('KOOK') && (
               <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-bold bg-[#7c5cbf] text-white shadow-sm">KOOK</span>

@@ -107,8 +107,8 @@ const formatPrice = (cents: number) => {
 
 const BookingCard = ({ booking, showActions = false, onCancel, onViewDetails, onReview, hasReview, onConfirmCompletion }: { booking: Booking; showActions?: boolean; onCancel?: (id: number) => void; onViewDetails?: (id: number) => void; onReview?: (booking: Booking) => void; hasReview?: boolean; onConfirmCompletion?: (id: number) => void }) => {
   const isKours = Array.isArray(booking.serviceType)
-    ? (booking.serviceType as unknown as string[]).includes('KOURS')
-    : String(booking.serviceType || '').includes('KOURS');
+    ? (booking.serviceType as unknown as string[]).includes('COURS')
+    : String(booking.serviceType || '').includes('COURS');
   const isKook = !isKours && String(booking.serviceType || '').includes('KOOK');
 
   return (
@@ -129,7 +129,7 @@ const BookingCard = ({ booking, showActions = false, onCancel, onViewDetails, on
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2 mb-0.5">
             <h4 className="text-[20px] font-semibold text-[#111125] truncate">{booking.serviceName}</h4>
-            {isKours && <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-bold bg-[#c1a0fd] text-white">KOURS</span>}
+            {isKours && <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-bold bg-[#c1a0fd] text-white">COURS</span>}
             {isKook && <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-bold bg-[#7c5cbf] text-white">KOOK</span>}
           </div>
           <p className="text-[16px] text-[#5c5c6f]">par {booking.kookerName}</p>

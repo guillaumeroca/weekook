@@ -198,8 +198,8 @@ export default function BookingDetailPage() {
   const isOwner = booking.userId === user?.id;
   const isKooker = user?.kookerProfileId != null && booking.kookerProfileId === user.kookerProfileId;
   const isKours = Array.isArray(booking.service.type)
-    ? (booking.service.type as string[]).includes('KOURS')
-    : String(booking.service.type).includes('KOURS');
+    ? (booking.service.type as string[]).includes('COURS')
+    : String(booking.service.type).includes('COURS');
   const canEdit = isOwner
     ? booking.status === 'pending'
     : isKooker
@@ -446,7 +446,7 @@ export default function BookingDetailPage() {
                   <div className="flex flex-wrap items-center gap-2 leading-tight mb-0.5">
                     <h1 className="text-[20px] font-bold text-[#111125]">{booking.service.title}</h1>
                     {isKours
-                      ? <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-bold bg-[#c1a0fd] text-white">KOURS</span>
+                      ? <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-bold bg-[#c1a0fd] text-white">COURS</span>
                       : <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-bold bg-[#7c5cbf] text-white">KOOK</span>}
                   </div>
                   <button

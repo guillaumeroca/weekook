@@ -709,8 +709,8 @@ export default function KookerProfilePage() {
                               )}
                               {/* Type badges */}
                               <div className="absolute top-2 left-2 flex flex-col gap-1">
-                                {service.types.includes('KOURS') && (
-                                  <span className="px-2 py-0.5 rounded-[5px] text-[10px] font-bold bg-[#c1a0fd] text-white">KOURS</span>
+                                {service.types.includes('COURS') && (
+                                  <span className="px-2 py-0.5 rounded-[5px] text-[10px] font-bold bg-[#c1a0fd] text-white">COURS</span>
                                 )}
                                 {service.types.includes('KOOK') && (
                                   <span className="px-2 py-0.5 rounded-[5px] text-[10px] font-bold bg-[#7c5cbf] text-white">KOOK</span>
@@ -802,7 +802,7 @@ export default function KookerProfilePage() {
                                 onClick={() => { if (!user) { navigate('/connexion'); return; } navigate(`/reservation?service=${service.id}&kooker=${profile.id}`); }}
                                 className="px-4 py-2 bg-[#c1a0fd] text-white text-[13px] font-semibold rounded-[10px] hover:bg-[#b090ed] transition-all whitespace-nowrap flex-shrink-0"
                               >
-                                {service.types.includes('KOURS') ? 'Réserver ce cours' : 'Réserver'}
+                                {service.types.includes('COURS') ? 'Réserver ce cours' : 'Réserver'}
                               </button>
                             </div>
                           </div>
@@ -815,8 +815,8 @@ export default function KookerProfilePage() {
                             <p className="text-[13px] text-[#4b5563] leading-relaxed mb-4">
                               {service.description}
                             </p>
-                            {/* KOURS-specific badges */}
-                            {service.types.includes('KOURS') && (service.koursDifficulty || service.koursLocation) && (
+                            {/* COURS-specific badges */}
+                            {service.types.includes('COURS') && (service.koursDifficulty || service.koursLocation) && (
                               <div className="flex flex-wrap gap-2 mb-4">
                                 {service.koursDifficulty && (
                                   <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] text-[#7c5cbf] text-[12px] font-semibold rounded-[8px]">
@@ -831,7 +831,7 @@ export default function KookerProfilePage() {
                               </div>
                             )}
                             {/* Matériel nécessaire */}
-                            {service.types.includes('KOURS') && service.equipmentList.length > 0 && (
+                            {service.types.includes('COURS') && service.equipmentList.length > 0 && (
                               <div className="mb-4">
                                 <span className="block text-[11px] font-semibold text-[#9ca3af] uppercase mb-1.5">Matériel à prévoir</span>
                                 <div className="flex flex-wrap gap-1.5">

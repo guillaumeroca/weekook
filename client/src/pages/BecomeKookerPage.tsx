@@ -65,7 +65,7 @@ export default function BecomeKookerPage() {
       await api.post('/kookers/become', {
         bio: formData.description,
         specialties: formData.specialties,
-        type: ['KOOK', 'KOURS'],
+        type: ['KOOK', 'COURS'],
         city: formData.city,
         experience: formData.experience + ' ans',
         isCompany: formData.isCompany,

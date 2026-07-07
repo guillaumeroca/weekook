@@ -149,7 +149,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       filtered = filtered.filter((k) => {
         return k.services.some((s: any) => {
           const sTypes = Array.isArray(s.type) ? s.type : JSON.parse(s.type || '[]');
-          return sTypes.includes('KOURS') && s.koursDifficulty === difficultyFilter;
+          return sTypes.includes('COURS') && s.koursDifficulty === difficultyFilter;
         });
       });
     }

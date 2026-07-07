@@ -229,10 +229,10 @@ router.post(
       }
 
       // Auto-calculate total price
-      // KOURS: base price covers 1-6 guests, then extra per guest beyond 6
+      // COURS: base price covers 1-6 guests, then extra per guest beyond 6
       // KOOK: price per guest
       const serviceTypes: string[] = Array.isArray(service.type) ? service.type : JSON.parse(String(service.type) || '[]');
-      const isKours = serviceTypes.includes('KOURS');
+      const isKours = serviceTypes.includes('COURS');
       let totalPriceInCents: number;
       if (isKours) {
         const extraGuests = Math.max(0, guests - 6);
@@ -543,13 +543,13 @@ router.put(
       if (isOwner && typeof guests === 'number' && guests !== booking.guests) {
         changes.push(`Convives : ${booking.guests} → ${guests}`);
         updateData.guests = guests;
-        // Recalculate price: KOURS uses base + extra beyond 6, KOOK uses per-guest
+        // Recalculate price: COURS uses base + extra beyond 6, KOOK uses per-guest
         const svc = await prisma.service.findUnique({
           where: { id: (booking.service as any).id },
           select: { type: true, priceInCents: true, extraGuestPriceInCents: true },
         });
         const svcTypes: string[] = svc ? (Array.isArray(svc.type) ? svc.type : JSON.parse(String(svc.type) || '[]')) : [];
-        if (svcTypes.includes('KOURS') && svc) {
+        if (svcTypes.includes('COURS') && svc) {
           const extraGuests = Math.max(0, guests - 6);
           updateData.totalPriceInCents = svc.priceInCents + extraGuests * (svc.extraGuestPriceInCents ?? 0);
         } else {

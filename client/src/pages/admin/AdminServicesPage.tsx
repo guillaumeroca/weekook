@@ -77,7 +77,7 @@ export default function AdminServicesPage() {
                         {(() => {
                           const types = Array.isArray(s.type) ? s.type : (() => { try { return JSON.parse(s.type as string); } catch { return [s.type]; } })();
                           return (types as string[]).map((t: string) => (
-                            <span key={t} className={`px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold text-white ${t === 'KOURS' ? 'bg-[#c1a0fd]' : 'bg-[#7c5cbf]'}`}>{t}</span>
+                            <span key={t} className={`px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold text-white ${t === 'COURS' ? 'bg-[#c1a0fd]' : 'bg-[#7c5cbf]'}`}>{t}</span>
                           ));
                         })()}
                       </div>

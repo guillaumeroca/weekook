@@ -13,7 +13,7 @@ const KOOKER_PLACEHOLDER_IMAGES = [
 ];
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
-type ServiceType = 'KOOK' | 'KOURS' | 'BOTH' | '';
+type ServiceType = 'KOOK' | 'COURS' | 'BOTH' | '';
 type SortOption = 'pertinence' | 'prix-asc' | 'prix-desc' | 'note';
 
 interface Kooker {
@@ -177,7 +177,7 @@ export default function SearchPage() {
       if (city !== 'Toutes') params.set('city', city);
       if (minPrice) params.set('minPrice', minPrice);
       if (maxPrice) params.set('maxPrice', maxPrice);
-      if (difficulty && type === 'KOURS') params.set('difficulty', difficulty);
+      if (difficulty && type === 'COURS') params.set('difficulty', difficulty);
       if (sort !== 'pertinence') params.set('sort', sort);
       params.set('limit', '12');
 
@@ -220,7 +220,7 @@ export default function SearchPage() {
     if (city !== 'Toutes') params.set('city', city);
     if (minPrice) params.set('minPrice', minPrice);
     if (maxPrice) params.set('maxPrice', maxPrice);
-    if (difficulty && type === 'KOURS') params.set('difficulty', difficulty);
+    if (difficulty && type === 'COURS') params.set('difficulty', difficulty);
     setSearchParams(params, { replace: true });
   }, [query, type, specialty, city, minPrice, maxPrice, difficulty, setSearchParams]);
 
@@ -230,7 +230,7 @@ export default function SearchPage() {
     setCity(pendingCity);
     setMinPrice(pendingMinPrice);
     setMaxPrice(pendingMaxPrice);
-    setDifficulty(pendingType === 'KOURS' ? pendingDifficulty : '');
+    setDifficulty(pendingType === 'COURS' ? pendingDifficulty : '');
   };
 
   const resetFilters = () => {
@@ -352,18 +352,18 @@ export default function SearchPage() {
                   <label className="text-[13px] font-medium text-[#303044]">Type de service</label>
                   <select
                     value={pendingType}
-                    onChange={(e) => { setPendingType(e.target.value as ServiceType); if (e.target.value !== 'KOURS') setPendingDifficulty(''); }}
+                    onChange={(e) => { setPendingType(e.target.value as ServiceType); if (e.target.value !== 'COURS') setPendingDifficulty(''); }}
                     className="h-[48px] px-3 bg-white border-2 border-[#e0e0e6] hover:border-[#c1a0fd] rounded-[12px] text-[14px] text-[#111125] focus:outline-none focus:ring-2 focus:ring-[#c1a0fd] focus:border-transparent cursor-pointer"
                   >
                     <option value="">Tous les types</option>
-                    <option value="KOURS">KOURS (Cours)</option>
+                    <option value="COURS">COURS (Cours)</option>
                     <option value="KOOK">KOOK (Repas)</option>
                     <option value="BOTH">Les deux</option>
                   </select>
                 </div>
 
-                {/* Niveau (KOURS only) */}
-                {pendingType === 'KOURS' && (
+                {/* Niveau (COURS only) */}
+                {pendingType === 'COURS' && (
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[13px] font-medium text-[#303044]">Niveau</label>
                     <select
@@ -449,7 +449,7 @@ export default function SearchPage() {
                 )}
                 {type && type !== 'BOTH' && (
                   <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] border border-[#c1a0fd] text-[#c1a0fd] rounded-[8px] text-[12px] font-medium">
-                    {type === 'KOOK' ? 'KOOK (Repas)' : 'KOURS (Cours)'}
+                    {type === 'KOOK' ? 'KOOK (Repas)' : 'COURS (Cours)'}
                     <button onClick={() => { setType(''); setPendingType(''); }} className="hover:text-[#111125] transition-colors">
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

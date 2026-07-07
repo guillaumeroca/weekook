@@ -352,7 +352,7 @@ export default function BookingPage() {
   };
 
   // ─── Derived values ────────────────────────────────────────────────────────
-  const isKours = service ? service.type.includes('KOURS') : false;
+  const isKours = service ? service.type.includes('COURS') : false;
   const guestLabel = isKours ? 'participant' : 'convive';
   const guestLabelPlural = isKours ? 'participants' : 'convives';
   const totalPriceCents = service

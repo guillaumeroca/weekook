@@ -44,7 +44,7 @@ export default function EditMenuPage() {
   // Service type selection
   const [serviceTypes, setServiceTypes] = useState<string[]>([]);
 
-  // KOURS fields
+  // COURS fields
   const [koursTitle, setKoursTitle] = useState('');
   const [koursDescription, setKoursDescription] = useState('');
   const [koursPrice, setKoursPrice] = useState('');
@@ -94,8 +94,8 @@ export default function EditMenuPage() {
           const types: string[] = Array.isArray(s.type) ? s.type : JSON.parse(s.type || '[]');
           setServiceTypes(types);
 
-          // Populate KOURS or KOOK fields based on type
-          if (types.includes('KOURS')) {
+          // Populate COURS or KOOK fields based on type
+          if (types.includes('COURS')) {
             setKoursTitle(s.title || '');
             setKoursDescription(s.description || '');
             setKoursPrice(String(s.priceInCents / 100));
@@ -131,7 +131,7 @@ export default function EditMenuPage() {
               name: m.name,
               description: m.description || '',
             }));
-            if (types.includes('KOURS')) setKoursMenuItems(items);
+            if (types.includes('COURS')) setKoursMenuItems(items);
             else setKookMenuItems(items);
           }
         }
@@ -158,7 +158,7 @@ export default function EditMenuPage() {
     });
   };
 
-  // ────────────────────────── KOURS completeness ──────────────────────────
+  // ────────────────────────── COURS completeness ──────────────────────────
 
   const isKoursComplete =
     koursTitle.trim() !== '' &&
@@ -168,7 +168,7 @@ export default function EditMenuPage() {
     koursDuration.trim() !== '' &&
     koursMaxParticipants.trim() !== '';
 
-  const isKookDisabled = serviceTypes.includes('KOURS') && serviceTypes.includes('KOOK') && !isKoursComplete;
+  const isKookDisabled = serviceTypes.includes('COURS') && serviceTypes.includes('KOOK') && !isKoursComplete;
 
   // ────────────────────────── Menu Items Helpers ──────────────────────────
 
@@ -247,7 +247,7 @@ export default function EditMenuPage() {
     setIsSubmitting(true);
     try {
       const type = serviceTypes[0];
-      const isKours = type === 'KOURS';
+      const isKours = type === 'COURS';
       const data = {
         title: isKours ? koursTitle : kookTitle,
         description: isKours ? koursDescription : kookDescription,
@@ -348,15 +348,15 @@ export default function EditMenuPage() {
               <div className="flex flex-col sm:flex-row gap-4">
                 <button
                   type="button"
-                  onClick={() => toggleType('KOURS')}
+                  onClick={() => toggleType('COURS')}
                   className={`flex-1 flex items-center justify-center gap-3 h-[56px] rounded-[12px] text-[15px] font-semibold transition-all ${
-                    serviceTypes.includes('KOURS')
+                    serviceTypes.includes('COURS')
                       ? 'bg-[#c1a0fd] text-white shadow-lg shadow-[#c1a0fd]/30'
                       : 'bg-white/10 text-white/80 hover:bg-white/20 border border-white/20'
                   }`}
                 >
                   <GraduationCap size={20} />
-                  KOURS
+                  COURS
                 </button>
                 <button
                   type="button"
@@ -374,15 +374,15 @@ export default function EditMenuPage() {
             </div>
           </div>
 
-          {/* ── KOURS Form ── */}
-          {serviceTypes.includes('KOURS') && (
+          {/* ── COURS Form ── */}
+          {serviceTypes.includes('COURS') && (
             <div className="bg-white rounded-[16px] p-6 md:p-8 shadow-sm mb-8">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 rounded-[12px] bg-[#f3ecff] flex items-center justify-center">
                   <GraduationCap size={20} className="text-[#c1a0fd]" />
                 </div>
                 <div>
-                  <h3 className="text-[24px] font-semibold text-[#111125] tracking-[-0.48px]">Service KOURS - Cours de cuisine</h3>
+                  <h3 className="text-[24px] font-semibold text-[#111125] tracking-[-0.48px]">Service COURS - Cours de cuisine</h3>
                   <p className="text-[13px] text-[#111125]/50">Configurez les détails de votre cours</p>
                 </div>
               </div>
@@ -569,7 +569,7 @@ export default function EditMenuPage() {
                 <div className="bg-orange-50 border border-orange-200 rounded-[12px] p-4 mb-6 flex items-center gap-3">
                   <Lock size={18} className="text-orange-500 flex-shrink-0" />
                   <p className="text-[13px] text-orange-700 font-medium">
-                    Complétez d'abord le formulaire KOURS ci-dessus pour débloquer cette section.
+                    Complétez d'abord le formulaire COURS ci-dessus pour débloquer cette section.
                   </p>
                 </div>
               )}
@@ -907,7 +907,7 @@ export default function EditMenuPage() {
             </button>
             <button
               type="submit"
-              disabled={!canSubmit || (serviceTypes.includes('KOURS') && serviceTypes.includes('KOOK') && !isKoursComplete)}
+              disabled={!canSubmit || (serviceTypes.includes('COURS') && serviceTypes.includes('KOOK') && !isKoursComplete)}
               className="px-8 py-3 text-[14px] font-semibold text-white bg-[#c1a0fd] hover:bg-[#b090ed] rounded-[12px] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isSubmitting ? (

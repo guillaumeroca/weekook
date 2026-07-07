@@ -50,11 +50,10 @@ export default function EditMenuPage() {
   const [koursPrice, setKoursPrice] = useState('');
   const [koursExtraGuestPrice, setKoursExtraGuestPrice] = useState('');
   const [koursDuration, setKoursDuration] = useState('');
-  const [koursMinParticipants, setKoursMinParticipants] = useState('');
   const [koursMaxParticipants, setKoursMaxParticipants] = useState('');
   const [koursDifficulty, setKoursDifficulty] = useState('Débutant');
-  const [koursLocation, setKoursLocation] = useState('Chez le kooker');
-  const [koursEquipmentProvided, setKoursEquipmentProvided] = useState(false);
+  const [koursEquipmentList, setKoursEquipmentList] = useState<string[]>([]);
+  const [koursNewEquipment, setKoursNewEquipment] = useState('');
   const [koursMenuItems, setKoursMenuItems] = useState<MenuItem[]>([]);
   const [koursNewItemName, setKoursNewItemName] = useState('');
   const [koursNewItemDesc, setKoursNewItemDesc] = useState('');
@@ -102,11 +101,10 @@ export default function EditMenuPage() {
             setKoursPrice(String(s.priceInCents / 100));
             setKoursExtraGuestPrice(s.extraGuestPriceInCents != null ? String(s.extraGuestPriceInCents / 100) : '');
             setKoursDuration(String(s.durationMinutes || ''));
-            setKoursMinParticipants(s.minGuests ? String(s.minGuests) : '');
             setKoursMaxParticipants(String(s.maxGuests || ''));
-            setKoursEquipmentProvided(s.equipmentProvided || false);
             setKoursDifficulty(s.koursDifficulty || 'Débutant');
-            setKoursLocation(s.koursLocation || 'Chez le kooker');
+            const constraints = Array.isArray(s.constraints) ? s.constraints : (s.constraints ? JSON.parse(s.constraints) : []);
+            setKoursEquipmentList(constraints);
           }
           if (types.includes('KOOK')) {
             setKookTitle(s.title || '');
@@ -258,16 +256,17 @@ export default function EditMenuPage() {
         extraGuestPriceInCents: isKours ? Math.round(parseFloat(koursExtraGuestPrice) * 100) : undefined,
         durationMinutes: parseInt(isKours ? koursDuration : kookDuration),
         minGuests: isKours
-          ? (koursMinParticipants ? parseInt(koursMinParticipants) : undefined)
+          ? undefined
           : (kookMinConvives ? parseInt(kookMinConvives) : undefined),
         maxGuests: parseInt(isKours ? koursMaxParticipants : kookMaxParticipants),
         allergens: allergens,
         specialty: specialties.length > 0 ? specialties : [],
         prepTimeMinutes: !isKours && kookPrepTime ? parseInt(kookPrepTime) : undefined,
         ingredientsIncluded: !isKours ? kookIngredientsIncluded : undefined,
-        equipmentProvided: isKours ? koursEquipmentProvided : undefined,
+        equipmentProvided: undefined,
         koursDifficulty: isKours ? koursDifficulty : undefined,
-        koursLocation: isKours ? koursLocation : undefined,
+        koursLocation: isKours ? 'Chez le client' : undefined,
+        constraints: isKours && koursEquipmentList.length > 0 ? koursEquipmentList : undefined,
         menuItems: (isKours ? koursMenuItems : kookMenuItems).map((item, idx) => ({
           category: 'Plat',
           name: item.name,
@@ -460,70 +459,94 @@ export default function EditMenuPage() {
                 />
               </div>
 
-              {/* Min / Max participants */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
-                <div>
-                  <label className={labelClass}>Min participants</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={koursMinParticipants}
-                    onChange={(e) => setKoursMinParticipants(e.target.value)}
-                    placeholder="2"
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>Max participants</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={koursMaxParticipants}
-                    onChange={(e) => setKoursMaxParticipants(e.target.value)}
-                    placeholder="8"
-                    className={inputClass}
-                  />
-                </div>
-              </div>
-
-              {/* Difficulty + Location */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
-                <div>
-                  <label className={labelClass}>Difficulté</label>
-                  <select
-                    value={koursDifficulty}
-                    onChange={(e) => setKoursDifficulty(e.target.value)}
-                    className={inputClass + ' appearance-none cursor-pointer'}
-                  >
-                    <option value="Débutant">Débutant</option>
-                    <option value="Intermédiaire">Intermédiaire</option>
-                    <option value="Avancé">Avancé</option>
-                  </select>
-                </div>
-                <div>
-                  <label className={labelClass}>Lieu</label>
-                  <select
-                    value={koursLocation}
-                    onChange={(e) => setKoursLocation(e.target.value)}
-                    className={inputClass + ' appearance-none cursor-pointer'}
-                  >
-                    <option value="Chez le kooker">Chez le kooker</option>
-                    <option value="Chez le client">Chez le client</option>
-                    <option value="Les deux">Les deux</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Equipment checkbox */}
-              <label className="flex items-center gap-3 cursor-pointer mb-8">
+              {/* Max participants */}
+              <div className="mb-5">
+                <label className={labelClass}>Nombre maximum de participants</label>
                 <input
-                  type="checkbox"
-                  checked={koursEquipmentProvided}
-                  onChange={(e) => setKoursEquipmentProvided(e.target.checked)}
-                  className="w-5 h-5 rounded-[4px] border-[#e0e2ef] text-[#c1a0fd] focus:ring-[#c1a0fd]/20 cursor-pointer"
+                  type="number"
+                  min="1"
+                  value={koursMaxParticipants}
+                  onChange={(e) => setKoursMaxParticipants(e.target.value)}
+                  placeholder="8"
+                  className={inputClass}
                 />
-                <span className="text-[14px] text-[#111125] font-medium">Matériel et ustensiles fournis</span>
-              </label>
+              </div>
+
+              {/* Difficulty */}
+              <div className="mb-5">
+                <label className={labelClass}>Difficulté</label>
+                <select
+                  value={koursDifficulty}
+                  onChange={(e) => setKoursDifficulty(e.target.value)}
+                  className={inputClass + ' appearance-none cursor-pointer'}
+                >
+                  <option value="Débutant">Débutant</option>
+                  <option value="Intermédiaire">Intermédiaire</option>
+                  <option value="Avancé">Avancé</option>
+                </select>
+              </div>
+
+              {/* Matériel et ustensiles à fournir par le client */}
+              <div className="mb-8">
+                <label className={labelClass}>
+                  Matériel et ustensiles nécessaires (à fournir par le client)
+                </label>
+
+                {koursEquipmentList.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {koursEquipmentList.map((item) => (
+                      <span
+                        key={item}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#c1a0fd]/10 text-[#c1a0fd] text-[13px] font-medium rounded-[8px]"
+                      >
+                        {item}
+                        <button
+                          type="button"
+                          onClick={() => setKoursEquipmentList((prev) => prev.filter((x) => x !== item))}
+                          className="hover:text-red-500 transition-colors"
+                        >
+                          <X size={14} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    value={koursNewEquipment}
+                    onChange={(e) => setKoursNewEquipment(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const val = koursNewEquipment.trim();
+                        if (val && !koursEquipmentList.includes(val)) {
+                          setKoursEquipmentList((prev) => [...prev, val]);
+                          setKoursNewEquipment('');
+                        }
+                      }
+                    }}
+                    placeholder="Ex: Saladier, fouet, planche à découper..."
+                    className={inputClass + ' flex-1'}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const val = koursNewEquipment.trim();
+                      if (val && !koursEquipmentList.includes(val)) {
+                        setKoursEquipmentList((prev) => [...prev, val]);
+                        setKoursNewEquipment('');
+                      }
+                    }}
+                    disabled={!koursNewEquipment.trim()}
+                    className="h-[48px] px-5 flex items-center gap-2 bg-[#c1a0fd] hover:bg-[#b090ed] text-white text-[13px] font-semibold rounded-[12px] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <Plus size={16} />
+                    Ajouter
+                  </button>
+                </div>
+              </div>
 
               {/* Menu Items - KOURS */}
               <div className="border-t border-[#e0e2ef] pt-6">

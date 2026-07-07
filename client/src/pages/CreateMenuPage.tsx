@@ -48,11 +48,10 @@ export default function CreateMenuPage() {
   const [koursPrice, setKoursPrice] = useState('');
   const [koursExtraGuestPrice, setKoursExtraGuestPrice] = useState('');
   const [koursDuration, setKoursDuration] = useState('');
-  const [koursMinParticipants, setKoursMinParticipants] = useState('');
   const [koursMaxParticipants, setKoursMaxParticipants] = useState('');
   const [koursDifficulty, setKoursDifficulty] = useState('Débutant');
-  const [koursLocation, setKoursLocation] = useState('Chez le kooker');
-  const [koursEquipmentProvided, setKoursEquipmentProvided] = useState(false);
+  const [koursEquipmentList, setKoursEquipmentList] = useState<string[]>([]);
+  const [koursNewEquipment, setKoursNewEquipment] = useState('');
   const [koursMenuItems, setKoursMenuItems] = useState<MenuItem[]>([]);
   const [koursNewItemName, setKoursNewItemName] = useState('');
   const [koursNewItemDesc, setKoursNewItemDesc] = useState('');
@@ -195,16 +194,17 @@ export default function CreateMenuPage() {
           extraGuestPriceInCents: isKours ? Math.round(parseFloat(koursExtraGuestPrice) * 100) : undefined,
           durationMinutes: parseInt(isKours ? koursDuration : kookDuration),
           minGuests: isKours
-            ? (koursMinParticipants ? parseInt(koursMinParticipants) : undefined)
+            ? undefined
             : (kookMinConvives ? parseInt(kookMinConvives) : undefined),
           maxGuests: parseInt(isKours ? koursMaxParticipants : kookMaxParticipants),
           allergens: allergens,
           specialty: specialties.length > 0 ? specialties : undefined,
           prepTimeMinutes: !isKours && kookPrepTime ? parseInt(kookPrepTime) : undefined,
           ingredientsIncluded: !isKours ? kookIngredientsIncluded : undefined,
-          equipmentProvided: isKours ? koursEquipmentProvided : undefined,
+          equipmentProvided: undefined,
           koursDifficulty: isKours ? koursDifficulty : undefined,
-          koursLocation: isKours ? koursLocation : undefined,
+          koursLocation: isKours ? 'Chez le client' : undefined,
+          constraints: isKours && koursEquipmentList.length > 0 ? koursEquipmentList : undefined,
           menuItems: (isKours ? koursMenuItems : kookMenuItems).map((item, idx) => ({
             category: 'Plat',
             name: item.name,
@@ -403,34 +403,19 @@ export default function CreateMenuPage() {
                   />
                 </div>
 
-                {/* Min / Max participants */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
-                  <div>
-                    <label className={labelClass}>
-                      Nombre minimum de participants <span className="text-[#c1a0fd]">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={koursMinParticipants}
-                      onChange={(e) => setKoursMinParticipants(e.target.value)}
-                      placeholder="2"
-                      className={inputClass}
-                    />
-                  </div>
-                  <div>
-                    <label className={labelClass}>
-                      Nombre maximum de participants <span className="text-[#c1a0fd]">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={koursMaxParticipants}
-                      onChange={(e) => setKoursMaxParticipants(e.target.value)}
-                      placeholder="8"
-                      className={inputClass}
-                    />
-                  </div>
+                {/* Max participants */}
+                <div className="mb-5">
+                  <label className={labelClass}>
+                    Nombre maximum de participants <span className="text-[#c1a0fd]">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={koursMaxParticipants}
+                    onChange={(e) => setKoursMaxParticipants(e.target.value)}
+                    placeholder="8"
+                    className={inputClass}
+                  />
                 </div>
 
                 {/* Niveau de difficulté */}
@@ -456,52 +441,66 @@ export default function CreateMenuPage() {
                   </div>
                 </div>
 
-                {/* Lieu du cours */}
-                <div className="mb-6">
+                {/* Matériel et ustensiles à fournir par le client */}
+                <div>
                   <label className={labelClass}>
-                    Lieu du cours <span className="text-[#c1a0fd]">*</span>
+                    Matériel et ustensiles nécessaires (à fournir par le client)
                   </label>
-                  <div className="relative">
-                    <select
-                      value={koursLocation}
-                      onChange={(e) => setKoursLocation(e.target.value)}
-                      className={inputClass + ' appearance-none cursor-pointer pr-10'}
-                    >
-                      <option value="Chez le kooker">Chez le kooker</option>
-                      <option value="Chez le client">Chez le client</option>
-                      <option value="Les deux">Les deux</option>
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                        <path d="M4 6L8 10L12 6" stroke="#303044" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
+
+                  {koursEquipmentList.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {koursEquipmentList.map((item) => (
+                        <span
+                          key={item}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] text-[#c1a0fd] text-[13px] font-semibold rounded-[8px]"
+                        >
+                          {item}
+                          <button
+                            type="button"
+                            onClick={() => setKoursEquipmentList((prev) => prev.filter((x) => x !== item))}
+                            className="hover:text-red-500 transition-colors cursor-pointer"
+                          >
+                            <X size={12} />
+                          </button>
+                        </span>
+                      ))}
                     </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={koursNewEquipment}
+                      onChange={(e) => setKoursNewEquipment(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const val = koursNewEquipment.trim();
+                          if (val && !koursEquipmentList.includes(val)) {
+                            setKoursEquipmentList((prev) => [...prev, val]);
+                            setKoursNewEquipment('');
+                          }
+                        }
+                      }}
+                      placeholder="Ex: Saladier, fouet, planche à découper..."
+                      className={inputClass + ' flex-1'}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const val = koursNewEquipment.trim();
+                        if (val && !koursEquipmentList.includes(val)) {
+                          setKoursEquipmentList((prev) => [...prev, val]);
+                          setKoursNewEquipment('');
+                        }
+                      }}
+                      disabled={!koursNewEquipment.trim()}
+                      className="w-[48px] h-[48px] flex items-center justify-center bg-[#c1a0fd] hover:bg-[#b090ed] text-white rounded-[12px] transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0 cursor-pointer"
+                    >
+                      <Plus size={20} />
+                    </button>
                   </div>
                 </div>
-
-                {/* Matériel checkbox */}
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <div
-                    onClick={() => setKoursEquipmentProvided(!koursEquipmentProvided)}
-                    className={`w-5 h-5 rounded-[4px] border-2 flex items-center justify-center cursor-pointer transition-all shrink-0 ${
-                      koursEquipmentProvided
-                        ? 'bg-[#303044] border-[#303044]'
-                        : 'bg-white border-[#c0c0cc]'
-                    }`}
-                  >
-                    {koursEquipmentProvided && (
-                      <svg width="12" height="9" viewBox="0 0 12 9" fill="none">
-                        <path d="M1 4L4.5 7.5L11 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    )}
-                  </div>
-                  <span
-                    className="text-[14px] text-[#303044] font-medium cursor-pointer"
-                    onClick={() => setKoursEquipmentProvided(!koursEquipmentProvided)}
-                  >
-                    Matériel et ustensiles fournis
-                  </span>
-                </label>
               </div>
 
               {/* Ce que vous allez apprendre — separate card */}

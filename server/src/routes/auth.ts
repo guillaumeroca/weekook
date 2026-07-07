@@ -1,13 +1,15 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import prisma from '../lib/prisma.js';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 import { signToken, INACTIVITY_TIMEOUT_MS } from '../utils/jwt.js';
 import { authenticate } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { rateLimit } from '../middleware/rateLimit.js';
-import { registerSchema, loginSchema } from '../schemas/auth.js';
+import { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from '../schemas/auth.js';
 import { AppError } from '../utils/errors.js';
 import { env } from '../config/env.js';
+import { sendPasswordResetEmail } from '../lib/email.js';
 
 const router = Router();
 
@@ -151,6 +153,71 @@ router.get(
           kookerProfileId: user.kookerProfile?.id || null,
         },
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// POST /forgot-password
+router.post(
+  '/forgot-password',
+  rateLimit(5, 15 * 60 * 1000),
+  validate(forgotPasswordSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { email } = req.body;
+
+      const user = await prisma.user.findUnique({ where: { email } });
+
+      // Toujours répondre success pour éviter l'énumération d'emails
+      if (!user) {
+        return res.json({ success: true, data: { message: 'Si cet email existe, un lien vous a été envoyé.' } });
+      }
+
+      // Supprimer les anciens tokens de cet utilisateur
+      await prisma.passwordResetToken.deleteMany({ where: { userId: user.id } });
+
+      // Créer un nouveau token (expire dans 1h)
+      const token = crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+      await prisma.passwordResetToken.create({
+        data: { userId: user.id, token, expiresAt },
+      });
+
+      const resetUrl = `${env.APP_URL}/reinitialiser-mot-de-passe?token=${token}`;
+      await sendPasswordResetEmail(user.email, user.firstName, resetUrl);
+
+      res.json({ success: true, data: { message: 'Si cet email existe, un lien vous a été envoyé.' } });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// POST /reset-password
+router.post(
+  '/reset-password',
+  validate(resetPasswordSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { token, password } = req.body;
+
+      const resetToken = await prisma.passwordResetToken.findUnique({ where: { token } });
+
+      if (!resetToken || resetToken.used || resetToken.expiresAt < new Date()) {
+        throw new AppError('Ce lien est invalide ou a expiré.', 400);
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      await prisma.$transaction([
+        prisma.user.update({ where: { id: resetToken.userId }, data: { password: hashedPassword } }),
+        prisma.passwordResetToken.update({ where: { id: resetToken.id }, data: { used: true } }),
+      ]);
+
+      res.json({ success: true, data: { message: 'Mot de passe réinitialisé avec succès.' } });
     } catch (error) {
       next(error);
     }

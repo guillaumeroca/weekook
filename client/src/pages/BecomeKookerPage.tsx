@@ -7,8 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ChefHat, MapPin, Clock, Plus, X, Users } from 'lucide-react';
+import { usePageTiming } from '@/hooks/usePageTiming';
 
 export default function BecomeKookerPage() {
+  usePageTiming('Devenir Kooker', true);
   const navigate = useNavigate();
   const { user, refreshUser } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);

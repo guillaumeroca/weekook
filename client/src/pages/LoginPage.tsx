@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { ChefHat, Eye, EyeOff, ChevronLeft } from 'lucide-react';
+import { api } from '@/lib/api';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -30,6 +32,22 @@ const LoginPage = () => {
   const [showRegisterConfirm, setShowRegisterConfirm] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
 
+  // Forgot password state
+  const [showForgotDialog, setShowForgotDialog] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotStatus, setForgotStatus] = useState<'idle' | 'loading' | 'sent' | 'error'>('idle');
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotStatus('loading');
+    try {
+      await api.post('/auth/forgot-password', { email: forgotEmail });
+      setForgotStatus('sent');
+    } catch {
+      setForgotStatus('error');
+    }
+  };
+
   const handleTabChange = (tab: 'login' | 'register') => {
     setActiveTab(tab);
     setSearchParams({ tab });
@@ -44,7 +62,9 @@ const LoginPage = () => {
 
     try {
       const loggedUser = await login(loginEmail, loginPassword);
-      if (loggedUser.role === 'admin') navigate('/admin');
+      const redirect = searchParams.get('redirect');
+      if (redirect) navigate(redirect);
+      else if (loggedUser.role === 'admin') navigate('/admin');
       else if (loggedUser.kookerProfileId) navigate('/tableau-de-bord');
       else navigate('/');
     } catch (err: any) {
@@ -77,7 +97,8 @@ const LoginPage = () => {
 
     try {
       await register({ email: registerEmail, password: registerPassword, firstName: registerFirstName, lastName: registerLastName });
-      navigate('/');
+      const redirect = searchParams.get('redirect');
+      navigate(redirect || '/');
     } catch (err: any) {
       setRegisterError(err?.error || err?.response?.data?.error || err?.message || 'Erreur lors de l\'inscription.');
     } finally {
@@ -134,6 +155,32 @@ const LoginPage = () => {
             </button>
           </div>
 
+          {/* Switch link — sous les onglets */}
+          {activeTab === 'register' && (
+            <p className="text-center text-[13px] text-[#828294] mb-4 -mt-2">
+              Déjà un compte ?{' '}
+              <button
+                type="button"
+                onClick={() => handleTabChange('login')}
+                className="text-[#c1a0fd] hover:text-[#b090ed] font-semibold transition-colors"
+              >
+                Se connecter
+              </button>
+            </p>
+          )}
+          {activeTab === 'login' && (
+            <p className="text-center text-[13px] text-[#828294] mb-4 -mt-2">
+              Pas encore de compte ?{' '}
+              <button
+                type="button"
+                onClick={() => handleTabChange('register')}
+                className="text-[#c1a0fd] hover:text-[#b090ed] font-semibold transition-colors"
+              >
+                Créer un compte
+              </button>
+            </p>
+          )}
+
           {/* Login Form */}
           {activeTab === 'login' && (
             <form onSubmit={handleLogin} className="space-y-4">
@@ -165,6 +212,7 @@ const LoginPage = () => {
                   </label>
                   <button
                     type="button"
+                    onClick={() => { setForgotEmail(loginEmail); setForgotStatus('idle'); setShowForgotDialog(true); }}
                     className="font-medium text-[13px] text-[#c1a0fd] hover:text-[#b090ed] transition-colors"
                   >
                     Mot de passe oublié ?
@@ -242,17 +290,6 @@ const LoginPage = () => {
                 </button>
               </div>
 
-              {/* Register link */}
-              <p className="text-center text-[13px] text-[#828294] mt-6">
-                Pas encore de compte ?{' '}
-                <button
-                  type="button"
-                  onClick={() => handleTabChange('register')}
-                  className="text-[#c1a0fd] hover:text-[#b090ed] font-semibold transition-colors"
-                >
-                  Créer un compte
-                </button>
-              </p>
             </form>
           )}
 
@@ -311,69 +348,72 @@ const LoginPage = () => {
                 />
               </div>
 
-              <div className="space-y-2">
-                <label htmlFor="signup-password" className="font-medium text-[14px] text-[#303044] block">
-                  Mot de passe
-                </label>
-                <div className="relative">
-                  <input
-                    id="signup-password"
-                    type={showRegisterPassword ? 'text' : 'password'}
-                    value={registerPassword}
-                    onChange={(e) => setRegisterPassword(e.target.value)}
-                    placeholder="Minimum 8 caractères"
-                    required
-                    minLength={8}
-                    className="w-full h-[48px] px-4 pr-12 border border-[#e6e6f0] rounded-[8px] text-[14px] text-[#111125] placeholder:text-[#828294] focus:outline-none focus:border-[#c1a0fd] focus:ring-2 focus:ring-[#c1a0fd]/20 transition-all"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowRegisterPassword(!showRegisterPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#828294] hover:text-[#303044] transition-colors"
-                  >
-                    {showRegisterPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                  </button>
-                </div>
-                {/* Password strength indicator */}
-                {registerPassword.length > 0 && (
-                  <div className="mt-2 flex gap-1.5">
-                    <div className={`h-1 flex-1 rounded-full ${registerPassword.length >= 2 ? (registerPassword.length >= 8 ? 'bg-green-400' : 'bg-yellow-400') : 'bg-[#e6e6f0]'}`} />
-                    <div className={`h-1 flex-1 rounded-full ${registerPassword.length >= 5 ? (registerPassword.length >= 8 ? 'bg-green-400' : 'bg-yellow-400') : 'bg-[#e6e6f0]'}`} />
-                    <div className={`h-1 flex-1 rounded-full ${registerPassword.length >= 8 ? 'bg-green-400' : 'bg-[#e6e6f0]'}`} />
-                    <div className={`h-1 flex-1 rounded-full ${registerPassword.length >= 12 ? 'bg-green-400' : 'bg-[#e6e6f0]'}`} />
+              <div className="grid grid-cols-2 gap-4">
+                {/* Mot de passe */}
+                <div className="space-y-2">
+                  <label htmlFor="signup-password" className="font-medium text-[14px] text-[#303044] block">
+                    Mot de passe
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="signup-password"
+                      type={showRegisterPassword ? 'text' : 'password'}
+                      value={registerPassword}
+                      onChange={(e) => setRegisterPassword(e.target.value)}
+                      placeholder="Min. 8 caractères"
+                      required
+                      minLength={8}
+                      className="w-full h-[48px] px-4 pr-12 border border-[#e6e6f0] rounded-[8px] text-[14px] text-[#111125] placeholder:text-[#828294] focus:outline-none focus:border-[#c1a0fd] focus:ring-2 focus:ring-[#c1a0fd]/20 transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowRegisterPassword(!showRegisterPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-[#828294] hover:text-[#303044] transition-colors"
+                    >
+                      {showRegisterPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    </button>
                   </div>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="signup-confirm" className="font-medium text-[14px] text-[#303044] block">
-                  Confirmer le mot de passe
-                </label>
-                <div className="relative">
-                  <input
-                    id="signup-confirm"
-                    type={showRegisterConfirm ? 'text' : 'password'}
-                    value={registerConfirmPassword}
-                    onChange={(e) => setRegisterConfirmPassword(e.target.value)}
-                    placeholder="Confirmez votre mot de passe"
-                    required
-                    className={`w-full h-[48px] px-4 pr-12 border rounded-[8px] text-[14px] text-[#111125] placeholder:text-[#828294] focus:outline-none focus:ring-2 transition-all ${
-                      registerConfirmPassword.length > 0 && registerPassword !== registerConfirmPassword
-                        ? 'border-red-300 focus:border-red-400 focus:ring-red-200'
-                        : 'border-[#e6e6f0] focus:border-[#c1a0fd] focus:ring-[#c1a0fd]/20'
-                    }`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowRegisterConfirm(!showRegisterConfirm)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#828294] hover:text-[#303044] transition-colors"
-                  >
-                    {showRegisterConfirm ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                  </button>
+                  {registerPassword.length > 0 && (
+                    <div className="flex gap-1.5">
+                      <div className={`h-1 flex-1 rounded-full ${registerPassword.length >= 2 ? (registerPassword.length >= 8 ? 'bg-green-400' : 'bg-yellow-400') : 'bg-[#e6e6f0]'}`} />
+                      <div className={`h-1 flex-1 rounded-full ${registerPassword.length >= 5 ? (registerPassword.length >= 8 ? 'bg-green-400' : 'bg-yellow-400') : 'bg-[#e6e6f0]'}`} />
+                      <div className={`h-1 flex-1 rounded-full ${registerPassword.length >= 8 ? 'bg-green-400' : 'bg-[#e6e6f0]'}`} />
+                      <div className={`h-1 flex-1 rounded-full ${registerPassword.length >= 12 ? 'bg-green-400' : 'bg-[#e6e6f0]'}`} />
+                    </div>
+                  )}
                 </div>
-                {registerConfirmPassword.length > 0 && registerPassword !== registerConfirmPassword && (
-                  <p className="text-[12px] text-red-500 mt-1">Les mots de passe ne correspondent pas</p>
-                )}
+
+                {/* Confirmer */}
+                <div className="space-y-2">
+                  <label htmlFor="signup-confirm" className="font-medium text-[14px] text-[#303044] block">
+                    Confirmer
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="signup-confirm"
+                      type={showRegisterConfirm ? 'text' : 'password'}
+                      value={registerConfirmPassword}
+                      onChange={(e) => setRegisterConfirmPassword(e.target.value)}
+                      placeholder="••••••••"
+                      required
+                      className={`w-full h-[48px] px-4 pr-12 border rounded-[8px] text-[14px] text-[#111125] placeholder:text-[#828294] focus:outline-none focus:ring-2 transition-all ${
+                        registerConfirmPassword.length > 0 && registerPassword !== registerConfirmPassword
+                          ? 'border-red-300 focus:border-red-400 focus:ring-red-200'
+                          : 'border-[#e6e6f0] focus:border-[#c1a0fd] focus:ring-[#c1a0fd]/20'
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowRegisterConfirm(!showRegisterConfirm)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-[#828294] hover:text-[#303044] transition-colors"
+                    >
+                      {showRegisterConfirm ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    </button>
+                  </div>
+                  {registerConfirmPassword.length > 0 && registerPassword !== registerConfirmPassword && (
+                    <p className="text-[12px] text-red-500 mt-1">Les mots de passe ne correspondent pas</p>
+                  )}
+                </div>
               </div>
 
               {/* Terms */}
@@ -449,17 +489,6 @@ const LoginPage = () => {
                 </button>
               </div>
 
-              {/* Login link */}
-              <p className="text-center text-[13px] text-[#828294] mt-6">
-                Déjà un compte ?{' '}
-                <button
-                  type="button"
-                  onClick={() => handleTabChange('login')}
-                  className="text-[#c1a0fd] hover:text-[#b090ed] font-semibold transition-colors"
-                >
-                  Se connecter
-                </button>
-              </p>
             </form>
           )}
         </div>
@@ -551,6 +580,53 @@ const LoginPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Forgot password dialog */}
+      <Dialog open={showForgotDialog} onOpenChange={(open) => { setShowForgotDialog(open); if (!open) setForgotStatus('idle'); }}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>Mot de passe oublié</DialogTitle>
+          </DialogHeader>
+
+          {forgotStatus === 'sent' ? (
+            <div className="py-4 text-center space-y-3">
+              <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center mx-auto">
+                <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+              </div>
+              <p className="text-[#111125] font-medium">Email envoyé</p>
+              <p className="text-sm text-gray-500">Si cette adresse est associée à un compte, vous recevrez un lien de réinitialisation. Vérifiez vos spams.</p>
+              <button onClick={() => setShowForgotDialog(false)} className="w-full h-[44px] bg-[#c1a0fd] text-white rounded-[12px] font-medium text-sm hover:bg-[#b090ed] transition-colors mt-2">
+                Fermer
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleForgotPassword} className="space-y-4 py-2">
+              <p className="text-sm text-gray-500">Entrez votre adresse email et nous vous enverrons un lien pour réinitialiser votre mot de passe.</p>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-[#303044]">Email</label>
+                <input
+                  type="email"
+                  required
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  placeholder="votre@email.com"
+                  className="w-full h-[48px] px-4 border border-[#e6e6f0] rounded-[8px] text-[14px] text-[#111125] placeholder:text-[#828294] focus:outline-none focus:border-[#c1a0fd] focus:ring-2 focus:ring-[#c1a0fd]/20 transition-all"
+                />
+              </div>
+              {forgotStatus === 'error' && (
+                <p className="text-sm text-red-500">Une erreur est survenue. Réessayez.</p>
+              )}
+              <button
+                type="submit"
+                disabled={forgotStatus === 'loading'}
+                className="w-full h-[48px] bg-[#c1a0fd] text-white rounded-[12px] font-medium text-sm hover:bg-[#b090ed] transition-colors disabled:opacity-60"
+              >
+                {forgotStatus === 'loading' ? 'Envoi...' : 'Envoyer le lien'}
+              </button>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

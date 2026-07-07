@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { usePageTiming } from '@/hooks/usePageTiming';
 
 const KOOKER_PLACEHOLDER_IMAGES = [
   'https://images.unsplash.com/photo-1496952286950-c36951138af4?w=600&h=400&fit=crop',
@@ -33,6 +34,7 @@ interface Service {
   koursDifficulty?: string | null;
   koursLocation?: string | null;
   equipmentProvided?: boolean;
+  equipmentList: string[];
 }
 
 interface Review {
@@ -63,6 +65,7 @@ interface KookerProfile {
   name: string;
   avatarUrl: string;
   coverUrl: string;
+  cardImageUrl: string;
   city: string;
   bio: string;
   specialties: string[];
@@ -86,16 +89,26 @@ function safeJsonParse<T>(value: unknown, fallback: T): T {
   }
 }
 
+// ─── Helper: Construit une URL depuis un chemin DB (peut être "filename.jpg" ou "/uploads/filename.jpg")
+const toUrl = (raw: string | null | undefined): string => {
+  if (!raw) return '';
+  if (raw.startsWith('http') || raw.startsWith('/')) return raw;
+  return `/uploads/${raw}`;
+};
+
 // ─── Helper: Map API response to KookerProfile ─────────────────────────────────
 function mapApiToProfile(data: any): KookerProfile {
   return {
     id: data.id,
     userId: data.user?.id || 0,
     name: `${data.user?.firstName || ''} ${data.user?.lastName || ''}`.trim() || 'Kooker',
-    avatarUrl: data.user?.avatar
-      ? (data.user.avatar.startsWith('http') ? data.user.avatar : `/uploads/${data.user.avatar}`)
-      : KOOKER_PLACEHOLDER_IMAGES[data.id % KOOKER_PLACEHOLDER_IMAGES.length],
+    avatarUrl: toUrl(data.user?.avatar) || KOOKER_PLACEHOLDER_IMAGES[data.id % KOOKER_PLACEHOLDER_IMAGES.length],
     coverUrl: '',
+    cardImageUrl: toUrl(
+      (data.services || [])
+        .flatMap((s: any) => (s.images || []).filter((img: any) => img.isCardImage))
+        [0]?.url
+    ),
     city: data.city || '',
     bio: data.bio || '',
     specialties: safeJsonParse<string[]>(data.specialties, []),
@@ -123,8 +136,9 @@ function mapApiToProfile(data: any): KookerProfile {
         koursDifficulty: s.koursDifficulty || null,
         koursLocation: s.koursLocation || null,
         equipmentProvided: s.equipmentProvided || false,
+        equipmentList: safeJsonParse<string[]>(s.constraints, []),
       })),
-    reviews: (data.reviews || []).map((r: any) => ({
+    reviews: (data.reviewsReceived || []).map((r: any) => ({
       id: r.id,
       userName: `${r.user?.firstName || ''} ${r.user?.lastName || ''}`.trim() || 'Anonyme',
       userAvatar: r.user?.avatar || '',
@@ -248,9 +262,11 @@ function getSlotLabel(startTime: string): string {
 export default function KookerProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
 
   const [isLoading, setIsLoading] = useState(true);
+  usePageTiming('Profil Kooker', !isLoading);
   const [profile, setProfile] = useState<KookerProfile | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
 
@@ -278,7 +294,16 @@ export default function KookerProfilePage() {
   const [messageContent, setMessageContent] = useState('');
   const [messageSending, setMessageSending] = useState(false);
 
+  // Ouvrir le modal contact automatiquement après redirection post-login
+  useEffect(() => {
+    if (user && searchParams.get('action') === 'contact') {
+      setShowMessageModal(true);
+      setSearchParams({}, { replace: true });
+    }
+  }, [user, searchParams]);
+
   // Review modal
+  const [showAllReviews, setShowAllReviews] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [hasReview, setHasReview] = useState(false);
   const [reviewRating, setReviewRating] = useState(0);
@@ -538,7 +563,18 @@ export default function KookerProfilePage() {
           Retour aux résultats
         </button>
 
-        <div className="bg-white rounded-[20px] p-5 md:p-6 mb-6 border border-[#e0e0e0] shadow-sm">
+        <div className="bg-white rounded-[20px] mb-6 border border-[#e0e0e0] shadow-sm overflow-hidden">
+          {/* Bannière : image de vignette sélectionnée par le kooker */}
+          {profile.cardImageUrl ? (
+            <img
+              src={profile.cardImageUrl}
+              alt={profile.name}
+              className="w-full h-[180px] md:h-[220px] object-cover"
+            />
+          ) : (
+            <div className="w-full h-[100px] bg-gradient-to-br from-[#c1a0fd]/20 to-[#9171d9]/10" />
+          )}
+          <div className="p-5 md:p-6">
           <div className="flex flex-col sm:flex-row gap-5">
             {/* Avatar */}
             <div className="w-[110px] h-[110px] md:w-[130px] md:h-[130px] rounded-[16px] bg-[#f3ecff] overflow-hidden flex-shrink-0 self-start">
@@ -589,7 +625,7 @@ export default function KookerProfilePage() {
                 {/* Action buttons */}
                 <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
                   <button
-                    onClick={() => { if (!user) { navigate('/login'); return; } setShowMessageModal(true); }}
+                    onClick={() => { if (!user) { navigate(`/connexion?redirect=/kooker/${id}&action=contact`); return; } setShowMessageModal(true); }}
                     className="flex items-center gap-2 px-4 py-2.5 bg-[#c1a0fd] text-white rounded-[12px] text-[14px] font-semibold hover:bg-[#b090ed] transition-all"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -618,6 +654,7 @@ export default function KookerProfilePage() {
                 <p className="text-[14px] text-[#4b5563] leading-relaxed">{profile.bio}</p>
               </div>
             </div>
+          </div>
           </div>
         </div>
       </div>
@@ -762,7 +799,7 @@ export default function KookerProfilePage() {
                                 À partir de {service.price}€
                               </span>
                               <button
-                                onClick={() => navigate(`/reservation?service=${service.id}&kooker=${profile.id}`)}
+                                onClick={() => { if (!user) { navigate('/connexion'); return; } navigate(`/reservation?service=${service.id}&kooker=${profile.id}`); }}
                                 className="px-4 py-2 bg-[#c1a0fd] text-white text-[13px] font-semibold rounded-[10px] hover:bg-[#b090ed] transition-all whitespace-nowrap flex-shrink-0"
                               >
                                 {service.types.includes('KOURS') ? 'Réserver ce cours' : 'Réserver'}
@@ -779,7 +816,7 @@ export default function KookerProfilePage() {
                               {service.description}
                             </p>
                             {/* KOURS-specific badges */}
-                            {service.types.includes('KOURS') && (service.koursDifficulty || service.koursLocation || service.equipmentProvided) && (
+                            {service.types.includes('KOURS') && (service.koursDifficulty || service.koursLocation) && (
                               <div className="flex flex-wrap gap-2 mb-4">
                                 {service.koursDifficulty && (
                                   <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] text-[#7c5cbf] text-[12px] font-semibold rounded-[8px]">
@@ -791,11 +828,19 @@ export default function KookerProfilePage() {
                                     📍 {service.koursLocation}
                                   </span>
                                 )}
-                                {service.equipmentProvided && (
-                                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] text-[#7c5cbf] text-[12px] font-semibold rounded-[8px]">
-                                    🎒 Matériel fourni
-                                  </span>
-                                )}
+                              </div>
+                            )}
+                            {/* Matériel nécessaire */}
+                            {service.types.includes('KOURS') && service.equipmentList.length > 0 && (
+                              <div className="mb-4">
+                                <span className="block text-[11px] font-semibold text-[#9ca3af] uppercase mb-1.5">Matériel à prévoir</span>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {service.equipmentList.map((item) => (
+                                    <span key={item} className="px-2.5 py-1 bg-[#fef3c7] text-[#92400e] text-[12px] font-medium rounded-[6px]">
+                                      {item}
+                                    </span>
+                                  ))}
+                                </div>
                               </div>
                             )}
                             <div className="grid grid-cols-2 gap-4 mb-3">
@@ -830,7 +875,7 @@ export default function KookerProfilePage() {
                 Vous pouvez envoyer un message à ce Kooker pour poser vos questions ou discuter de votre projet.
               </p>
               <button
-                onClick={() => { if (!user) { navigate('/login'); return; } setShowMessageModal(true); }}
+                onClick={() => { if (!user) { navigate(`/connexion?redirect=/kooker/${id}&action=contact`); return; } setShowMessageModal(true); }}
                 className="flex items-center gap-2 px-5 py-2.5 bg-[#c1a0fd] text-white text-[14px] font-semibold rounded-[12px] hover:bg-[#b090ed] transition-all"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -879,7 +924,7 @@ export default function KookerProfilePage() {
               ) : (
                 <>
                 <div className="space-y-4">
-                  {profile.reviews.slice(0, 5).map((review) => (
+                  {(showAllReviews ? profile.reviews : profile.reviews.slice(0, 5)).map((review) => (
                     <div key={review.id} className="bg-[#f8f9fc] rounded-[16px] p-5">
                       <div className="flex items-start justify-between gap-4 mb-3">
                         <div className="flex items-center gap-3">
@@ -906,10 +951,13 @@ export default function KookerProfilePage() {
                     </div>
                   ))}
                 </div>
-                {profile.reviewCount > 5 && (
+                {profile.reviews.length > 5 && (
                   <div className="text-center mt-6">
-                    <button className="px-6 py-2.5 border border-[#c1a0fd] text-[#c1a0fd] text-[14px] font-semibold rounded-[12px] hover:bg-[#fdf4ff] transition-all">
-                      Voir tous les avis
+                    <button
+                      onClick={() => setShowAllReviews(v => !v)}
+                      className="px-6 py-2.5 border border-[#c1a0fd] text-[#c1a0fd] text-[14px] font-semibold rounded-[12px] hover:bg-[#fdf4ff] transition-all"
+                    >
+                      {showAllReviews ? 'Voir moins' : `Voir tous les avis (${profile.reviews.length})`}
                     </button>
                   </div>
                 )}

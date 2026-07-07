@@ -20,6 +20,7 @@ import usersRoutes from './routes/users.js';
 import uploadRoutes from './routes/upload.js';
 import adminRoutes from './routes/admin.js';
 import stripeRoutes from './routes/stripe.js';
+import metricsRoutes from './routes/metrics.js';
 
 import { errorHandler } from './middleware/errorHandler.js';
 
@@ -90,6 +91,7 @@ app.use('/api/v1/users', usersRoutes);
 app.use('/api/v1/upload', uploadRoutes);
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/stripe', stripeRoutes);
+app.use('/api/v1/metrics', metricsRoutes);
 
 // ── Error handler ──
 app.use(errorHandler);

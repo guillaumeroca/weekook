@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import KookerCard from '@/components/common/KookerCard';
 import { api } from '@/lib/api';
+import { usePageTiming } from '@/hooks/usePageTiming';
+import { useAuth } from '@/contexts/AuthContext';
 
 const KOOKER_PLACEHOLDER_IMAGES = [
   'https://images.unsplash.com/photo-1496952286950-c36951138af4?w=600&h=400&fit=crop',
@@ -38,7 +40,7 @@ interface ApiKooker {
   rating: number;
   reviewCount: number;
   user: { id: number; firstName: string; lastName: string; avatar: string | null };
-  services: { id: number; priceInCents: number; type: string }[];
+  services: { id: number; priceInCents: number; type: string; images?: { url: string; isCardImage: boolean }[] }[];
 }
 
 interface KookersResponse {
@@ -112,33 +114,42 @@ export default function SearchPage() {
   const [maxPrice, setMaxPrice] = useState(initialMaxPrice);
   const [difficulty, setDifficulty] = useState(initialDifficulty);
 
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
+  usePageTiming('Recherche', !isLoading);
   const [results, setResults] = useState<Kooker[]>([]);
   const [totalResults, setTotalResults] = useState(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   // Map API kooker to local Kooker format
+  const parseJsonField = (val: any): string[] => {
+    if (Array.isArray(val)) return val;
+    try { const parsed = JSON.parse(val); return Array.isArray(parsed) ? parsed : JSON.parse(parsed); } catch { return []; }
+  };
+
+  // Gère les deux formats stockés en DB : juste "filename.jpg" ou déjà "/uploads/filename.jpg"
+  const toUrl = (raw: string | null | undefined): string => {
+    if (!raw) return '';
+    if (raw.startsWith('http') || raw.startsWith('/')) return raw;
+    return `/uploads/${raw}`;
+  };
+
   const mapKooker = (k: ApiKooker): Kooker => {
-    const specialties = (() => {
-      try { return JSON.parse(k.specialties); } catch { return []; }
-    })();
-    const typeArr: string[] = (() => {
-      try { return JSON.parse(k.type); } catch { return []; }
-    })();
+    const specialties = parseJsonField(k.specialties);
+    const typeArr = parseJsonField(k.type);
     // Collect all service types across all services
     const allServiceTypes = Array.from(new Set(
-      k.services.flatMap((s) => {
-        try { return JSON.parse(s.type); } catch { return []; }
-      })
+      k.services.flatMap((s) => parseJsonField(s.type))
     )) as string[];
     const lowestPrice = k.services.length > 0
       ? Math.min(...k.services.map((s) => s.priceInCents)) / 100
       : 0;
-    const avatarUrl = k.user.avatar
-      ? (k.user.avatar.startsWith('http') ? k.user.avatar : `/uploads/${k.user.avatar}`)
-      : '';
-
-    const imageUrl = avatarUrl || KOOKER_PLACEHOLDER_IMAGES[k.id % KOOKER_PLACEHOLDER_IMAGES.length];
+    const avatarUrl = toUrl(k.user.avatar);
+    // Image de vignette : préférer isCardImage=true, sinon première image disponible
+    const allServiceImages = k.services.flatMap((s) => s.images || []);
+    const bestImage = allServiceImages.find((img) => img.isCardImage) || allServiceImages[0];
+    const cardImageUrl = toUrl(bestImage?.url) || null;
+    const imageUrl = cardImageUrl || avatarUrl || KOOKER_PLACEHOLDER_IMAGES[k.id % KOOKER_PLACEHOLDER_IMAGES.length];
     return {
       id: k.id,
       name: `${k.user.firstName} ${k.user.lastName}`,
@@ -253,6 +264,13 @@ export default function SearchPage() {
       <section className="bg-[#f2f4fc]">
         <div className="px-4 md:px-8 lg:px-[96px] py-6 md:py-8">
 
+          {/* Titre visiteurs non connectés */}
+          {!user && (
+            <h1 className="text-[18px] font-semibold text-[#111125] mb-4">
+              Je cherche un Kooker
+            </h1>
+          )}
+
           {/* Search bar + Masquer les filtres */}
           <div className="flex items-center gap-3 mb-6">
             <div className="relative flex-1">
@@ -298,14 +316,14 @@ export default function SearchPage() {
             </button>
           </div>
 
-          {/* Results count title */}
-          <h1 className="text-[24px] md:text-[28px] font-bold text-[#111125] mb-4 tracking-[-0.5px]">
+          {/* Results count */}
+          <p className="text-[18px] font-semibold text-[#111125] mb-4">
             {isLoading ? (
-              <span className="inline-block w-48 h-7 bg-[#e5e7eb] rounded animate-pulse" />
+              <span className="inline-block w-32 h-4 bg-[#e5e7eb] rounded animate-pulse" />
             ) : (
               <>{totalResults} Kooker{totalResults !== 1 ? 's' : ''} trouvé{totalResults !== 1 ? 's' : ''}</>
             )}
-          </h1>
+          </p>
 
           {/* Filter Panel */}
           {showFilters && (
@@ -506,10 +524,27 @@ export default function SearchPage() {
             </div>
           )}
         </div>
+
       </section>
 
       {/* Results Section */}
       <section className="px-4 md:px-8 lg:px-[96px] pb-8 md:pb-12">
+        {/* Empty State */}
+        {!isLoading && results.length === 0 && (
+          <div className="flex flex-col items-center justify-center -mt-6 pb-24">
+            <h3 className="text-[18px] font-semibold text-[#111125] mb-2">Aucun résultat</h3>
+            <p className="text-[14px] text-[#6b7280] text-center max-w-[400px] mb-5">
+              Aucun kooker ne correspond à vos critères. Essayez de modifier vos filtres.
+            </p>
+            <button
+              onClick={resetFilters}
+              className="px-6 py-3 bg-[#c1a0fd] text-white font-semibold rounded-[12px] hover:bg-[#b090ed] transition-all shadow-sm"
+            >
+              Réinitialiser les filtres
+            </button>
+          </div>
+        )}
+
         {/* Loading State */}
         {isLoading && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 justify-items-center">
@@ -559,26 +594,6 @@ export default function SearchPage() {
           </div>
         )}
 
-        {/* Empty State */}
-        {!isLoading && results.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 md:py-24">
-            <div className="w-[80px] h-[80px] mb-6 rounded-full bg-[#f8f9fc] flex items-center justify-center">
-              <svg className="w-10 h-10 text-[#c1a0fd]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-            <h3 className="text-[20px] font-semibold text-[#111125] mb-2">Aucun résultat</h3>
-            <p className="text-[15px] text-[#6b7280] text-center max-w-[400px] mb-6">
-              Nous n'avons trouvé aucun kooker correspondant à vos critères. Essayez de modifier vos filtres.
-            </p>
-            <button
-              onClick={resetFilters}
-              className="px-6 py-3 bg-[#c1a0fd] text-white font-semibold rounded-[12px] hover:bg-[#b090ed] transition-all shadow-sm"
-            >
-              Réinitialiser les filtres
-            </button>
-          </div>
-        )}
       </section>
     </div>
   );

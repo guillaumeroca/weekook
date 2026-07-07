@@ -60,6 +60,11 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
               description: true,
               specialty: true,
               koursDifficulty: true,
+              images: {
+                orderBy: [{ isCardImage: 'desc' }, { sortOrder: 'asc' }],
+                select: { url: true, isCardImage: true },
+                take: 1,
+              },
             },
           },
         },
@@ -97,21 +102,27 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       });
     }
 
-    // Post-filter by type (JSON field)
+    // Post-filter by type — se base uniquement sur les types des services actifs
+    // (le profil kooker peut avoir un type déclaré qui ne correspond pas aux services réels)
     if (type) {
       const typeFilter = type as string;
-      filtered = filtered.filter((k) => {
-        const kType = k.type as string[] | null;
-        return kType && Array.isArray(kType) && kType.includes(typeFilter);
-      });
+      const parseTypes = (val: any): string[] => {
+        if (Array.isArray(val)) return val;
+        try { const p = JSON.parse(val || '[]'); return Array.isArray(p) ? p : JSON.parse(p); } catch { return []; }
+      };
+      filtered = filtered.filter((k) =>
+        k.services.some((s: any) => parseTypes(s.type).includes(typeFilter))
+      );
     }
 
-    // Post-filter by specialty (JSON field)
+    // Post-filter by specialty (JSON field — may be stored as string or parsed array)
     if (specialty) {
       const specialtyFilter = specialty as string;
       filtered = filtered.filter((k) => {
-        const kSpec = k.specialties as string[] | null;
-        return kSpec && Array.isArray(kSpec) && kSpec.includes(specialtyFilter);
+        const kSpec: string[] = Array.isArray(k.specialties)
+          ? (k.specialties as string[])
+          : JSON.parse((k.specialties as string) || '[]');
+        return kSpec.includes(specialtyFilter);
       });
     }
 

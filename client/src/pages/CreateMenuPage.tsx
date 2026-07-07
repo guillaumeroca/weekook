@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
+import { compressImage } from '@/lib/compressImage';
 import {
   ArrowLeft,
   GraduationCap,
@@ -13,6 +14,7 @@ import {
   Trash2,
   Loader2,
 } from 'lucide-react';
+import { usePageTiming } from '@/hooks/usePageTiming';
 
 // ────────────────────────── Types ──────────────────────────
 
@@ -34,6 +36,7 @@ const ALL_ALLERGENS = [
 // ────────────────────────── Component ──────────────────────────
 
 export default function CreateMenuPage() {
+  usePageTiming('Créer une offre', true);
   const navigate = useNavigate();
 
   // Service type selection
@@ -43,12 +46,12 @@ export default function CreateMenuPage() {
   const [koursTitle, setKoursTitle] = useState('');
   const [koursDescription, setKoursDescription] = useState('');
   const [koursPrice, setKoursPrice] = useState('');
+  const [koursExtraGuestPrice, setKoursExtraGuestPrice] = useState('');
   const [koursDuration, setKoursDuration] = useState('');
-  const [koursMinParticipants, setKoursMinParticipants] = useState('');
   const [koursMaxParticipants, setKoursMaxParticipants] = useState('');
   const [koursDifficulty, setKoursDifficulty] = useState('Débutant');
-  const [koursLocation, setKoursLocation] = useState('Chez le kooker');
-  const [koursEquipmentProvided, setKoursEquipmentProvided] = useState(false);
+  const [koursEquipmentList, setKoursEquipmentList] = useState<string[]>([]);
+  const [koursNewEquipment, setKoursNewEquipment] = useState('');
   const [koursMenuItems, setKoursMenuItems] = useState<MenuItem[]>([]);
   const [koursNewItemName, setKoursNewItemName] = useState('');
   const [koursNewItemDesc, setKoursNewItemDesc] = useState('');
@@ -98,6 +101,7 @@ export default function CreateMenuPage() {
     koursTitle.trim() !== '' &&
     koursDescription.trim() !== '' &&
     koursPrice.trim() !== '' &&
+    koursExtraGuestPrice.trim() !== '' &&
     koursDuration.trim() !== '' &&
     koursMaxParticipants.trim() !== '';
 
@@ -142,37 +146,6 @@ export default function CreateMenuPage() {
 
   // ────────────────────────── Photo Helpers ──────────────────────────
 
-  const compressImage = (file: File): Promise<File> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = (e) => {
-        const img = new Image();
-        img.src = e.target?.result as string;
-        img.onload = () => {
-          const MAX_WIDTH = 1200;
-          let w = img.width;
-          let h = img.height;
-          if (w > MAX_WIDTH) { h = Math.round((h * MAX_WIDTH) / w); w = MAX_WIDTH; }
-          const canvas = document.createElement('canvas');
-          canvas.width = w;
-          canvas.height = h;
-          const ctx = canvas.getContext('2d');
-          if (!ctx) { reject(new Error('canvas')); return; }
-          ctx.drawImage(img, 0, 0, w, h);
-          canvas.toBlob(
-            (blob) => {
-              if (!blob) { reject(new Error('blob')); return; }
-              resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }));
-            },
-            'image/jpeg',
-            0.82
-          );
-        };
-        img.onerror = reject;
-      };
-      reader.onerror = reject;
-    });
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -218,18 +191,20 @@ export default function CreateMenuPage() {
           description: isKours ? koursDescription : kookDescription,
           type: [type],
           priceInCents: Math.round(parseFloat(isKours ? koursPrice : kookPrice) * 100),
+          extraGuestPriceInCents: isKours ? Math.round(parseFloat(koursExtraGuestPrice) * 100) : undefined,
           durationMinutes: parseInt(isKours ? koursDuration : kookDuration),
           minGuests: isKours
-            ? (koursMinParticipants ? parseInt(koursMinParticipants) : undefined)
+            ? undefined
             : (kookMinConvives ? parseInt(kookMinConvives) : undefined),
           maxGuests: parseInt(isKours ? koursMaxParticipants : kookMaxParticipants),
           allergens: allergens,
           specialty: specialties.length > 0 ? specialties : undefined,
           prepTimeMinutes: !isKours && kookPrepTime ? parseInt(kookPrepTime) : undefined,
           ingredientsIncluded: !isKours ? kookIngredientsIncluded : undefined,
-          equipmentProvided: isKours ? koursEquipmentProvided : undefined,
+          equipmentProvided: undefined,
           koursDifficulty: isKours ? koursDifficulty : undefined,
-          koursLocation: isKours ? koursLocation : undefined,
+          koursLocation: isKours ? 'Chez le client' : undefined,
+          constraints: isKours && koursEquipmentList.length > 0 ? koursEquipmentList : undefined,
           menuItems: (isKours ? koursMenuItems : kookMenuItems).map((item, idx) => ({
             category: 'Plat',
             name: item.name,
@@ -381,11 +356,11 @@ export default function CreateMenuPage() {
                   />
                 </div>
 
-                {/* Prix + Durée */}
+                {/* Prix de base + Supplément */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
                   <div>
                     <label className={labelClass}>
-                      Prix par personne (€) <span className="text-[#c1a0fd]">*</span>
+                      Prix du cours — 1 à 6 élèves (€) <span className="text-[#c1a0fd]">*</span>
                     </label>
                     <input
                       type="number"
@@ -393,53 +368,54 @@ export default function CreateMenuPage() {
                       min="0"
                       value={koursPrice}
                       onChange={(e) => setKoursPrice(e.target.value)}
-                      placeholder="45"
+                      placeholder="200"
                       className={inputClass}
                     />
                   </div>
                   <div>
                     <label className={labelClass}>
-                      Durée (minutes) <span className="text-[#c1a0fd]">*</span>
+                      Supplément par élève au-delà de 6 (€) <span className="text-[#c1a0fd]">*</span>
                     </label>
                     <input
                       type="number"
+                      step="0.01"
                       min="0"
-                      value={koursDuration}
-                      onChange={(e) => setKoursDuration(e.target.value)}
-                      placeholder="180"
+                      value={koursExtraGuestPrice}
+                      onChange={(e) => setKoursExtraGuestPrice(e.target.value)}
+                      placeholder="25"
                       className={inputClass}
                     />
                   </div>
                 </div>
 
-                {/* Min / Max participants */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
-                  <div>
-                    <label className={labelClass}>
-                      Nombre minimum de participants <span className="text-[#c1a0fd]">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={koursMinParticipants}
-                      onChange={(e) => setKoursMinParticipants(e.target.value)}
-                      placeholder="2"
-                      className={inputClass}
-                    />
-                  </div>
-                  <div>
-                    <label className={labelClass}>
-                      Nombre maximum de participants <span className="text-[#c1a0fd]">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={koursMaxParticipants}
-                      onChange={(e) => setKoursMaxParticipants(e.target.value)}
-                      placeholder="8"
-                      className={inputClass}
-                    />
-                  </div>
+                {/* Durée */}
+                <div className="mb-5">
+                  <label className={labelClass}>
+                    Durée (minutes) <span className="text-[#c1a0fd]">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={koursDuration}
+                    onChange={(e) => setKoursDuration(e.target.value)}
+                    placeholder="180"
+                    className={inputClass}
+                  />
+                </div>
+
+                {/* Max participants */}
+                <div className="mb-5">
+                  <label className={labelClass}>
+                    Nombre maximum de participants <span className="text-[#c1a0fd]">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={koursMaxParticipants}
+                    onChange={(e) => setKoursMaxParticipants(e.target.value)}
+                    placeholder="8"
+                    className={inputClass}
+                  />
                 </div>
 
                 {/* Niveau de difficulté */}
@@ -465,110 +441,68 @@ export default function CreateMenuPage() {
                   </div>
                 </div>
 
-                {/* Lieu du cours */}
-                <div className="mb-6">
+                {/* Matériel et ustensiles à fournir par le client */}
+                <div>
                   <label className={labelClass}>
-                    Lieu du cours <span className="text-[#c1a0fd]">*</span>
+                    Matériel et ustensiles nécessaires (à fournir par le client)
                   </label>
-                  <div className="relative">
-                    <select
-                      value={koursLocation}
-                      onChange={(e) => setKoursLocation(e.target.value)}
-                      className={inputClass + ' appearance-none cursor-pointer pr-10'}
-                    >
-                      <option value="Chez le kooker">Chez le kooker</option>
-                      <option value="Chez le client">Chez le client</option>
-                      <option value="Les deux">Les deux</option>
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                        <path d="M4 6L8 10L12 6" stroke="#303044" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </div>
-                  </div>
-                </div>
 
-                {/* Matériel checkbox */}
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <div
-                    onClick={() => setKoursEquipmentProvided(!koursEquipmentProvided)}
-                    className={`w-5 h-5 rounded-[4px] border-2 flex items-center justify-center cursor-pointer transition-all shrink-0 ${
-                      koursEquipmentProvided
-                        ? 'bg-[#303044] border-[#303044]'
-                        : 'bg-white border-[#c0c0cc]'
-                    }`}
-                  >
-                    {koursEquipmentProvided && (
-                      <svg width="12" height="9" viewBox="0 0 12 9" fill="none">
-                        <path d="M1 4L4.5 7.5L11 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    )}
-                  </div>
-                  <span
-                    className="text-[14px] text-[#303044] font-medium cursor-pointer"
-                    onClick={() => setKoursEquipmentProvided(!koursEquipmentProvided)}
-                  >
-                    Matériel et ustensiles fournis
-                  </span>
-                </label>
-              </div>
-
-              {/* Ce que vous allez apprendre — separate card */}
-              <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm mb-6">
-                <h3 className="text-[22px] font-bold text-[#111125] tracking-[-0.44px] mb-5">
-                  Ce que vous allez apprendre
-                </h3>
-
-                {koursMenuItems.length > 0 && (
-                  <div className="space-y-2 mb-4">
-                    {koursMenuItems.map((item, idx) => (
-                      <div key={idx} className="flex items-start justify-between gap-3 bg-[#f3ecff] rounded-[12px] p-4">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[14px] font-semibold text-[#111125]">{item.name}</p>
-                          {item.description && (
-                            <p className="text-[13px] text-[#303044]/50 mt-0.5">{item.description}</p>
-                          )}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => removeKoursItem(idx)}
-                          className="shrink-0 w-8 h-8 flex items-center justify-center rounded-[8px] hover:bg-red-50 text-[#303044]/30 hover:text-red-500 transition-all cursor-pointer"
+                  {koursEquipmentList.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {koursEquipmentList.map((item) => (
+                        <span
+                          key={item}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] text-[#c1a0fd] text-[13px] font-semibold rounded-[8px]"
                         >
-                          <X size={16} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                          {item}
+                          <button
+                            type="button"
+                            onClick={() => setKoursEquipmentList((prev) => prev.filter((x) => x !== item))}
+                            className="hover:text-red-500 transition-colors cursor-pointer"
+                          >
+                            <X size={12} />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
 
-                <div className="border-2 border-dashed border-[#e0e2ef] rounded-[16px] p-4">
-                  <div className="flex flex-col gap-3">
+                  <div className="flex gap-2">
                     <input
                       type="text"
-                      value={koursNewItemName}
-                      onChange={(e) => setKoursNewItemName(e.target.value)}
-                      placeholder="Ex: Pâtes fraîches maison"
-                      className={inputClass}
-                    />
-                    <input
-                      type="text"
-                      value={koursNewItemDesc}
-                      onChange={(e) => setKoursNewItemDesc(e.target.value)}
-                      placeholder="Description (optionnel)"
-                      className={inputClass}
+                      value={koursNewEquipment}
+                      onChange={(e) => setKoursNewEquipment(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const val = koursNewEquipment.trim();
+                          if (val && !koursEquipmentList.includes(val)) {
+                            setKoursEquipmentList((prev) => [...prev, val]);
+                            setKoursNewEquipment('');
+                          }
+                        }
+                      }}
+                      placeholder="Ex: Saladier, fouet, planche à découper..."
+                      className={inputClass + ' flex-1'}
                     />
                     <button
                       type="button"
-                      onClick={addKoursItem}
-                      disabled={!koursNewItemName.trim()}
-                      className="h-[48px] flex items-center justify-center gap-2 bg-white border-2 border-[#c1a0fd] text-[#c1a0fd] text-[14px] font-semibold rounded-[12px] transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#f3ecff] cursor-pointer"
+                      onClick={() => {
+                        const val = koursNewEquipment.trim();
+                        if (val && !koursEquipmentList.includes(val)) {
+                          setKoursEquipmentList((prev) => [...prev, val]);
+                          setKoursNewEquipment('');
+                        }
+                      }}
+                      disabled={!koursNewEquipment.trim()}
+                      className="w-[48px] h-[48px] flex items-center justify-center bg-[#c1a0fd] hover:bg-[#b090ed] text-white rounded-[12px] transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0 cursor-pointer"
                     >
-                      <Plus size={16} />
-                      Ajouter un élément
+                      <Plus size={20} />
                     </button>
                   </div>
                 </div>
               </div>
+
             </>
           )}
 

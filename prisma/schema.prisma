@@ -19,14 +19,15 @@ model User {
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
-  kookerProfile   KookerProfile?
-  userProfile     UserProfile?
-  bookings        Booking[]       @relation("UserBookings")
-  reviews         Review[]
-  favorites       Favorite[]
-  sentMessages    Message[]       @relation("SentMessages")
-  receivedMessages Message[]      @relation("ReceivedMessages")
-  reviewsReceived Review[]        @relation("ReviewsReceived")
+  kookerProfile        KookerProfile?
+  userProfile          UserProfile?
+  bookings             Booking[]        @relation("UserBookings")
+  reviews              Review[]
+  favorites            Favorite[]
+  sentMessages         Message[]        @relation("SentMessages")
+  receivedMessages     Message[]        @relation("ReceivedMessages")
+  reviewsReceived      Review[]         @relation("ReviewsReceived")
+  passwordResetTokens  PasswordResetToken[]
 
   @@map("users")
 }
@@ -126,6 +127,7 @@ model Service {
   prepTimeMinutes     Int?      @map("prep_time_minutes")
   ingredientsIncluded Boolean   @default(false) @map("ingredients_included")
   equipmentProvided   Boolean   @default(false) @map("equipment_provided")
+  extraGuestPriceInCents Int?   @map("extra_guest_price_in_cents")
   koursDifficulty     String?   @map("kours_difficulty")
   koursLocation       String?   @map("kours_location")
   createdAt       DateTime  @default(now()) @map("created_at")
@@ -145,6 +147,7 @@ model ServiceImage {
   url             String
   alt             String?
   sortOrder       Int       @default(0) @map("sort_order")
+  isCardImage     Boolean   @default(false) @map("is_card_image")
   createdAt       DateTime  @default(now()) @map("created_at")
 
   service         Service   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
@@ -299,4 +302,40 @@ model Testimonial {
   kookerProfile   KookerProfile? @relation(fields: [kookerProfileId], references: [id])
 
   @@map("testimonials")
+}
+
+model PasswordResetToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+}
+
+model ErrorLog {
+  id         Int      @id @default(autoincrement())
+  message    String   @db.Text
+  stack      String?  @db.LongText
+  route      String?
+  method     String?
+  statusCode Int?     @map("status_code")
+  userId     Int?     @map("user_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("error_logs")
+}
+
+model PageViewLog {
+  id         Int      @id @default(autoincrement())
+  page       String
+  loadTimeMs Int      @map("load_time_ms")
+  userId     Int?     @map("user_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("page_view_logs")
 }

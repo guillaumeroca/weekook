@@ -24,6 +24,7 @@ const MessagesPage = lazy(() => import('@/pages/MessagesPage').then(m => ({ defa
 const BookingDetailPage = lazy(() => import('@/pages/BookingDetailPage').then(m => ({ default: m.default })));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage').then(m => ({ default: m.default })));
 const UserProfilePage = lazy(() => import('@/pages/UserProfilePage').then(m => ({ default: m.default })));
+const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage').then(m => ({ default: m.default })));
 const AdminLayout = lazy(() => import('@/pages/admin/AdminLayout').then(m => ({ default: m.default })));
 const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboardPage').then(m => ({ default: m.default })));
 const AdminUsersPage = lazy(() => import('@/pages/admin/AdminUsersPage').then(m => ({ default: m.default })));
@@ -84,6 +85,7 @@ export function AppRouter() {
             <Route path="*" element={<NotFoundPage />} />
         </Route>
         <Route path="/connexion" element={<LoginPage />} />
+        <Route path="/reinitialiser-mot-de-passe" element={<ResetPasswordPage />} />
         <Route path="/admin" element={<AdminProtectedRoute><AdminLayout /></AdminProtectedRoute>}>
           <Route index element={<AdminDashboardPage />} />
           <Route path="utilisateurs" element={<AdminUsersPage />} />

@@ -1,9 +1,11 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import PlanningTab from '@/components/dashboard/PlanningTab';
+import { usePageTiming } from '@/hooks/usePageTiming';
+import { compressImage } from '@/lib/compressImage';
 
 // ────────────────────────── Types ──────────────────────────
 
@@ -49,7 +51,7 @@ interface Service {
   durationMinutes: number;
   maxGuests: number;
   active: boolean;
-  images?: { url: string }[];
+  images?: { id: number; url: string; isCardImage: boolean }[];
 }
 
 interface Availability {
@@ -196,7 +198,7 @@ const SectionSpinner = ({ text }: { text?: string }) => (
 const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const [activeTab, setActiveTab] = useState<'bookings' | 'planning' | 'services' | 'profile'>(
     (location.state as any)?.tab || 'bookings'
   );
@@ -217,9 +219,12 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
     address: '',
   });
   const [originalProfile, setOriginalProfile] = useState<KookerProfile | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [cardImageUpdating, setCardImageUpdating] = useState(false);
 
   // Loading states
   const [loading, setLoading] = useState(true);
+  usePageTiming('Dashboard Kooker', !loading);
   const [statsLoading, setStatsLoading] = useState(true);
   const [bookingsLoading, setBookingsLoading] = useState(true);
   const [servicesLoading, setServicesLoading] = useState(true);
@@ -390,9 +395,48 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
     if (activeTab === 'profile' && profileLoading && !originalProfile) {
       fetchProfile();
     }
+    if (activeTab === 'profile' && servicesLoading && services.length === 0) {
+      fetchServices();
+    }
   }, [activeTab, fetchServices, fetchAvailabilities, fetchProfile, servicesLoading, availabilitiesLoading, profileLoading, services.length, availabilities.length, originalProfile]);
 
   // ── Actions ──
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const compressed = await compressImage(file, 800);
+      const formData = new FormData();
+      formData.append('file', compressed);
+      const uploadRes = await api.upload<{ url: string }>('/upload', formData);
+      if (uploadRes.success && uploadRes.data) {
+        await api.put('/users/avatar', { avatar: uploadRes.data.url });
+        await refreshUser();
+        toast.success('Avatar mis à jour');
+      }
+    } catch {
+      toast.error("Erreur lors de la mise à jour de l'avatar");
+    } finally {
+      if (avatarInputRef.current) avatarInputRef.current.value = '';
+    }
+  };
+
+  const handleSetCardImage = async (imageId: number) => {
+    setCardImageUpdating(true);
+    try {
+      await api.put(`/services/card-image/${imageId}`, {});
+      setServices(prev => prev.map(s => ({
+        ...s,
+        images: (s.images || []).map(img => ({ ...img, isCardImage: img.id === imageId })),
+      })));
+      toast.success('Photo de vignette mise à jour');
+    } catch {
+      toast.error('Erreur lors de la mise à jour');
+    } finally {
+      setCardImageUpdating(false);
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -1175,7 +1219,17 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
                   <div className="bg-white rounded-[20px] p-6 shadow-sm sticky top-8">
                     {/* Avatar */}
                     <div className="flex flex-col items-center text-center mb-6">
-                      <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#c1a0fd] to-[#9171d9] flex items-center justify-center mb-4 relative group cursor-pointer">
+                      <input
+                        type="file"
+                        ref={avatarInputRef}
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleAvatarUpload}
+                      />
+                      <div
+                        className="w-24 h-24 rounded-full bg-gradient-to-br from-[#c1a0fd] to-[#9171d9] flex items-center justify-center mb-4 relative group cursor-pointer"
+                        onClick={() => avatarInputRef.current?.click()}
+                      >
                         {user?.avatar ? (
                           <img src={user.avatar} alt="Avatar" className="w-full h-full rounded-full object-cover" />
                         ) : (
@@ -1192,6 +1246,59 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
                       <h4 className="text-[17px] font-bold text-[#111125]">{user?.firstName} {user?.lastName}</h4>
                       <p className="text-[13px] text-[#c1a0fd] font-medium mt-1">{profile.type}</p>
                       <p className="text-[13px] text-[#111125]/50 mt-0.5">{profile.city}</p>
+                    </div>
+
+                    {/* Photo vignette : sélection depuis les images de services */}
+                    <div className="mb-6 border-t border-[#e0e2ef] pt-6">
+                      <p className="text-[13px] font-semibold text-[#111125] mb-1">Photo de vignette</p>
+                      <p className="text-[11px] text-[#111125]/40 mb-3">Apparaît sur votre carte dans la recherche</p>
+                      {(() => {
+                        const allImages = services.flatMap(s =>
+                          (s.images || []).map(img => ({ ...img, serviceTitle: s.title }))
+                        );
+                        if (allImages.length === 0) {
+                          return (
+                            <div className="w-full h-[80px] rounded-[12px] bg-[#f2f4fc] border border-[#e0e2ef] flex flex-col items-center justify-center gap-1">
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c1a0fd" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+                              </svg>
+                              <p className="text-[11px] text-[#111125]/40">Ajoutez des photos à vos offres</p>
+                            </div>
+                          );
+                        }
+                        if (allImages.length === 1) {
+                          const img = allImages[0];
+                          return (
+                            <div className="w-full h-[90px] rounded-[12px] overflow-hidden border-2 border-[#c1a0fd]">
+                              <img src={img.url.startsWith('/') || img.url.startsWith('http') ? img.url : `/uploads/${img.url}`} alt={img.serviceTitle} className="w-full h-full object-cover" />
+                            </div>
+                          );
+                        }
+                        return (
+                          <div className={`grid grid-cols-3 gap-1.5 ${cardImageUpdating ? 'opacity-50 pointer-events-none' : ''}`}>
+                            {allImages.map(img => {
+                              const src = img.url.startsWith('/') || img.url.startsWith('http') ? img.url : `/uploads/${img.url}`;
+                              return (
+                                <button
+                                  key={img.id}
+                                  onClick={() => !img.isCardImage && handleSetCardImage(img.id)}
+                                  title={img.isCardImage ? 'Photo actuelle' : `Sélectionner — ${img.serviceTitle}`}
+                                  className={`relative aspect-square rounded-[10px] overflow-hidden border-2 transition-all ${img.isCardImage ? 'border-[#c1a0fd] ring-2 ring-[#c1a0fd]/30' : 'border-transparent hover:border-[#c1a0fd]/50 cursor-pointer'}`}
+                                >
+                                  <img src={src} alt={img.serviceTitle} className="w-full h-full object-cover" />
+                                  {img.isCardImage && (
+                                    <div className="absolute top-1 right-1 w-5 h-5 bg-[#c1a0fd] rounded-full flex items-center justify-center">
+                                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                        <polyline points="20 6 9 17 4 12"/>
+                                      </svg>
+                                    </div>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     {/* Quick Stats */}

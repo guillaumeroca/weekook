@@ -46,6 +46,7 @@ export default function CreateMenuPage() {
   const [koursTitle, setKoursTitle] = useState('');
   const [koursDescription, setKoursDescription] = useState('');
   const [koursPrice, setKoursPrice] = useState('');
+  const [koursExtraGuestPrice, setKoursExtraGuestPrice] = useState('');
   const [koursDuration, setKoursDuration] = useState('');
   const [koursMinParticipants, setKoursMinParticipants] = useState('');
   const [koursMaxParticipants, setKoursMaxParticipants] = useState('');
@@ -101,6 +102,7 @@ export default function CreateMenuPage() {
     koursTitle.trim() !== '' &&
     koursDescription.trim() !== '' &&
     koursPrice.trim() !== '' &&
+    koursExtraGuestPrice.trim() !== '' &&
     koursDuration.trim() !== '' &&
     koursMaxParticipants.trim() !== '';
 
@@ -190,6 +192,7 @@ export default function CreateMenuPage() {
           description: isKours ? koursDescription : kookDescription,
           type: [type],
           priceInCents: Math.round(parseFloat(isKours ? koursPrice : kookPrice) * 100),
+          extraGuestPriceInCents: isKours ? Math.round(parseFloat(koursExtraGuestPrice) * 100) : undefined,
           durationMinutes: parseInt(isKours ? koursDuration : kookDuration),
           minGuests: isKours
             ? (koursMinParticipants ? parseInt(koursMinParticipants) : undefined)
@@ -353,11 +356,11 @@ export default function CreateMenuPage() {
                   />
                 </div>
 
-                {/* Prix + Durée */}
+                {/* Prix de base + Supplément */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
                   <div>
                     <label className={labelClass}>
-                      Prix par personne (€) <span className="text-[#c1a0fd]">*</span>
+                      Prix du cours — 1 à 6 élèves (€) <span className="text-[#c1a0fd]">*</span>
                     </label>
                     <input
                       type="number"
@@ -365,23 +368,39 @@ export default function CreateMenuPage() {
                       min="0"
                       value={koursPrice}
                       onChange={(e) => setKoursPrice(e.target.value)}
-                      placeholder="45"
+                      placeholder="200"
                       className={inputClass}
                     />
                   </div>
                   <div>
                     <label className={labelClass}>
-                      Durée (minutes) <span className="text-[#c1a0fd]">*</span>
+                      Supplément par élève au-delà de 6 (€) <span className="text-[#c1a0fd]">*</span>
                     </label>
                     <input
                       type="number"
+                      step="0.01"
                       min="0"
-                      value={koursDuration}
-                      onChange={(e) => setKoursDuration(e.target.value)}
-                      placeholder="180"
+                      value={koursExtraGuestPrice}
+                      onChange={(e) => setKoursExtraGuestPrice(e.target.value)}
+                      placeholder="25"
                       className={inputClass}
                     />
                   </div>
+                </div>
+
+                {/* Durée */}
+                <div className="mb-5">
+                  <label className={labelClass}>
+                    Durée (minutes) <span className="text-[#c1a0fd]">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={koursDuration}
+                    onChange={(e) => setKoursDuration(e.target.value)}
+                    placeholder="180"
+                    className={inputClass}
+                  />
                 </div>
 
                 {/* Min / Max participants */}

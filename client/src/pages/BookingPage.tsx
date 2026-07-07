@@ -15,6 +15,7 @@ interface ServiceDetail {
   title: string;
   description: string;
   priceInCents: number;
+  extraGuestPriceInCents: number | null;
   durationMinutes: number;
   minGuests: number;
   maxGuests: number;
@@ -162,6 +163,7 @@ export default function BookingPage() {
             title: s.title || '',
             description: s.description || '',
             priceInCents: s.priceInCents || 0,
+            extraGuestPriceInCents: s.extraGuestPriceInCents ?? null,
             durationMinutes: s.durationMinutes || 0,
             minGuests: min,
             maxGuests: s.maxGuests || 1,
@@ -353,7 +355,11 @@ export default function BookingPage() {
   const isKours = service ? service.type.includes('KOURS') : false;
   const guestLabel = isKours ? 'participant' : 'convive';
   const guestLabelPlural = isKours ? 'participants' : 'convives';
-  const totalPriceCents = service ? service.priceInCents * guests : 0;
+  const totalPriceCents = service
+    ? isKours
+      ? service.priceInCents + Math.max(0, guests - 6) * (service.extraGuestPriceInCents ?? 0)
+      : service.priceInCents * guests
+    : 0;
   const guestsError = service
     ? guests < service.minGuests
       ? `Minimum ${service.minGuests} ${guests < service.minGuests ? guestLabelPlural : guestLabel} requis pour ce service.`
@@ -627,7 +633,9 @@ export default function BookingPage() {
                 <span className="text-[20px] font-bold text-[#c1a0fd]">
                   {formatPrice(service.priceInCents)}&euro;
                 </span>
-                <span className="text-[13px] text-[#6b7280] ml-1">/pers.</span>
+                <span className="text-[13px] text-[#6b7280] ml-1">
+                  {isKours ? '/ 1-6 élèves' : '/pers.'}
+                </span>
               </div>
             </div>
 
@@ -946,11 +954,26 @@ export default function BookingPage() {
                   </div>
                 )}
                 <div className="flex justify-between items-center">
-                  <span className="text-[14px] text-[#6b7280]">Prix unitaire</span>
+                  <span className="text-[14px] text-[#6b7280]">
+                    {isKours ? 'Prix du cours (1-6 élèves)' : 'Prix unitaire'}
+                  </span>
                   <span className="text-[14px] font-semibold text-[#111125]">
-                    {formatPrice(service.priceInCents)}&euro; x {guests}
+                    {isKours
+                      ? `${formatPrice(service.priceInCents)}\u20AC`
+                      : `${formatPrice(service.priceInCents)}\u20AC x ${guests}`
+                    }
                   </span>
                 </div>
+                {isKours && guests > 6 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-[14px] text-[#6b7280]">
+                      Supplément ({guests - 6} élève{guests - 6 > 1 ? 's' : ''} en plus)
+                    </span>
+                    <span className="text-[14px] font-semibold text-[#111125]">
+                      +{formatPrice((service.extraGuestPriceInCents ?? 0) * (guests - 6))}&euro;
+                    </span>
+                  </div>
+                )}
                 {notes.trim() && (
                   <div className="flex justify-between items-start">
                     <span className="text-[14px] text-[#6b7280]">Notes</span>

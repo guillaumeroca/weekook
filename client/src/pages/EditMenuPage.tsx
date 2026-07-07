@@ -48,6 +48,7 @@ export default function EditMenuPage() {
   const [koursTitle, setKoursTitle] = useState('');
   const [koursDescription, setKoursDescription] = useState('');
   const [koursPrice, setKoursPrice] = useState('');
+  const [koursExtraGuestPrice, setKoursExtraGuestPrice] = useState('');
   const [koursDuration, setKoursDuration] = useState('');
   const [koursMinParticipants, setKoursMinParticipants] = useState('');
   const [koursMaxParticipants, setKoursMaxParticipants] = useState('');
@@ -99,6 +100,7 @@ export default function EditMenuPage() {
             setKoursTitle(s.title || '');
             setKoursDescription(s.description || '');
             setKoursPrice(String(s.priceInCents / 100));
+            setKoursExtraGuestPrice(s.extraGuestPriceInCents != null ? String(s.extraGuestPriceInCents / 100) : '');
             setKoursDuration(String(s.durationMinutes || ''));
             setKoursMinParticipants(s.minGuests ? String(s.minGuests) : '');
             setKoursMaxParticipants(String(s.maxGuests || ''));
@@ -164,6 +166,7 @@ export default function EditMenuPage() {
     koursTitle.trim() !== '' &&
     koursDescription.trim() !== '' &&
     koursPrice.trim() !== '' &&
+    koursExtraGuestPrice.trim() !== '' &&
     koursDuration.trim() !== '' &&
     koursMaxParticipants.trim() !== '';
 
@@ -252,6 +255,7 @@ export default function EditMenuPage() {
         description: isKours ? koursDescription : kookDescription,
         type: serviceTypes,
         priceInCents: Math.round(parseFloat(isKours ? koursPrice : kookPrice) * 100),
+        extraGuestPriceInCents: isKours ? Math.round(parseFloat(koursExtraGuestPrice) * 100) : undefined,
         durationMinutes: parseInt(isKours ? koursDuration : kookDuration),
         minGuests: isKours
           ? (koursMinParticipants ? parseInt(koursMinParticipants) : undefined)
@@ -415,31 +419,45 @@ export default function EditMenuPage() {
                 />
               </div>
 
-              {/* Price + Duration */}
+              {/* Price base + Extra guest price */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
                 <div>
-                  <label className={labelClass}>Prix par personne (EUR)</label>
+                  <label className={labelClass}>Prix du cours — 1 à 6 élèves (EUR)</label>
                   <input
                     type="number"
                     step="0.01"
                     min="0"
                     value={koursPrice}
                     onChange={(e) => setKoursPrice(e.target.value)}
-                    placeholder="35.00"
+                    placeholder="200.00"
                     className={inputClass}
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>Durée (minutes)</label>
+                  <label className={labelClass}>Supplément par élève au-delà de 6 (EUR)</label>
                   <input
                     type="number"
+                    step="0.01"
                     min="0"
-                    value={koursDuration}
-                    onChange={(e) => setKoursDuration(e.target.value)}
-                    placeholder="120"
+                    value={koursExtraGuestPrice}
+                    onChange={(e) => setKoursExtraGuestPrice(e.target.value)}
+                    placeholder="25.00"
                     className={inputClass}
                   />
                 </div>
+              </div>
+
+              {/* Duration */}
+              <div className="mb-5">
+                <label className={labelClass}>Durée (minutes)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={koursDuration}
+                  onChange={(e) => setKoursDuration(e.target.value)}
+                  placeholder="120"
+                  className={inputClass}
+                />
               </div>
 
               {/* Min / Max participants */}

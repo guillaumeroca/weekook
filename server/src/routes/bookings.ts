@@ -189,7 +189,9 @@ router.post(
         where: { id: serviceId },
         select: {
           id: true,
+          type: true,
           priceInCents: true,
+          extraGuestPriceInCents: true,
           durationMinutes: true,
           kookerProfileId: true,
           maxGuests: true,
@@ -226,8 +228,18 @@ router.post(
         throw new AppError('Ce kooker n\'accepte pas encore les paiements en ligne. Veuillez réessayer plus tard.', 400);
       }
 
-      // Auto-calculate total price: price * guests
-      const totalPriceInCents = service.priceInCents * guests;
+      // Auto-calculate total price
+      // KOURS: base price covers 1-6 guests, then extra per guest beyond 6
+      // KOOK: price per guest
+      const serviceTypes: string[] = Array.isArray(service.type) ? service.type : JSON.parse(String(service.type) || '[]');
+      const isKours = serviceTypes.includes('KOURS');
+      let totalPriceInCents: number;
+      if (isKours) {
+        const extraGuests = Math.max(0, guests - 6);
+        totalPriceInCents = service.priceInCents + extraGuests * (service.extraGuestPriceInCents ?? 0);
+      } else {
+        totalPriceInCents = service.priceInCents * guests;
+      }
 
       // Create booking
       const booking = await prisma.booking.create({
@@ -531,7 +543,18 @@ router.put(
       if (isOwner && typeof guests === 'number' && guests !== booking.guests) {
         changes.push(`Convives : ${booking.guests} → ${guests}`);
         updateData.guests = guests;
-        updateData.totalPriceInCents = (booking.service as any).priceInCents * guests;
+        // Recalculate price: KOURS uses base + extra beyond 6, KOOK uses per-guest
+        const svc = await prisma.service.findUnique({
+          where: { id: (booking.service as any).id },
+          select: { type: true, priceInCents: true, extraGuestPriceInCents: true },
+        });
+        const svcTypes: string[] = svc ? (Array.isArray(svc.type) ? svc.type : JSON.parse(String(svc.type) || '[]')) : [];
+        if (svcTypes.includes('KOURS') && svc) {
+          const extraGuests = Math.max(0, guests - 6);
+          updateData.totalPriceInCents = svc.priceInCents + extraGuests * (svc.extraGuestPriceInCents ?? 0);
+        } else {
+          updateData.totalPriceInCents = (booking.service as any).priceInCents * guests;
+        }
       }
       if (typeof notes !== 'undefined') {
         const oldNotes = booking.notes || '';

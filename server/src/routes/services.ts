@@ -85,6 +85,7 @@ router.post(
         prepTimeMinutes,
         ingredientsIncluded,
         equipmentProvided,
+        extraGuestPriceInCents,
         menuItems,
       } = req.body;
 
@@ -104,6 +105,7 @@ router.post(
           prepTimeMinutes: prepTimeMinutes ?? null,
           ingredientsIncluded: ingredientsIncluded ?? false,
           equipmentProvided: equipmentProvided ?? false,
+          extraGuestPriceInCents: extraGuestPriceInCents ?? null,
           menuItems: menuItems
             ? {
                 create: menuItems.map(
@@ -236,6 +238,7 @@ router.put(
         prepTimeMinutes,
         ingredientsIncluded,
         equipmentProvided,
+        extraGuestPriceInCents,
         menuItems,
       } = req.body;
 
@@ -254,6 +257,7 @@ router.put(
       if (prepTimeMinutes !== undefined) data.prepTimeMinutes = prepTimeMinutes;
       if (ingredientsIncluded !== undefined) data.ingredientsIncluded = ingredientsIncluded;
       if (equipmentProvided !== undefined) data.equipmentProvided = equipmentProvided;
+      if (extraGuestPriceInCents !== undefined) data.extraGuestPriceInCents = extraGuestPriceInCents;
 
       // If menuItems provided, replace all
       if (menuItems !== undefined) {

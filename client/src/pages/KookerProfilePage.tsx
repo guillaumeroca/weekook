@@ -34,6 +34,7 @@ interface Service {
   koursDifficulty?: string | null;
   koursLocation?: string | null;
   equipmentProvided?: boolean;
+  equipmentList: string[];
 }
 
 interface Review {
@@ -135,6 +136,7 @@ function mapApiToProfile(data: any): KookerProfile {
         koursDifficulty: s.koursDifficulty || null,
         koursLocation: s.koursLocation || null,
         equipmentProvided: s.equipmentProvided || false,
+        equipmentList: safeJsonParse<string[]>(s.constraints, []),
       })),
     reviews: (data.reviewsReceived || []).map((r: any) => ({
       id: r.id,
@@ -814,7 +816,7 @@ export default function KookerProfilePage() {
                               {service.description}
                             </p>
                             {/* KOURS-specific badges */}
-                            {service.types.includes('KOURS') && (service.koursDifficulty || service.koursLocation || service.equipmentProvided) && (
+                            {service.types.includes('KOURS') && (service.koursDifficulty || service.koursLocation) && (
                               <div className="flex flex-wrap gap-2 mb-4">
                                 {service.koursDifficulty && (
                                   <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] text-[#7c5cbf] text-[12px] font-semibold rounded-[8px]">
@@ -826,11 +828,19 @@ export default function KookerProfilePage() {
                                     📍 {service.koursLocation}
                                   </span>
                                 )}
-                                {service.equipmentProvided && (
-                                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] text-[#7c5cbf] text-[12px] font-semibold rounded-[8px]">
-                                    🎒 Matériel fourni
-                                  </span>
-                                )}
+                              </div>
+                            )}
+                            {/* Matériel nécessaire */}
+                            {service.types.includes('KOURS') && service.equipmentList.length > 0 && (
+                              <div className="mb-4">
+                                <span className="block text-[11px] font-semibold text-[#9ca3af] uppercase mb-1.5">Matériel à prévoir</span>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {service.equipmentList.map((item) => (
+                                    <span key={item} className="px-2.5 py-1 bg-[#fef3c7] text-[#92400e] text-[12px] font-medium rounded-[6px]">
+                                      {item}
+                                    </span>
+                                  ))}
+                                </div>
                               </div>
                             )}
                             <div className="grid grid-cols-2 gap-4 mb-3">

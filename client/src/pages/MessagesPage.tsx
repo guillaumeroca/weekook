@@ -358,6 +358,11 @@ export default function MessagesPage() {
   // Prestation à la conversation active
   const activeService = activeConv?.service ?? (messages.length > 0 ? messages[0]?.service : null);
 
+  // Liste affichée : inclure le ghost s'il n'est pas déjà dans conversations
+  const displayedConversations = activeConv && !conversations.some(c => c.user.id === activeConv.user.id && c.service?.id === activeConv.service?.id)
+    ? [activeConv, ...conversations]
+    : conversations;
+
   return (
     <div className="min-h-screen bg-[#f2f4fc]" style={{ fontFamily: 'Inter, sans-serif' }}>
       <div className="px-4 md:px-8 lg:px-[96px] py-6">
@@ -390,7 +395,7 @@ export default function MessagesPage() {
                     </div>
                   ))}
                 </div>
-              ) : conversations.length === 0 ? (
+              ) : displayedConversations.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full py-16 px-6 text-center">
                   <div className="w-14 h-14 rounded-full bg-[#f3ecff] flex items-center justify-center mb-4">
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#c1a0fd" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -401,7 +406,7 @@ export default function MessagesPage() {
                   <p className="text-[13px] text-[#6b7280]">Contactez un kooker depuis sa fiche pour démarrer une discussion.</p>
                 </div>
               ) : (
-                conversations.map(conv => (
+                displayedConversations.map(conv => (
                   <div
                     key={conv.user.id}
                     className={`conv-row relative flex items-center gap-3 px-4 py-3.5 border-b border-[#f0f0f0] last:border-0 transition-colors ${
@@ -462,40 +467,17 @@ export default function MessagesPage() {
 
             {activeConv ? (
               <>
-                {/* Header */}
-                <div className="flex items-center gap-3 px-5 py-3 border-b border-[#e0e0e0] flex-shrink-0">
-                  {/* Bouton retour mobile */}
+                {/* Bouton retour mobile */}
+                <div className="lg:hidden px-5 py-2 border-b border-[#e0e0e0] flex-shrink-0">
                   <button
                     onClick={() => setActiveConv(null)}
-                    className="lg:hidden w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#f3ecff] transition-colors flex-shrink-0"
+                    className="flex items-center gap-2 text-[13px] text-[#c1a0fd] font-semibold"
                   >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c1a0fd" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c1a0fd" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M15 18l-6-6 6-6"/>
                     </svg>
+                    Retour
                   </button>
-                  <div
-                    className={activeConv.user.kookerProfileId ? 'cursor-pointer' : ''}
-                    onClick={() => activeConv.user.kookerProfileId && navigate(`/kooker/${activeConv.user.kookerProfileId}`)}
-                  >
-                    <Avatar user={activeConv.user} size={40} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    {activeConv.user.kookerProfileId ? (
-                      <button
-                        onClick={() => navigate(`/kooker/${activeConv.user.kookerProfileId}`)}
-                        className="text-[15px] font-semibold text-[#111125] truncate hover:text-[#c1a0fd] transition-colors block"
-                      >
-                        {activeConv.user.firstName} {activeConv.user.lastName}
-                      </button>
-                    ) : (
-                      <p className="text-[15px] font-semibold text-[#111125] truncate">
-                        {activeConv.user.firstName} {activeConv.user.lastName}
-                      </p>
-                    )}
-                    {activeConv.service && (
-                      <p className="text-[12px] text-[#c1a0fd] truncate">{activeConv.service.title}</p>
-                    )}
-                  </div>
                 </div>
 
                 {/* Messages */}

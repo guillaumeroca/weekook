@@ -628,23 +628,6 @@ export default function KookerProfilePage() {
                 {/* Action buttons */}
                 <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
                   <button
-                    onClick={() => {
-                      if (!user) { navigate(`/connexion?redirect=/kooker/${id}&action=contact`); return; }
-                      const firstService = profile.services?.[0];
-                      if (firstService) {
-                        navigate(`/messagerie?to=${profile.userId}&service=${firstService.id}`);
-                      } else {
-                        toast.error('Ce kooker n\'a pas encore de prestation.');
-                      }
-                    }}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-[#c1a0fd] text-white rounded-[12px] text-[14px] font-semibold hover:bg-[#b090ed] transition-all"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                    </svg>
-                    Contacter
-                  </button>
-                  <button
                     onClick={handleToggleFavorite}
                     className={`flex items-center gap-2 px-4 py-2.5 rounded-[12px] text-[14px] font-semibold border transition-all ${
                       isFavorite
@@ -883,33 +866,6 @@ export default function KookerProfilePage() {
                   })}
                 </div>
               )}
-            </section>
-
-            {/* ============================================================= */}
-            {/* MESSAGERIE                                                     */}
-            {/* ============================================================= */}
-            <section className="mb-10 bg-white rounded-[20px] border border-[#c1a0fd]/40 p-5 md:p-6">
-              <h2 className="text-[18px] font-semibold text-[#111125] mb-2">Messagerie</h2>
-              <p className="text-[14px] text-[#6b7280] mb-4">
-                Vous pouvez envoyer un message à ce Kooker pour poser vos questions ou discuter de votre projet.
-              </p>
-              <button
-                onClick={() => {
-                  if (!user) { navigate(`/connexion?redirect=/kooker/${id}&action=contact`); return; }
-                  const firstService = profile.services?.[0];
-                  if (firstService) {
-                    navigate(`/messagerie?to=${profile.userId}&service=${firstService.id}`);
-                  } else {
-                    toast.error('Ce kooker n\'a pas encore de prestation.');
-                  }
-                }}
-                className="flex items-center gap-2 px-5 py-2.5 bg-[#c1a0fd] text-white text-[14px] font-semibold rounded-[12px] hover:bg-[#b090ed] transition-all"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
-                Envoyer un message
-              </button>
             </section>
 
             {/* ============================================================= */}

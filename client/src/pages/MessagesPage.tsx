@@ -432,6 +432,9 @@ export default function MessagesPage() {
                             {conv.lastMessage?.createdAt ? formatTime(conv.lastMessage.createdAt) : ''}
                           </span>
                         </div>
+                        {conv.service?.title && (
+                          <p className="text-[12px] text-[#c1a0fd] truncate mt-0.5">{conv.service.title}</p>
+                        )}
                         <p className={`text-[13px] truncate mt-0.5 ${conv.unreadCount > 0 ? 'font-medium text-[#374151]' : 'text-[#6b7280]'}`}>
                           {conv.lastMessage?.content || ''}
                         </p>

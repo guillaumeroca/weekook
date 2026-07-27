@@ -31,7 +31,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         if (initialLoadDoneRef.current && newCount > prevCountRef.current) {
           toast.info('Nouveau message reçu', {
             description: 'Consultez vos messages pour voir les détails.',
-            action: { label: 'Voir', onClick: () => navigate('/messages') },
+            action: { label: 'Voir', onClick: () => navigate('/messagerie') },
             duration: 6000,
           });
         }

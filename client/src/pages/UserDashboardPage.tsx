@@ -3,7 +3,6 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../lib/api';
 import { toast } from 'sonner';
-import KookerDashboardPage from './KookerDashboardPage';
 import { usePageTiming } from '@/hooks/usePageTiming';
 import { compressImage } from '@/lib/compressImage';
 
@@ -301,7 +300,10 @@ const UserDashboardPage = () => {
   const navigate = useNavigate();
   const { user, logout, refreshUser } = useAuth(); // refreshUser used for avatar upload
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [activeTab, setActiveTab] = useState<'upcoming' | 'history' | 'favorites' | 'kooker'>('upcoming');
+  const [activeTab, setActiveTab] = useState<'upcoming' | 'history' | 'favorites' | 'infos'>('upcoming');
+  // Personal info state for "Mes infos" tab
+  const [personalInfo, setPersonalInfo] = useState({ firstName: '', lastName: '', phone: '', email: '' });
+  const [savingPersonal, setSavingPersonal] = useState(false);
   const [upcomingBookings, setUpcomingBookings] = useState<Booking[]>([]);
   const [historyBookings, setHistoryBookings] = useState<Booking[]>([]);
   const [favorites, setFavorites] = useState<FavoriteKooker[]>([]);
@@ -315,7 +317,17 @@ const UserDashboardPage = () => {
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
 
   useEffect(() => {
-    document.title = 'Mon Espace - Weekook';
+    document.title = 'Mon Compte - Weekook';
+
+    // Init personal info from user context
+    if (user) {
+      setPersonalInfo({
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phone: user.phone ?? '',
+        email: user.email ?? '',
+      });
+    }
 
     const fetchData = async () => {
       try {
@@ -358,6 +370,25 @@ const UserDashboardPage = () => {
 
     fetchData();
   }, []);
+
+  const handleSavePersonal = async () => {
+    setSavingPersonal(true);
+    try {
+      const payload: Record<string, string> = {
+        firstName: personalInfo.firstName,
+        lastName: personalInfo.lastName,
+        phone: personalInfo.phone,
+      };
+      if (personalInfo.email !== (user?.email ?? '')) payload.email = personalInfo.email;
+      await api.put('/users/profile', payload);
+      await refreshUser();
+      toast.success('Informations mises à jour');
+    } catch {
+      toast.error("Erreur lors de la mise à jour");
+    } finally {
+      setSavingPersonal(false);
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -456,9 +487,10 @@ const UserDashboardPage = () => {
   };
 
   const tabs = [
-    { key: 'upcoming' as const, label: 'Réservations à venir', shortLabel: 'A venir', count: upcomingBookings.length },
-    { key: 'history' as const, label: 'Historique', shortLabel: 'Historique', count: historyBookings.length },
-    { key: 'favorites' as const, label: 'Mes Favoris', shortLabel: 'Favoris', count: favorites.length },
+    { key: 'upcoming' as const, label: 'Mon Agenda gourmand', shortLabel: 'Agenda' },
+    { key: 'history' as const, label: 'Historique', shortLabel: 'Historique' },
+    { key: 'favorites' as const, label: 'Mes Kookers favoris', shortLabel: 'Favoris' },
+    { key: 'infos' as const, label: 'Mes infos', shortLabel: 'Infos' },
   ];
 
   if (loading) {
@@ -481,8 +513,9 @@ const UserDashboardPage = () => {
       <div className="max-w-[1200px] mx-auto px-4 md:px-8 lg:px-[96px] py-8 md:py-12">
         {/* Heading */}
         <div className="mb-8">
+          <p className="text-[13px] text-[#828294] mb-3">/Profil/dashboard_user</p>
           <h1 className="text-[32px] md:text-[40px] font-semibold text-[#111125] tracking-[-0.8px] mb-2">
-            Mon tableau de bord
+            MON COMPTE
           </h1>
           <p className="text-[16px] text-[#5c5c6f]">
             Gérez vos réservations et vos préférences
@@ -525,23 +558,23 @@ const UserDashboardPage = () => {
               </div>
             </div>
             <div className="flex gap-3 flex-wrap">
-              {/* Modifier le profil */}
-              <button
-                onClick={() => navigate('/mon-profil')}
-                className="flex items-center gap-2 px-5 py-2.5 border border-[#c1a0fd] text-[#c1a0fd] hover:bg-[#c1a0fd]/5 rounded-[12px] h-[44px] text-[14px] font-medium transition-all"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
-                  <circle cx="12" cy="12" r="3"/>
-                </svg>
-                Modifier le profil
-              </button>
-
-              {/* Devenir Kooker (non-kookers only) */}
-              {!user?.kookerProfileId && (
+              {/* Bouton conditionnel : Devenir Kooker OU Mon tableau de bord Kooker */}
+              {user?.kookerProfileId ? (
+                <button
+                  onClick={() => navigate('/kooker-dashboard')}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-[#c1a0fd] hover:bg-[#b090ed] text-[#111125] rounded-[12px] h-[44px] text-[14px] font-medium transition-all"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"/>
+                    <line x1="6" y1="17" x2="18" y2="17"/>
+                    <line x1="6" y1="21" x2="18" y2="21"/>
+                  </svg>
+                  Mon tableau de bord Kooker
+                </button>
+              ) : (
                 <button
                   onClick={() => navigate('/devenir-kooker')}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-[#c1a0fd] hover:bg-[#b090ed] text-white rounded-[12px] h-[44px] text-[14px] font-medium transition-all"
+                  className="flex items-center gap-2 px-5 py-2.5 border border-[#c1a0fd] text-[#c1a0fd] hover:bg-[#c1a0fd]/5 rounded-[12px] h-[44px] text-[14px] font-medium transition-all"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"/>
@@ -555,14 +588,12 @@ const UserDashboardPage = () => {
               {/* Se déconnecter */}
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-2 px-5 py-2.5 border border-red-400 text-red-500 hover:bg-red-50 rounded-[12px] h-[44px] text-[14px] font-medium transition-all"
+                className="flex items-center gap-2 px-5 py-2.5 bg-[#c1a0fd] hover:bg-[#b090ed] text-[#111125] rounded-[12px] h-[44px] text-[14px] font-medium transition-all"
               >
+                se déconnecter
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                  <polyline points="16 17 21 12 16 7"/>
-                  <line x1="21" y1="12" x2="9" y2="12"/>
+                  <polyline points="9 18 15 12 9 6"/>
                 </svg>
-                Se déconnecter
               </button>
             </div>
           </div>
@@ -570,12 +601,18 @@ const UserDashboardPage = () => {
 
         {/* Tabs */}
         <div className="flex items-center bg-white rounded-[12px] p-2 mb-6 h-[72px] gap-2">
-          <div className="grid grid-cols-3 flex-1 h-full">
+          <div className="flex items-center gap-2 text-[#c1a0fd] pl-2">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+          </div>
+          <div className="grid grid-cols-4 flex-1 h-full">
             {tabs.map(tab => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`rounded-[8px] text-[16px] md:text-[18px] font-normal transition-all duration-300 ${
+                className={`rounded-[8px] text-[14px] md:text-[16px] font-normal transition-all duration-300 ${
                   activeTab === tab.key
                     ? 'bg-[#c1a0fd] font-bold text-white shadow-sm'
                     : 'text-[#111125]/60 hover:text-[#111125]'
@@ -586,34 +623,13 @@ const UserDashboardPage = () => {
               </button>
             ))}
           </div>
-          {user?.kookerProfileId && (
-            <>
-              <div className="w-px h-10 bg-[#e0e2ef] flex-shrink-0" />
-              <button
-                onClick={() => setActiveTab('kooker')}
-                className={`h-full px-3 md:px-5 rounded-[8px] flex items-center gap-2 text-[13px] md:text-[15px] font-medium transition-all duration-300 whitespace-nowrap flex-shrink-0 ${
-                  activeTab === 'kooker'
-                    ? 'bg-[#c1a0fd] text-white shadow-sm font-bold'
-                    : 'text-[#c1a0fd] hover:bg-[#f3ecff]'
-                }`}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"/>
-                  <line x1="6" y1="17" x2="18" y2="17"/>
-                  <line x1="6" y1="21" x2="18" y2="21"/>
-                </svg>
-                <span className="hidden sm:inline">Espace Kooker</span>
-                <span className="sm:hidden">Kooker</span>
-              </button>
-            </>
-          )}
         </div>
 
         {/* Upcoming Bookings Tab */}
         {activeTab === 'upcoming' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-[20px] font-semibold text-[#111125]">Réservations à venir</h3>
+              <h3 className="text-[20px] font-semibold text-[#111125]">Mon Agenda gourmand</h3>
               <span className="text-[13px] text-[#111125]/40">{upcomingBookings.length} réservation{upcomingBookings.length > 1 ? 's' : ''}</span>
             </div>
             {upcomingBookings.length === 0 ? (
@@ -701,9 +717,61 @@ const UserDashboardPage = () => {
             )}
           </div>
         )}
-        {/* Kooker Tab */}
-        {activeTab === 'kooker' && (
-          <KookerDashboardPage embedded={true} />
+        {/* Mes infos Tab */}
+        {activeTab === 'infos' && (
+          <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm">
+            <h3 className="text-[20px] font-semibold text-[#111125] mb-6">Mes informations personnelles</h3>
+            <div className="space-y-4 max-w-[600px]">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[13px] font-medium text-[#111125] mb-1">Prénom</label>
+                  <input
+                    type="text"
+                    value={personalInfo.firstName}
+                    onChange={e => setPersonalInfo(p => ({ ...p, firstName: e.target.value }))}
+                    className="w-full h-[44px] px-4 border border-[#e0e2ef] rounded-[12px] text-[14px] text-[#111125] focus:outline-none focus:border-[#c1a0fd] bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[13px] font-medium text-[#111125] mb-1">Nom</label>
+                  <input
+                    type="text"
+                    value={personalInfo.lastName}
+                    onChange={e => setPersonalInfo(p => ({ ...p, lastName: e.target.value }))}
+                    className="w-full h-[44px] px-4 border border-[#e0e2ef] rounded-[12px] text-[14px] text-[#111125] focus:outline-none focus:border-[#c1a0fd] bg-white"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[13px] font-medium text-[#111125] mb-1">Email</label>
+                <input
+                  type="email"
+                  value={personalInfo.email}
+                  onChange={e => setPersonalInfo(p => ({ ...p, email: e.target.value }))}
+                  className="w-full h-[44px] px-4 border border-[#e0e2ef] rounded-[12px] text-[14px] text-[#111125] focus:outline-none focus:border-[#c1a0fd] bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-[13px] font-medium text-[#111125] mb-1">Téléphone</label>
+                <input
+                  type="tel"
+                  value={personalInfo.phone}
+                  onChange={e => setPersonalInfo(p => ({ ...p, phone: e.target.value }))}
+                  placeholder="+33 6 00 00 00 00"
+                  className="w-full h-[44px] px-4 border border-[#e0e2ef] rounded-[12px] text-[14px] text-[#111125] focus:outline-none focus:border-[#c1a0fd] bg-white placeholder:text-[#c0c2d0]"
+                />
+              </div>
+              <div className="pt-4 flex justify-end">
+                <button
+                  onClick={handleSavePersonal}
+                  disabled={savingPersonal}
+                  className="px-8 h-[44px] bg-[#c1a0fd] hover:bg-[#b090ed] text-[#111125] text-[14px] font-semibold rounded-[12px] transition-all disabled:opacity-50"
+                >
+                  {savingPersonal ? 'Enregistrement...' : 'Enregistrer'}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

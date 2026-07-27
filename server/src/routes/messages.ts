@@ -45,6 +45,7 @@ router.get(
           content: true,
           read: true,
           kookerRecipientId: true,
+          serviceId: true,
           createdAt: true,
           sender: {
             select: {
@@ -58,19 +59,35 @@ router.get(
               kookerProfile: { select: { id: true } },
             },
           },
+          service: {
+            select: {
+              id: true,
+              title: true,
+              type: true,
+              priceInCents: true,
+              images: { select: { url: true }, take: 1 },
+              kookerProfile: {
+                select: {
+                  id: true,
+                  user: { select: { firstName: true, lastName: true, avatar: true } },
+                },
+              },
+            },
+          },
         },
         orderBy: { createdAt: 'desc' },
         take: 500,
       });
 
-      // Group par partenaire de conversation
+      // Group par partenaire + service (une conversation = un user + un service)
       const conversationMap = new Map<
-        number,
+        string,
         {
           user: { id: number; firstName: string; lastName: string; avatar: string | null; kookerProfileId: number | null };
           lastMessage: (typeof messages)[0];
           unreadCount: number;
           kookerRecipientId: number | null;
+          service: (typeof messages)[0]['service'];
         }
       >();
 
@@ -85,23 +102,26 @@ router.get(
           kookerProfileId: (partnerRaw as any).kookerProfile?.id ?? null,
         };
 
-        if (!conversationMap.has(partnerId)) {
-          conversationMap.set(partnerId, {
+        // Clé unique : partnerId + serviceId (un même user peut avoir plusieurs conversations si plusieurs prestations)
+        const convKey = `${partnerId}-${msg.serviceId ?? 'none'}`;
+
+        if (!conversationMap.has(convKey)) {
+          conversationMap.set(convKey, {
             user: partner,
             lastMessage: msg,
             unreadCount: 0,
             kookerRecipientId: msg.kookerRecipientId ?? null,
+            service: msg.service,
           });
         } else {
-          // Propager kookerRecipientId si un message de la conversation le porte
-          const conv = conversationMap.get(partnerId)!;
+          const conv = conversationMap.get(convKey)!;
           if (!conv.kookerRecipientId && msg.kookerRecipientId) {
             conv.kookerRecipientId = msg.kookerRecipientId;
           }
         }
 
         if (msg.receiverId === userId && !msg.read) {
-          conversationMap.get(partnerId)!.unreadCount += 1;
+          conversationMap.get(convKey)!.unreadCount += 1;
         }
       }
 
@@ -119,6 +139,7 @@ router.get(
 );
 
 // GET /conversation/:userId — Messages avec un utilisateur, marque comme lus
+// Query param ?serviceId=123 pour filtrer par prestation
 router.get(
   '/conversation/:userId',
   authenticate,
@@ -126,26 +147,45 @@ router.get(
     try {
       const currentUserId = req.user!.userId;
       const otherUserId = parseInt(req.params.userId, 10);
+      const serviceId = req.query.serviceId ? parseInt(req.query.serviceId as string, 10) : undefined;
 
       if (isNaN(otherUserId)) {
         throw new AppError('ID utilisateur invalide', 400);
       }
 
+      const whereBase = {
+        OR: [
+          { senderId: currentUserId, receiverId: otherUserId },
+          { senderId: otherUserId, receiverId: currentUserId },
+        ],
+        ...(serviceId ? { serviceId } : {}),
+      };
+
       // Fetch messages and mark as read in parallel
       const [messages] = await Promise.all([
         prisma.message.findMany({
-          where: {
-            OR: [
-              { senderId: currentUserId, receiverId: otherUserId },
-              { senderId: otherUserId, receiverId: currentUserId },
-            ],
-          },
+          where: whereBase,
           include: {
             sender: {
               select: { id: true, firstName: true, lastName: true, avatar: true },
             },
             receiver: {
               select: { id: true, firstName: true, lastName: true, avatar: true },
+            },
+            service: {
+              select: {
+                id: true,
+                title: true,
+                type: true,
+                priceInCents: true,
+                images: { select: { url: true }, take: 1 },
+                kookerProfile: {
+                  select: {
+                    id: true,
+                    user: { select: { firstName: true, lastName: true, avatar: true } },
+                  },
+                },
+              },
             },
           },
           orderBy: { createdAt: 'asc' },
@@ -155,6 +195,7 @@ router.get(
             senderId: otherUserId,
             receiverId: currentUserId,
             read: false,
+            ...(serviceId ? { serviceId } : {}),
           },
           data: { read: true },
         }),
@@ -175,7 +216,7 @@ router.post(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const senderId = req.user!.userId;
-      const { receiverId, content, kookerRecipientId } = req.body;
+      const { receiverId, content, kookerRecipientId, serviceId } = req.body;
 
       if (senderId === receiverId) {
         throw new AppError('Vous ne pouvez pas vous envoyer un message a vous-meme', 400);
@@ -190,11 +231,20 @@ router.post(
         throw new AppError('Destinataire non trouve', 404);
       }
 
+      // Vérifier que le service existe
+      const service = await prisma.service.findUnique({
+        where: { id: serviceId },
+      });
+      if (!service) {
+        throw new AppError('Service introuvable', 404);
+      }
+
       const message = await prisma.message.create({
         data: {
           senderId,
           receiverId,
           content,
+          serviceId,
           ...(kookerRecipientId ? { kookerRecipientId } : {}),
         },
         include: {
@@ -226,7 +276,8 @@ router.post(
   }
 );
 
-// DELETE /conversation/:userId — Supprimer toute la conversation avec un utilisateur
+// DELETE /conversation/:userId — Supprimer la conversation avec un utilisateur
+// Query param ?serviceId=123 pour supprimer uniquement la conversation liée à ce service
 router.delete(
   '/conversation/:userId',
   authenticate,
@@ -234,6 +285,7 @@ router.delete(
     try {
       const currentUserId = req.user!.userId;
       const otherUserId = parseInt(req.params.userId, 10);
+      const serviceId = req.query.serviceId ? parseInt(req.query.serviceId as string, 10) : undefined;
 
       if (isNaN(otherUserId)) throw new AppError('ID invalide', 400);
 
@@ -243,6 +295,7 @@ router.delete(
             { senderId: currentUserId, receiverId: otherUserId },
             { senderId: otherUserId, receiverId: currentUserId },
           ],
+          ...(serviceId ? { serviceId } : {}),
         },
       });
 

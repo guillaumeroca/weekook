@@ -294,13 +294,16 @@ export default function KookerProfilePage() {
   const [messageContent, setMessageContent] = useState('');
   const [messageSending, setMessageSending] = useState(false);
 
-  // Ouvrir le modal contact automatiquement après redirection post-login
+  // Rediriger vers messagerie automatiquement après redirection post-login
   useEffect(() => {
-    if (user && searchParams.get('action') === 'contact') {
-      setShowMessageModal(true);
+    if (user && profile && searchParams.get('action') === 'contact') {
+      const firstService = profile.services?.[0];
+      if (firstService) {
+        navigate(`/messagerie?to=${profile.userId}&service=${firstService.id}`);
+      }
       setSearchParams({}, { replace: true });
     }
-  }, [user, searchParams]);
+  }, [user, profile, searchParams]);
 
   // Review modal
   const [showAllReviews, setShowAllReviews] = useState(false);
@@ -625,7 +628,15 @@ export default function KookerProfilePage() {
                 {/* Action buttons */}
                 <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
                   <button
-                    onClick={() => { if (!user) { navigate(`/connexion?redirect=/kooker/${id}&action=contact`); return; } setShowMessageModal(true); }}
+                    onClick={() => {
+                      if (!user) { navigate(`/connexion?redirect=/kooker/${id}&action=contact`); return; }
+                      const firstService = profile.services?.[0];
+                      if (firstService) {
+                        navigate(`/messagerie?to=${profile.userId}&service=${firstService.id}`);
+                      } else {
+                        toast.error('Ce kooker n\'a pas encore de prestation.');
+                      }
+                    }}
                     className="flex items-center gap-2 px-4 py-2.5 bg-[#c1a0fd] text-white rounded-[12px] text-[14px] font-semibold hover:bg-[#b090ed] transition-all"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -793,17 +804,25 @@ export default function KookerProfilePage() {
                               </div>
                             ) : null}
 
-                            {/* Price + Réserver */}
+                            {/* Price + Actions */}
                             <div className="flex items-center justify-between mt-auto gap-2 pt-1">
                               <span className="text-[14px] md:text-[15px] font-semibold text-[#111125]">
                                 À partir de {service.price}€
                               </span>
-                              <button
-                                onClick={() => { if (!user) { navigate('/connexion'); return; } navigate(`/reservation?service=${service.id}&kooker=${profile.id}`); }}
-                                className="px-4 py-2 bg-[#c1a0fd] text-white text-[13px] font-semibold rounded-[10px] hover:bg-[#b090ed] transition-all whitespace-nowrap flex-shrink-0"
-                              >
-                                {service.types.includes('COURS') ? 'Réserver ce cours' : 'Réserver'}
-                              </button>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => { if (!user) { navigate(`/connexion?redirect=/kooker/${id}&action=contact`); return; } navigate(`/messagerie?to=${profile.userId}&service=${service.id}`); }}
+                                  className="px-3 py-2 border border-[#c1a0fd] text-[#c1a0fd] text-[13px] font-semibold rounded-[10px] hover:bg-[#f3ecff] transition-all whitespace-nowrap flex-shrink-0"
+                                >
+                                  Contacter
+                                </button>
+                                <button
+                                  onClick={() => { if (!user) { navigate('/connexion'); return; } navigate(`/reservation?service=${service.id}&kooker=${profile.id}`); }}
+                                  className="px-4 py-2 bg-[#c1a0fd] text-white text-[13px] font-semibold rounded-[10px] hover:bg-[#b090ed] transition-all whitespace-nowrap flex-shrink-0"
+                                >
+                                  {service.types.includes('COURS') ? 'Réserver ce cours' : 'Réserver'}
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -875,7 +894,15 @@ export default function KookerProfilePage() {
                 Vous pouvez envoyer un message à ce Kooker pour poser vos questions ou discuter de votre projet.
               </p>
               <button
-                onClick={() => { if (!user) { navigate(`/connexion?redirect=/kooker/${id}&action=contact`); return; } setShowMessageModal(true); }}
+                onClick={() => {
+                  if (!user) { navigate(`/connexion?redirect=/kooker/${id}&action=contact`); return; }
+                  const firstService = profile.services?.[0];
+                  if (firstService) {
+                    navigate(`/messagerie?to=${profile.userId}&service=${firstService.id}`);
+                  } else {
+                    toast.error('Ce kooker n\'a pas encore de prestation.');
+                  }
+                }}
                 className="flex items-center gap-2 px-5 py-2.5 bg-[#c1a0fd] text-white text-[14px] font-semibold rounded-[12px] hover:bg-[#b090ed] transition-all"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -27,7 +27,7 @@ interface KookerBooking {
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'awaiting_confirmation';
   paymentStatus?: string;
   user: { id: number; firstName: string; lastName: string; email: string };
-  service: { title: string; type?: string };
+  service: { id?: number; title: string; type?: string };
   message?: string;
 }
 
@@ -195,7 +195,7 @@ const SectionSpinner = ({ text }: { text?: string }) => (
 
 // ────────────────────────── Main Page ──────────────────────────
 
-const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
+const KookerDashboardPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout, refreshUser } = useAuth();
@@ -238,7 +238,7 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
 
   // ── Refusal modal state ──
   const [pendingAcceptance, setPendingAcceptance] = useState<{ bookingId: number; clientName: string; serviceTitle: string; date: string; startTime: string; guests: number; totalPriceInCents: number } | null>(null);
-  const [pendingRefusal, setPendingRefusal] = useState<{ bookingId: number; userId: number } | null>(null);
+  const [pendingRefusal, setPendingRefusal] = useState<{ bookingId: number; userId: number; serviceId?: number } | null>(null);
   const [refusalReasonId, setRefusalReasonId] = useState('unavailable');
   const [refusalCustom, setRefusalCustom] = useState('');
 
@@ -365,7 +365,7 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
 
   // ── Initial Load ──
   useEffect(() => {
-    document.title = 'Espace Kooker - Weekook';
+    document.title = 'Mon tableau de bord Kooker - Weekook';
     const loadAll = async () => {
       await Promise.all([fetchStats(), fetchBookings(), fetchStripeStatus()]);
       setLoading(false);
@@ -476,10 +476,13 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
     }
     try {
       await api.put(`/bookings/${pendingRefusal.bookingId}/status`, { status: 'cancelled' });
-      await api.post('/messages', {
-        receiverId: pendingRefusal.userId,
-        content: `Votre réservation a été refusée.\n\nRaison : ${messageContent}`,
-      });
+      if (pendingRefusal.serviceId) {
+        await api.post('/messages', {
+          receiverId: pendingRefusal.userId,
+          content: `Votre réservation a été refusée.\n\nRaison : ${messageContent}`,
+          serviceId: pendingRefusal.serviceId,
+        });
+      }
       toast.success('Réservation refusée — le client a été notifié par message.');
       fetchBookings();
       fetchStats();
@@ -605,8 +608,8 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
     },
     {
       key: 'profile' as const,
-      label: 'Mon Profil',
-      shortLabel: 'Profil',
+      label: 'Mes Infos Kooker',
+      shortLabel: 'Infos',
       icon: (
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
           <circle cx="8" cy="5.33337" r="2.66667" stroke="currentColor" strokeWidth="1.2"/>
@@ -617,17 +620,6 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
   ];
 
   if (loading) {
-    if (embedded) return (
-      <div className="flex items-center justify-center py-12">
-        <div className="flex flex-col items-center gap-4">
-          <svg className="animate-spin h-8 w-8 text-[#c1a0fd]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-          </svg>
-          <p className="text-[14px] text-[#111125]/50">Chargement de votre espace kooker...</p>
-        </div>
-      </div>
-    );
     return (
       <div className="min-h-screen bg-[#f2f4fc] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -641,54 +633,82 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
     );
   }
 
-  const wrap = (inner: JSX.Element) =>
-    embedded
-      ? <>{inner}</>
-      : (
-        <div className="min-h-screen bg-[#f2f4fc]">
-          <div className="max-w-[1200px] mx-auto px-4 md:px-8 lg:px-[96px] py-8 md:py-12">
-            {inner}
-          </div>
-        </div>
-      );
-
   return (
     <>
-    {wrap(<>
-      {!embedded && (
-        <div className="mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-[32px] md:text-[40px] font-semibold text-[#111125] tracking-[-0.8px] mb-2">
-              Tableau de bord Kooker
-            </h1>
-            <p className="text-[16px] text-[#5c5c6f]">
-              Gérez vos prestations et suivez votre activité
-            </p>
-          </div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <button
-              onClick={() => navigate('/tableau-de-bord')}
-              className="flex items-center gap-2 px-4 h-[44px] border border-[#c1a0fd] text-[#c1a0fd] hover:bg-[#f3ecff] rounded-[8px] text-[13px] font-semibold transition-all"
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M10 14L6 8L10 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              Mon Espace
-            </button>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-4 h-[44px] border border-red-500 text-red-500 hover:bg-red-50 rounded-[8px] text-[13px] font-medium transition-all"
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M6 14H3.33333C2.97971 14 2.64057 13.8595 2.39052 13.6095C2.14048 13.3594 2 13.0203 2 12.6667V3.33333C2 2.97971 2.14048 2.64057 2.39052 2.39052C2.64057 2.14048 2.97971 2 3.33333 2H6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M10.6667 11.3333L14 7.99996L10.6667 4.66663" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M14 8H6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              Déconnexion
-            </button>
+    <div className="min-h-screen bg-[#f2f4fc]">
+      <div className="max-w-[1200px] mx-auto px-4 md:px-8 lg:px-[96px] py-8 md:py-12">
+        {/* Heading */}
+        <div className="mb-8">
+          <p className="text-[13px] text-[#828294] mb-3">/Profil/dashboard_kooker</p>
+          <h1 className="text-[32px] md:text-[40px] font-semibold text-[#111125] tracking-[-0.8px] mb-2">
+            MON TABLEAU DE BORD KOOKER
+          </h1>
+          <p className="text-[16px] text-[#5c5c6f]">
+            Gérez vos prestations et suivez votre activité
+          </p>
+        </div>
+
+        {/* Profile Card */}
+        <div className="bg-white rounded-[20px] p-6 md:p-8 mb-8 shadow-sm">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-center gap-6">
+              <div className="relative group">
+                <div className="w-[80px] h-[80px] rounded-full bg-[#ece2fe] flex items-center justify-center">
+                  {user?.avatar ? (
+                    <img src={user.avatar} alt={`${user.firstName} ${user.lastName}`} className="w-full h-full rounded-full object-cover" />
+                  ) : (
+                    <span className="text-[#c1a0fd] font-bold text-[28px]">
+                      {user?.firstName?.[0]}{user?.lastName?.[0]}
+                    </span>
+                  )}
+                </div>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarUpload}
+                />
+                <button
+                  onClick={() => avatarInputRef.current?.click()}
+                  className="absolute bottom-0 right-0 w-7 h-7 bg-white border border-[#e0e2ef] rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                >
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M8.5 1.5L10.5 3.5L4 10H2V8L8.5 1.5Z" stroke="#111125" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
+              </div>
+              <div>
+                <h2 className="text-[24px] font-semibold text-[#111125] mb-1">{user?.firstName} {user?.lastName}</h2>
+                <p className="text-[16px] text-[#828294]">{user?.email}</p>
+              </div>
+            </div>
+            <div className="flex gap-3 flex-wrap">
+              {/* Mon compte button */}
+              <button
+                onClick={() => navigate('/tableau-de-bord')}
+                className="flex items-center gap-2 px-5 py-2.5 border border-[#c1a0fd] text-[#c1a0fd] hover:bg-[#c1a0fd]/5 rounded-[12px] h-[44px] text-[14px] font-medium transition-all"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21"/>
+                  <circle cx="12" cy="7" r="4"/>
+                </svg>
+                Mon compte
+              </button>
+
+              {/* Se déconnecter */}
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-5 py-2.5 bg-[#c1a0fd] hover:bg-[#b090ed] text-[#111125] rounded-[12px] h-[44px] text-[14px] font-medium transition-all"
+              >
+                se déconnecter
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 18 15 12 9 6"/>
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
-      )}
         {/* Stripe Connect Banner */}
         {stripeStatus && !stripeStatus.onboardingComplete && (
           <div className="mb-6 bg-gradient-to-r from-[#f3ecff] to-[#e8e0ff] border border-[#c1a0fd]/30 rounded-[16px] p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -945,7 +965,7 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
                                   Accepter
                                 </button>
                                 <button
-                                  onClick={() => setPendingRefusal({ bookingId: booking.id, userId: booking.user.id })}
+                                  onClick={() => setPendingRefusal({ bookingId: booking.id, userId: booking.user.id, serviceId: booking.service?.id })}
                                   className="px-4 py-2 text-[13px] font-semibold text-red-600 bg-red-50 hover:bg-red-100 rounded-[10px] transition-all flex items-center gap-1.5"
                                 >
                                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -974,7 +994,7 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
                               Détails
                             </button>
                             <button
-                              onClick={() => navigate(`/messages?to=${booking.user.id}`)}
+                              onClick={() => navigate(`/messagerie?to=${booking.user.id}${booking.service?.id ? `&service=${booking.service.id}` : ''}`)}
                               className="px-4 py-2 text-[13px] font-medium text-[#c1a0fd] bg-[#f3ecff] hover:bg-[#ebe0ff] rounded-[10px] transition-all flex items-center gap-1.5"
                             >
                               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1467,7 +1487,8 @@ const KookerDashboardPage = ({ embedded = false }: { embedded?: boolean }) => {
             )}
           </div>
         )}
-    </>)}
+      </div>
+    </div>
 
     {/* ── Delete service confirmation modal ── */}
     {pendingDeleteServiceId && (

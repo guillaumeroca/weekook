@@ -16,6 +16,18 @@ interface MessageUser {
   kookerProfileId?: number | null;
 }
 
+interface ServiceInfo {
+  id: number;
+  title: string;
+  type: unknown;
+  priceInCents: number;
+  images: { url: string }[];
+  kookerProfile?: {
+    id: number;
+    user: { firstName: string; lastName: string; avatar: string | null };
+  };
+}
+
 interface Message {
   id: number;
   senderId: number;
@@ -24,9 +36,11 @@ interface Message {
   read: boolean;
   kookerRecipientId: number | null;
   bookingId: number | null;
+  serviceId: number | null;
   createdAt: string;
   sender: MessageUser;
   receiver: MessageUser;
+  service?: ServiceInfo | null;
 }
 
 interface Conversation {
@@ -34,6 +48,7 @@ interface Conversation {
   lastMessage: Message;
   unreadCount: number;
   kookerRecipientId: number | null;
+  service?: ServiceInfo | null;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -84,8 +99,8 @@ export default function MessagesPage() {
 
   // Params URL
   const toUserId = searchParams.get('to') ? parseInt(searchParams.get('to')!, 10) : null;
-  const kookerContext = searchParams.get('kookerContext')
-    ? parseInt(searchParams.get('kookerContext')!, 10)
+  const serviceIdParam = searchParams.get('service')
+    ? parseInt(searchParams.get('service')!, 10)
     : null;
 
   // State
@@ -127,13 +142,15 @@ export default function MessagesPage() {
     fetchConversations();
   }, [fetchConversations]);
 
-  // ── Ouvrir conversation automatiquement si ?to=userId (une seule fois par toUserId)
+  // ── Ouvrir conversation automatiquement si ?to=userId&service=serviceId (une seule fois par toUserId)
   useEffect(() => {
     if (!toUserId || conversations.length === 0) return;
-    if (autoOpenedForRef.current === toUserId) return; // already opened, don't flicker on conversations refresh
+    if (autoOpenedForRef.current === toUserId) return;
     autoOpenedForRef.current = toUserId;
 
-    const existing = conversations.find(c => c.user.id === toUserId);
+    const existing = conversations.find(c =>
+      c.user.id === toUserId && (!serviceIdParam || c.service?.id === serviceIdParam)
+    );
     if (existing) {
       openConversation(existing);
     } else {
@@ -143,11 +160,12 @@ export default function MessagesPage() {
         lastMessage: {} as Message,
         unreadCount: 0,
         kookerRecipientId: null,
+        service: null,
       };
       setActiveConv(ghost);
       setMessages([]);
     }
-  }, [toUserId, conversations]);
+  }, [toUserId, serviceIdParam, conversations]);
 
   // ── Scroll automatique vers le bas (dans le conteneur uniquement)
   const scrollToBottom = () => {
@@ -166,12 +184,12 @@ export default function MessagesPage() {
       return;
     }
 
+    const serviceFilter = activeConv.service?.id ? `?serviceId=${activeConv.service.id}` : '';
     const fetchMessages = async () => {
       try {
-        const res = await api.get<Message[]>(`/messages/conversation/${activeConv.user.id}`);
+        const res = await api.get<Message[]>(`/messages/conversation/${activeConv.user.id}${serviceFilter}`);
         if (res.success && res.data) {
           setMessages(prev => {
-            // Si nouveaux messages, rafraîchir la liste + badge
             if (res.data!.length !== prev.length) {
               fetchConversations();
               refreshUnread();
@@ -187,14 +205,15 @@ export default function MessagesPage() {
     fetchMessages();
     pollingRef.current = setInterval(fetchMessages, 3000);
     return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
-  }, [activeConv?.user.id]);
+  }, [activeConv?.user.id, activeConv?.service?.id]);
 
   // ── Ouvrir une conversation
   const openConversation = async (conv: Conversation) => {
     setActiveConv(conv);
     setMsgLoading(true);
     try {
-      const res = await api.get<Message[]>(`/messages/conversation/${conv.user.id}`);
+      const serviceFilter = conv.service?.id ? `?serviceId=${conv.service.id}` : '';
+      const res = await api.get<Message[]>(`/messages/conversation/${conv.user.id}${serviceFilter}`);
       if (res.success && res.data) setMessages(res.data);
       refreshUnread();
       fetchConversations();
@@ -213,11 +232,19 @@ export default function MessagesPage() {
     setInput('');
     setSending(true);
     try {
+      // serviceId requis : soit depuis la conversation active, soit depuis le param URL
+      const svcId = activeConv.service?.id ?? serviceIdParam;
+      if (!svcId) {
+        toast.error('Aucune prestation liée. Contactez le kooker depuis sa fiche.');
+        setInput(content);
+        setSending(false);
+        return;
+      }
       const body: Record<string, unknown> = {
         receiverId: activeConv.user.id,
         content,
+        serviceId: svcId,
       };
-      if (kookerContext) body.kookerRecipientId = kookerContext;
 
       const res = await api.post<Message>('/messages', body);
       if (res.success && res.data) {
@@ -283,14 +310,17 @@ export default function MessagesPage() {
   // Render
   // ─────────────────────────────────────────────────────────────────────────
 
-  document.title = 'Messages — Weekook';
+  document.title = 'Ma Messagerie — Weekook';
+
+  // Prestation liée à la conversation active
+  const activeService = activeConv?.service ?? (messages.length > 0 ? messages[0]?.service : null);
 
   return (
     <div className="min-h-screen bg-[#f2f4fc]" style={{ fontFamily: 'Inter, sans-serif' }}>
       <div className="px-4 md:px-8 lg:px-[96px] py-6">
 
         <h1 className="text-[24px] md:text-[28px] font-bold text-[#111125] mb-6 tracking-[-0.5px]">
-          Messages
+          MA MESSAGERIE
         </h1>
 
         <div className="flex gap-4 h-[calc(100vh-200px)] min-h-[500px]">
@@ -427,8 +457,8 @@ export default function MessagesPage() {
                         {activeConv.user.firstName} {activeConv.user.lastName}
                       </p>
                     )}
-                    {kookerContext && (
-                      <p className="text-[12px] text-[#c1a0fd]">Via profil kooker</p>
+                    {activeConv.service && (
+                      <p className="text-[12px] text-[#c1a0fd] truncate">{activeConv.service.title}</p>
                     )}
                   </div>
                 </div>
@@ -570,7 +600,7 @@ export default function MessagesPage() {
                 </div>
                 <h2 className="text-[18px] font-bold text-[#111125] mb-2">Vos messages</h2>
                 <p className="text-[14px] text-[#6b7280] max-w-[300px] leading-relaxed">
-                  Sélectionnez une conversation à gauche ou contactez un kooker depuis sa fiche de profil.
+                  Vos messages apparaîtront ici. Contactez un kooker depuis une prestation pour démarrer.
                 </p>
                 <button
                   onClick={() => navigate('/recherche')}
@@ -578,6 +608,91 @@ export default function MessagesPage() {
                 >
                   Trouver un kooker
                 </button>
+              </div>
+            )}
+          </div>
+
+          {/* ════════ PANEL PRESTATION (3ème colonne) ════════ */}
+          <div className="hidden xl:flex w-[300px] flex-shrink-0 bg-white rounded-[20px] border border-[#e0e0e0] shadow-sm flex-col overflow-hidden">
+            {activeService ? (
+              <div className="p-5 flex flex-col h-full">
+                <h3 className="text-[13px] font-semibold text-[#828294] uppercase tracking-wider mb-4">Prestation</h3>
+
+                {/* Image */}
+                {activeService.images?.[0]?.url && (
+                  <div className="w-full h-[160px] rounded-[12px] overflow-hidden mb-4">
+                    <img
+                      src={activeService.images[0].url}
+                      alt={activeService.title}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+
+                {/* Titre + type badge */}
+                <h4 className="text-[16px] font-semibold text-[#111125] mb-2">{activeService.title}</h4>
+                <div className="flex items-center gap-2 mb-4">
+                  {(() => {
+                    const typeArr = Array.isArray(activeService.type) ? activeService.type : [activeService.type];
+                    const isKours = typeArr.some((t: unknown) => String(t).includes('COURS'));
+                    const isKook = typeArr.some((t: unknown) => String(t).includes('KOOK'));
+                    return (
+                      <>
+                        {isKours && <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-bold bg-[#c1a0fd] text-white">KOURS</span>}
+                        {isKook && <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-bold bg-[#7c5cbf] text-white">KOOK</span>}
+                      </>
+                    );
+                  })()}
+                </div>
+
+                {/* Prix */}
+                <div className="flex items-center gap-2 mb-4">
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="1.5" y="3.5" width="13" height="9" rx="1.5" stroke="#111125" strokeWidth="1.2"/>
+                    <path d="M1.5 6.5H14.5" stroke="#111125" strokeWidth="1.2"/>
+                  </svg>
+                  <span className="text-[16px] font-bold text-[#111125]">
+                    {(activeService.priceInCents / 100).toFixed(2).replace('.', ',')} EUR
+                  </span>
+                </div>
+
+                {/* Kooker info */}
+                {activeService.kookerProfile && (
+                  <div className="border-t border-[#e0e2ef] pt-4 mt-auto">
+                    <p className="text-[12px] text-[#828294] mb-2">Kooker</p>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-[#ece2fe] flex items-center justify-center flex-shrink-0">
+                        {activeService.kookerProfile.user.avatar ? (
+                          <img src={activeService.kookerProfile.user.avatar} className="w-10 h-10 rounded-full object-cover" alt="" />
+                        ) : (
+                          <span className="text-[#c1a0fd] font-bold text-[14px]">
+                            {activeService.kookerProfile.user.firstName?.[0]}{activeService.kookerProfile.user.lastName?.[0]}
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-[14px] font-semibold text-[#111125]">
+                          {activeService.kookerProfile.user.firstName} {activeService.kookerProfile.user.lastName}
+                        </p>
+                        <button
+                          onClick={() => navigate(`/kooker/${activeService.kookerProfile!.id}`)}
+                          className="text-[12px] text-[#c1a0fd] hover:underline"
+                        >
+                          Voir le profil
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
+                <div className="w-14 h-14 rounded-full bg-[#f3ecff] flex items-center justify-center mb-4">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c1a0fd" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+                  </svg>
+                </div>
+                <p className="text-[13px] text-[#828294]">Sélectionnez une conversation pour voir la prestation associée</p>
               </div>
             )}
           </div>

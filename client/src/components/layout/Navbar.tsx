@@ -97,21 +97,23 @@ export function Navbar() {
                   )}
                 </button>
 
-                {/* Messages icon with unread badge */}
+                {/* Messagerie button with envelope icon */}
                 <button
-                  onClick={() => navigate('/messages')}
-                  className={`relative w-[48px] h-[48px] rounded-full flex items-center justify-center cursor-pointer transition-colors ${
-                    location.pathname === '/messages'
-                      ? 'bg-[#c1a0fd] ring-2 ring-[#c1a0fd] ring-offset-2'
-                      : 'bg-[#e8deff] hover:bg-[#c1a0fd]'
+                  onClick={() => navigate('/messagerie')}
+                  className={`relative h-[48px] px-[16px] rounded-[12px] flex items-center gap-[8px] cursor-pointer transition-colors ${
+                    location.pathname === '/messagerie'
+                      ? 'bg-[#c1a0fd] border-b-2 border-[#111125]'
+                      : 'bg-[#c1a0fd] hover:bg-[#b090ed]'
                   }`}
-                  aria-label="Messages"
+                  aria-label="Messagerie"
                 >
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111125" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#111125" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="4" width="20" height="16" rx="2"/>
+                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
                   </svg>
+                  <span className="font-medium text-[14px] text-[#111125] tracking-[-0.32px]">messagerie</span>
                   {unreadCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
+                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
                       {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
                   )}
@@ -187,12 +189,12 @@ export function Navbar() {
                 </button>
 
                 <button
-                  onClick={() => navigate('/messages')}
+                  onClick={() => navigate('/messagerie')}
                   className={`p-4 rounded-lg font-medium text-[18px] transition-colors text-left cursor-pointer flex items-center justify-between ${
-                    location.pathname === '/messages' ? 'bg-[#c1a0fd] text-[#111125]' : 'bg-white hover:bg-[#f3ecff] text-[#303044]'
+                    location.pathname === '/messagerie' ? 'bg-[#c1a0fd] text-[#111125]' : 'bg-white hover:bg-[#f3ecff] text-[#303044]'
                   }`}
                 >
-                  <span>Messages</span>
+                  <span>Messagerie</span>
                   {unreadCount > 0 && (
                     <span className="min-w-[22px] h-[22px] bg-red-500 text-white text-[11px] font-bold rounded-full flex items-center justify-center px-1">
                       {unreadCount > 99 ? '99+' : unreadCount}

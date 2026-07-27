@@ -73,9 +73,10 @@ export function AppRouter() {
           <Route path="/reservation" element={
             <ProtectedRoute><BookingPage /></ProtectedRoute>
           } />
-          <Route path="/messages" element={
+          <Route path="/messagerie" element={
             <ProtectedRoute><MessagesPage /></ProtectedRoute>
           } />
+          <Route path="/messages" element={<Navigate to="/messagerie" replace />} />
           <Route path="/reservation/:id" element={
             <ProtectedRoute><BookingDetailPage /></ProtectedRoute>
           } />

@@ -328,6 +328,7 @@ export default function BookingDetailPage() {
       await api.post('/messages', {
         receiverId: booking.user.id,
         content: `Votre réservation a été refusée.\n\nRaison : ${messageContent}`,
+        serviceId: booking.serviceId,
       });
       setBooking(prev => prev ? { ...prev, status: 'cancelled' } : prev);
       setShowRefuseModal(false);
@@ -734,7 +735,7 @@ export default function BookingDetailPage() {
 
               {/* Contact button */}
               <button
-                onClick={() => navigate(`/messages?to=${otherPersonId}`)}
+                onClick={() => navigate(`/messagerie?to=${otherPersonId}&service=${booking.serviceId}`)}
                 className="flex items-center gap-2 px-5 py-3 bg-white border border-[#e0e2ef] text-[#111125] text-[14px] font-semibold rounded-[12px] hover:border-[#c1a0fd] hover:text-[#c1a0fd] transition-all shadow-sm"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

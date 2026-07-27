@@ -15,8 +15,11 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script_stop: true
           script: |
             cd /var/www/weekook-dev
+            git clean -fd client/
+            git checkout -- .
             git pull origin develop
             npm install --workspaces --if-present
             npx prisma generate

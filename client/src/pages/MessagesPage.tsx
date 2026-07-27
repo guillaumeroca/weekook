@@ -112,8 +112,6 @@ export default function MessagesPage() {
   const [msgLoading, setMsgLoading] = useState(false);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
-  // Pour les kookers : filtre de contexte (default kooker si l'user est kooker)
-  const [kookerFilter, setKookerFilter] = useState<'user' | 'kooker'>(user?.kookerProfileId ? 'kooker' : 'user');
   // Confirmation suppression
   const [pendingDelete, setPendingDelete] = useState<
     { type: 'message'; id: number } | { type: 'conversation'; id: number } | null
@@ -298,13 +296,6 @@ export default function MessagesPage() {
     }
   };
 
-  // ── Filtrage conversations pour les kookers
-  const filteredConversations = user?.kookerProfileId
-    ? conversations.filter(c => {
-        const isKookerConv = c.kookerRecipientId === user.kookerProfileId;
-        return kookerFilter === 'kooker' ? isKookerConv : !isKookerConv;
-      })
-    : conversations;
 
   // ─────────────────────────────────────────────────────────────────────────
   // Render
@@ -328,23 +319,10 @@ export default function MessagesPage() {
           {/* ════════ LISTE CONVERSATIONS ════════ */}
           <div className={`w-full lg:w-[340px] flex-shrink-0 bg-white rounded-[20px] border border-[#e0e0e0] shadow-sm flex flex-col overflow-hidden ${activeConv ? 'hidden lg:flex' : 'flex'}`}>
 
-            {/* Filtre kooker/user */}
-            {user?.kookerProfileId && (
-              <div className="flex border-b border-[#e0e0e0]">
-                <button
-                  onClick={() => setKookerFilter('user')}
-                  className={`flex-1 py-3 text-[13px] font-semibold transition-colors ${kookerFilter === 'user' ? 'text-[#c1a0fd] border-b-2 border-[#c1a0fd]' : 'text-[#6b7280] hover:text-[#111125]'}`}
-                >
-                  En tant qu'utilisateur
-                </button>
-                <button
-                  onClick={() => setKookerFilter('kooker')}
-                  className={`flex-1 py-3 text-[13px] font-semibold transition-colors ${kookerFilter === 'kooker' ? 'text-[#c1a0fd] border-b-2 border-[#c1a0fd]' : 'text-[#6b7280] hover:text-[#111125]'}`}
-                >
-                  En tant que Kooker
-                </button>
-              </div>
-            )}
+            {/* Titre colonne */}
+            <div className="px-5 py-4 border-b border-[#e0e0e0] flex-shrink-0">
+              <h3 className="text-[13px] font-semibold text-[#828294] uppercase tracking-wider">Conversations</h3>
+            </div>
 
             {/* Liste */}
             <div className="flex-1 overflow-y-auto">
@@ -360,7 +338,7 @@ export default function MessagesPage() {
                     </div>
                   ))}
                 </div>
-              ) : filteredConversations.length === 0 ? (
+              ) : conversations.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full py-16 px-6 text-center">
                   <div className="w-14 h-14 rounded-full bg-[#f3ecff] flex items-center justify-center mb-4">
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#c1a0fd" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -371,7 +349,7 @@ export default function MessagesPage() {
                   <p className="text-[13px] text-[#6b7280]">Contactez un kooker depuis sa fiche pour démarrer une discussion.</p>
                 </div>
               ) : (
-                filteredConversations.map(conv => (
+                conversations.map(conv => (
                   <div
                     key={conv.user.id}
                     className={`conv-row relative flex items-center gap-3 px-4 py-3.5 border-b border-[#f0f0f0] last:border-0 transition-colors ${
@@ -425,10 +403,15 @@ export default function MessagesPage() {
           {/* ════════ ZONE CHAT ════════ */}
           <div className={`flex-1 bg-white rounded-[20px] border border-[#e0e0e0] shadow-sm flex flex-col overflow-hidden ${activeConv ? 'flex' : 'hidden lg:flex'}`}>
 
+            {/* Titre colonne */}
+            <div className="px-5 py-4 border-b border-[#e0e0e0] flex-shrink-0">
+              <h3 className="text-[13px] font-semibold text-[#828294] uppercase tracking-wider">Messages</h3>
+            </div>
+
             {activeConv ? (
               <>
                 {/* Header */}
-                <div className="flex items-center gap-3 px-5 py-4 border-b border-[#e0e0e0] flex-shrink-0">
+                <div className="flex items-center gap-3 px-5 py-3 border-b border-[#e0e0e0] flex-shrink-0">
                   {/* Bouton retour mobile */}
                   <button
                     onClick={() => setActiveConv(null)}

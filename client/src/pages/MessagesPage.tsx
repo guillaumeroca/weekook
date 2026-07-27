@@ -207,6 +207,10 @@ export default function MessagesPage() {
           kookerRecipientId: null,
           service: serviceData,
         };
+        setConversations(prev => {
+          if (prev.some(c => c.user.id === toUserId && c.service?.id === serviceData?.id)) return prev;
+          return [ghost, ...prev];
+        });
         setActiveConv(ghost);
         setMessages([]);
       })();

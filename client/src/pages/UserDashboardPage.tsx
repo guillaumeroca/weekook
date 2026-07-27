@@ -600,22 +600,22 @@ const UserDashboardPage = () => {
         </div>
 
         {/* Tabs */}
-        <div className="flex items-center bg-white rounded-[12px] p-2 mb-6 h-[72px] gap-2">
-          <div className="flex items-center gap-2 text-[#c1a0fd] pl-2">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <div className="flex items-center bg-white rounded-[20px] px-4 mb-6 shadow-sm">
+          <div className="flex items-center gap-2 text-[#c1a0fd] pr-4 border-r border-[#e0e2ef] py-4">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21"/>
               <circle cx="12" cy="7" r="4"/>
             </svg>
           </div>
-          <div className="grid grid-cols-4 flex-1 h-full">
+          <div className="flex flex-1">
             {tabs.map(tab => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`rounded-[8px] text-[14px] md:text-[16px] font-normal transition-all duration-300 ${
+                className={`flex-1 py-4 text-[13px] md:text-[15px] font-semibold transition-all duration-200 border-b-[3px] ${
                   activeTab === tab.key
-                    ? 'bg-[#c1a0fd] font-bold text-white shadow-sm'
-                    : 'text-[#111125]/60 hover:text-[#111125]'
+                    ? 'text-[#c1a0fd] border-[#c1a0fd]'
+                    : 'text-[#111125]/50 border-transparent hover:text-[#111125]/80'
                 }`}
               >
                 <span className="hidden sm:inline">{tab.label}</span>

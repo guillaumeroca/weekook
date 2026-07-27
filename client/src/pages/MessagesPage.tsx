@@ -620,7 +620,10 @@ export default function MessagesPage() {
 
                 {/* Image */}
                 {activeService.images?.[0]?.url && (
-                  <div className="w-full h-[160px] rounded-[12px] overflow-hidden mb-4">
+                  <div
+                    className="w-full h-[160px] rounded-[12px] overflow-hidden mb-4 cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => activeService.kookerProfile && navigate(`/kooker/${activeService.kookerProfile.id}`)}
+                  >
                     <img
                       src={activeService.images[0].url}
                       alt={activeService.title}
@@ -630,7 +633,10 @@ export default function MessagesPage() {
                 )}
 
                 {/* Titre + type badge */}
-                <h4 className="text-[16px] font-semibold text-[#111125] mb-2">{activeService.title}</h4>
+                <h4
+                  className="text-[16px] font-semibold text-[#111125] mb-2 cursor-pointer hover:text-[#c1a0fd] transition-colors"
+                  onClick={() => activeService.kookerProfile && navigate(`/kooker/${activeService.kookerProfile.id}`)}
+                >{activeService.title}</h4>
                 <div className="flex items-center gap-2 mb-4">
                   {(() => {
                     const typeArr = Array.isArray(activeService.type) ? activeService.type : [activeService.type];

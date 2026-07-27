@@ -46,6 +46,12 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
       include: {
         images: { orderBy: { sortOrder: 'asc' } },
         menuItems: { orderBy: { sortOrder: 'asc' } },
+        kookerProfile: {
+          select: {
+            id: true,
+            user: { select: { id: true, firstName: true, lastName: true, avatar: true } },
+          },
+        },
       },
     });
 

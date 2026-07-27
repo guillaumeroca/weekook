@@ -142,28 +142,76 @@ export default function MessagesPage() {
 
   // ── Ouvrir conversation automatiquement si ?to=userId&service=serviceId (une seule fois par toUserId)
   useEffect(() => {
-    if (!toUserId || conversations.length === 0) return;
+    if (!toUserId) return;
     if (autoOpenedForRef.current === toUserId) return;
-    autoOpenedForRef.current = toUserId;
 
-    const existing = conversations.find(c =>
-      c.user.id === toUserId && (!serviceIdParam || c.service?.id === serviceIdParam)
-    );
-    if (existing) {
-      openConversation(existing);
-    } else {
-      // Pas encore de conversation : créer un contact fictif
-      const ghost: Conversation = {
-        user: { id: toUserId, firstName: '...', lastName: '', avatar: null },
-        lastMessage: {} as Message,
-        unreadCount: 0,
-        kookerRecipientId: null,
-        service: null,
-      };
-      setActiveConv(ghost);
-      setMessages([]);
+    // Chercher dans les conversations existantes
+    if (conversations.length > 0) {
+      const existing = conversations.find(c =>
+        c.user.id === toUserId && (!serviceIdParam || c.service?.id === serviceIdParam)
+      );
+      if (existing) {
+        autoOpenedForRef.current = toUserId;
+        openConversation(existing);
+        return;
+      }
     }
-  }, [toUserId, serviceIdParam, conversations]);
+
+    // Pas de conversation existante et chargement terminé : créer un ghost avec données réelles
+    if (!convLoading) {
+      autoOpenedForRef.current = toUserId;
+      (async () => {
+        // Charger les infos du service (qui contient aussi le kooker)
+        let serviceData: ServiceInfo | null = null;
+        if (serviceIdParam) {
+          try {
+            const svcRes = await api.get<any>(`/services/${serviceIdParam}`);
+            if (svcRes.success && svcRes.data) {
+              const s = svcRes.data;
+              serviceData = {
+                id: s.id,
+                title: s.title,
+                type: s.type,
+                priceInCents: s.priceInCents,
+                images: s.images || [],
+                kookerProfile: s.kookerProfile ? {
+                  id: s.kookerProfile.id,
+                  user: {
+                    firstName: s.kookerProfile.user?.firstName || '',
+                    lastName: s.kookerProfile.user?.lastName || '',
+                    avatar: s.kookerProfile.user?.avatar || null,
+                  },
+                } : undefined,
+              };
+            }
+          } catch {
+            // silencieux
+          }
+        }
+
+        // Construire le user à partir des données du service ou avec l'id seul
+        const ghostUser: MessageUser = serviceData?.kookerProfile
+          ? {
+              id: toUserId,
+              firstName: serviceData.kookerProfile.user.firstName,
+              lastName: serviceData.kookerProfile.user.lastName,
+              avatar: serviceData.kookerProfile.user.avatar,
+              kookerProfileId: serviceData.kookerProfile.id,
+            }
+          : { id: toUserId, firstName: '...', lastName: '', avatar: null };
+
+        const ghost: Conversation = {
+          user: ghostUser,
+          lastMessage: {} as Message,
+          unreadCount: 0,
+          kookerRecipientId: null,
+          service: serviceData,
+        };
+        setActiveConv(ghost);
+        setMessages([]);
+      })();
+    }
+  }, [toUserId, serviceIdParam, conversations, convLoading]);
 
   // ── Scroll automatique vers le bas (dans le conteneur uniquement)
   const scrollToBottom = () => {

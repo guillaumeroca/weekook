@@ -303,7 +303,7 @@ export default function MessagesPage() {
 
   document.title = 'Ma Messagerie — Weekook';
 
-  // Prestation liée à la conversation active
+  // Prestation à la conversation active
   const activeService = activeConv?.service ?? (messages.length > 0 ? messages[0]?.service : null);
 
   return (
@@ -321,7 +321,7 @@ export default function MessagesPage() {
 
             {/* Titre colonne */}
             <div className="px-5 py-4 border-b border-[#e0e0e0] flex-shrink-0">
-              <h3 className="text-[13px] font-semibold text-[#828294] uppercase tracking-wider">Mes conversations</h3>
+              <h3 className="text-[13px] font-semibold text-[#828294] uppercase tracking-wider">Liste de discussions</h3>
             </div>
 
             {/* Liste */}
@@ -405,7 +405,7 @@ export default function MessagesPage() {
 
             {/* Titre colonne */}
             <div className="px-5 py-4 border-b border-[#e0e0e0] flex-shrink-0">
-              <h3 className="text-[13px] font-semibold text-[#828294] uppercase tracking-wider">Détail du message</h3>
+              <h3 className="text-[13px] font-semibold text-[#828294] uppercase tracking-wider">Détail</h3>
             </div>
 
             {activeConv ? (
@@ -600,7 +600,7 @@ export default function MessagesPage() {
 
             {/* Titre colonne — toujours visible */}
             <div className="px-5 py-4 border-b border-[#e0e0e0] flex-shrink-0">
-              <h3 className="text-[13px] font-semibold text-[#828294] uppercase tracking-wider">Prestation liée</h3>
+              <h3 className="text-[13px] font-semibold text-[#828294] uppercase tracking-wider">Prestation</h3>
             </div>
 
             {activeService ? (

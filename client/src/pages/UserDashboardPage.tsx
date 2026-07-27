@@ -576,10 +576,10 @@ const UserDashboardPage = () => {
                   onClick={() => navigate('/devenir-kooker')}
                   className="flex items-center gap-2 px-5 py-2.5 border border-[#c1a0fd] text-[#c1a0fd] hover:bg-[#c1a0fd]/5 rounded-[12px] h-[44px] text-[14px] font-medium transition-all"
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"/>
-                    <line x1="6" y1="17" x2="18" y2="17"/>
-                    <line x1="6" y1="21" x2="18" y2="21"/>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 3C8.5 3 5 5.5 5 9c0 2 .5 3 1 4v1h12v-1c.5-1 1-2 1-4 0-3.5-3.5-6-7-6z"/>
+                    <rect x="5" y="14" width="14" height="3" rx="1"/>
+                    <line x1="12" y1="3" x2="12" y2="1"/>
                   </svg>
                   Devenir Kooker
                 </button>

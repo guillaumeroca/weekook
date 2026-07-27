@@ -792,22 +792,28 @@ const KookerDashboardPage = () => {
         </div>
 
         {/* Tabs */}
-        <div className="grid w-full grid-cols-2 md:grid-cols-4 bg-white rounded-[12px] p-2 mb-8 h-auto md:h-[72px]">
-          {tabs.map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`py-3 md:py-0 rounded-[8px] text-[14px] md:text-[18px] font-normal transition-all duration-300 flex items-center justify-center gap-2 ${
-                activeTab === tab.key
-                  ? 'bg-[#c1a0fd] font-bold text-white shadow-sm'
-                  : 'text-[#111125]/60 hover:text-[#111125]'
-              }`}
-            >
-              <span className={activeTab === tab.key ? 'text-white' : 'text-[#111125]/40'}>{tab.icon}</span>
-              <span className="hidden sm:inline">{tab.label}</span>
-              <span className="sm:hidden">{tab.shortLabel}</span>
-            </button>
-          ))}
+        <div className="flex items-center bg-white rounded-[20px] px-4 mb-8 shadow-sm">
+          <div className="flex items-center gap-2 text-[#c1a0fd] pr-4 border-r border-[#e0e2ef] py-4">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/>
+            </svg>
+          </div>
+          <div className="flex flex-1">
+            {tabs.map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`flex-1 py-4 text-[13px] md:text-[15px] font-semibold transition-all duration-200 border-b-[3px] ${
+                  activeTab === tab.key
+                    ? 'text-[#c1a0fd] border-[#c1a0fd]'
+                    : 'text-[#111125]/50 border-transparent hover:text-[#111125]/80'
+                }`}
+              >
+                <span className="hidden sm:inline">{tab.label}</span>
+                <span className="sm:hidden">{tab.shortLabel}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* ────────────────────── BOOKINGS TAB ────────────────────── */}

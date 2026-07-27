@@ -577,9 +577,7 @@ const UserDashboardPage = () => {
                   className="flex items-center gap-2 px-5 py-2.5 border border-[#c1a0fd] text-[#c1a0fd] hover:bg-[#c1a0fd]/5 rounded-[12px] h-[44px] text-[14px] font-medium transition-all"
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 3C8.5 3 5 5.5 5 9c0 2 .5 3 1 4v1h12v-1c.5-1 1-2 1-4 0-3.5-3.5-6-7-6z"/>
-                    <rect x="5" y="14" width="14" height="3" rx="1"/>
-                    <line x1="12" y1="3" x2="12" y2="1"/>
+                    <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/>
                   </svg>
                   Devenir Kooker
                 </button>

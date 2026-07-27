@@ -321,7 +321,7 @@ export default function MessagesPage() {
 
             {/* Titre colonne */}
             <div className="px-5 py-4 border-b border-[#e0e0e0] flex-shrink-0">
-              <h3 className="text-[13px] font-semibold text-[#828294] uppercase tracking-wider">Conversations</h3>
+              <h3 className="text-[13px] font-semibold text-[#828294] uppercase tracking-wider">Mes conversations</h3>
             </div>
 
             {/* Liste */}
@@ -405,7 +405,7 @@ export default function MessagesPage() {
 
             {/* Titre colonne */}
             <div className="px-5 py-4 border-b border-[#e0e0e0] flex-shrink-0">
-              <h3 className="text-[13px] font-semibold text-[#828294] uppercase tracking-wider">Messages</h3>
+              <h3 className="text-[13px] font-semibold text-[#828294] uppercase tracking-wider">Détail du message</h3>
             </div>
 
             {activeConv ? (
@@ -597,9 +597,14 @@ export default function MessagesPage() {
 
           {/* ════════ PANEL PRESTATION (3ème colonne) ════════ */}
           <div className="hidden xl:flex w-[300px] flex-shrink-0 bg-white rounded-[20px] border border-[#e0e0e0] shadow-sm flex-col overflow-hidden">
+
+            {/* Titre colonne — toujours visible */}
+            <div className="px-5 py-4 border-b border-[#e0e0e0] flex-shrink-0">
+              <h3 className="text-[13px] font-semibold text-[#828294] uppercase tracking-wider">Prestation liée</h3>
+            </div>
+
             {activeService ? (
-              <div className="p-5 flex flex-col h-full">
-                <h3 className="text-[13px] font-semibold text-[#828294] uppercase tracking-wider mb-4">Prestation</h3>
+              <div className="p-5 flex flex-col flex-1 overflow-y-auto">
 
                 {/* Image */}
                 {activeService.images?.[0]?.url && (

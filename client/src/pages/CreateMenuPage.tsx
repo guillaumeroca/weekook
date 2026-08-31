@@ -48,9 +48,9 @@ export default function CreateMenuPage() {
   // COURS fields
   const [koursTitle, setKoursTitle] = useState('');
   const [koursDescription, setKoursDescription] = useState('');
-  const [koursPrice, setKoursPrice] = useState('50');
-  const [koursExtraGuestPrice, setKoursExtraGuestPrice] = useState('10');
-  const [koursDuration, setKoursDuration] = useState('120');
+  const [koursPrice, setKoursPrice] = useState('');
+  const [koursExtraGuestPrice, setKoursExtraGuestPrice] = useState('');
+  const [koursDuration, setKoursDuration] = useState('');
   const [koursMaxParticipants, setKoursMaxParticipants] = useState('');
   const [koursDifficulty, setKoursDifficulty] = useState('Débutant');
   const [koursEquipmentList, setKoursEquipmentList] = useState<string[]>([]);
@@ -377,7 +377,7 @@ export default function CreateMenuPage() {
                       min="0"
                       value={koursPrice}
                       onChange={(e) => setKoursPrice(e.target.value)}
-                      placeholder="200"
+                      placeholder="50"
                       className={inputClass}
                     />
                   </div>
@@ -391,7 +391,7 @@ export default function CreateMenuPage() {
                       min="0"
                       value={koursExtraGuestPrice}
                       onChange={(e) => setKoursExtraGuestPrice(e.target.value)}
-                      placeholder="25"
+                      placeholder="10"
                       className={inputClass}
                     />
                   </div>

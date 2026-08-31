@@ -52,8 +52,6 @@ export default function EditMenuPage() {
   const [koursDuration, setKoursDuration] = useState('');
   const [koursMaxParticipants, setKoursMaxParticipants] = useState('');
   const [koursDifficulty, setKoursDifficulty] = useState('Débutant');
-  const [koursEquipmentList, setKoursEquipmentList] = useState<string[]>([]);
-  const [koursNewEquipment, setKoursNewEquipment] = useState('');
   const [koursMenuItems, setKoursMenuItems] = useState<MenuItem[]>([]);
   const [koursNewItemName, setKoursNewItemName] = useState('');
   const [koursNewItemDesc, setKoursNewItemDesc] = useState('');
@@ -66,10 +64,23 @@ export default function EditMenuPage() {
   const [kookMinConvives, setKookMinConvives] = useState('');
   const [kookMaxParticipants, setKookMaxParticipants] = useState('');
   const [kookPrepTime, setKookPrepTime] = useState('');
-  const [kookIngredientsIncluded, setKookIngredientsIncluded] = useState(false);
   const [kookMenuItems, setKookMenuItems] = useState<MenuItem[]>([]);
   const [kookNewItemName, setKookNewItemName] = useState('');
   const [kookNewItemDesc, setKookNewItemDesc] = useState('');
+
+  // Champs partagés — Ingrédients (fournis par le client)
+  const [ingredientsList, setIngredientsList] = useState<{ name: string; quantity: string; unit: string }[]>([]);
+  const [newIngName, setNewIngName] = useState('');
+  const [newIngQty, setNewIngQty] = useState('');
+  const [newIngUnit, setNewIngUnit] = useState('g');
+
+  // Matériel fourni par le kooker
+  const [equipmentKooker, setEquipmentKooker] = useState<string[]>([]);
+  const [newEquipmentKooker, setNewEquipmentKooker] = useState('');
+
+  // Matériel à fournir par le client
+  const [equipmentClient, setEquipmentClient] = useState<string[]>([]);
+  const [newEquipmentClient, setNewEquipmentClient] = useState('');
 
   // Common fields
   const [photos, setPhotos] = useState<string[]>([]);
@@ -103,8 +114,6 @@ export default function EditMenuPage() {
             setKoursDuration(String(s.durationMinutes || ''));
             setKoursMaxParticipants(String(s.maxGuests || ''));
             setKoursDifficulty(s.koursDifficulty || 'Débutant');
-            const constraints = Array.isArray(s.constraints) ? s.constraints : (s.constraints ? JSON.parse(s.constraints) : []);
-            setKoursEquipmentList(constraints);
           }
           if (types.includes('KOOK')) {
             setKookTitle(s.title || '');
@@ -114,8 +123,15 @@ export default function EditMenuPage() {
             setKookMinConvives(s.minGuests ? String(s.minGuests) : '');
             setKookMaxParticipants(String(s.maxGuests || ''));
             setKookPrepTime(s.prepTimeMinutes ? String(s.prepTimeMinutes) : '');
-            setKookIngredientsIncluded(s.ingredientsIncluded || false);
           }
+
+          // Champs partagés
+          const ingList = Array.isArray(s.ingredientsList) ? s.ingredientsList : (s.ingredientsList ? JSON.parse(s.ingredientsList) : []);
+          setIngredientsList(ingList);
+          const eqKooker = Array.isArray(s.equipmentKooker) ? s.equipmentKooker : (s.equipmentKooker ? JSON.parse(s.equipmentKooker) : []);
+          setEquipmentKooker(eqKooker);
+          const eqClient = Array.isArray(s.constraints) ? s.constraints : (s.constraints ? JSON.parse(s.constraints) : []);
+          setEquipmentClient(eqClient);
 
           setAllergens(Array.isArray(s.allergens) ? s.allergens : JSON.parse(s.allergens || '[]'));
           setSpecialties(Array.isArray(s.specialty) ? s.specialty : (s.specialty ? JSON.parse(s.specialty) : []));
@@ -262,11 +278,11 @@ export default function EditMenuPage() {
         allergens: allergens,
         specialty: specialties.length > 0 ? specialties : [],
         prepTimeMinutes: !isKours && kookPrepTime ? parseInt(kookPrepTime) : undefined,
-        ingredientsIncluded: !isKours ? kookIngredientsIncluded : undefined,
-        equipmentProvided: undefined,
+        ingredientsList: ingredientsList.length > 0 ? ingredientsList : undefined,
+        equipmentKooker: equipmentKooker.length > 0 ? equipmentKooker : undefined,
+        constraints: equipmentClient.length > 0 ? equipmentClient : undefined,
         koursDifficulty: isKours ? koursDifficulty : undefined,
         koursLocation: isKours ? 'Chez le client' : undefined,
-        constraints: isKours && koursEquipmentList.length > 0 ? koursEquipmentList : undefined,
         menuItems: (isKours ? koursMenuItems : kookMenuItems).map((item, idx) => ({
           category: 'Plat',
           name: item.name,
@@ -486,61 +502,52 @@ export default function EditMenuPage() {
                 </select>
               </div>
 
-              {/* Matériel et ustensiles à fournir par le client */}
-              <div className="mb-8">
-                <label className={labelClass}>
-                  Matériel et ustensiles nécessaires (à fournir par le client)
-                </label>
+              {/* Programme du cours */}
+              <div className="border-t border-[#e0e2ef] pt-6">
+                <h4 className="text-[15px] font-semibold text-[#111125] mb-4">Programme du cours</h4>
 
-                {koursEquipmentList.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {koursEquipmentList.map((item) => (
-                      <span
-                        key={item}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#c1a0fd]/10 text-[#c1a0fd] text-[13px] font-medium rounded-[8px]"
-                      >
-                        {item}
+                {koursMenuItems.length > 0 && (
+                  <div className="space-y-3 mb-5">
+                    {koursMenuItems.map((item, idx) => (
+                      <div key={idx} className="flex items-start justify-between gap-3 bg-[#f3ecff] rounded-[12px] p-4">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[14px] font-semibold text-[#111125]">{item.name}</p>
+                          {item.description && (
+                            <p className="text-[13px] text-[#111125]/50 mt-0.5">{item.description}</p>
+                          )}
+                        </div>
                         <button
                           type="button"
-                          onClick={() => setKoursEquipmentList((prev) => prev.filter((x) => x !== item))}
-                          className="hover:text-red-500 transition-colors"
+                          onClick={() => removeKoursItem(idx)}
+                          className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-[8px] hover:bg-red-50 text-[#111125]/30 hover:text-red-500 transition-all"
                         >
-                          <X size={14} />
+                          <X size={16} />
                         </button>
-                      </span>
+                      </div>
                     ))}
                   </div>
                 )}
 
-                <div className="flex gap-3">
+                <div className="flex flex-col sm:flex-row gap-3">
                   <input
                     type="text"
-                    value={koursNewEquipment}
-                    onChange={(e) => setKoursNewEquipment(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        const val = koursNewEquipment.trim();
-                        if (val && !koursEquipmentList.includes(val)) {
-                          setKoursEquipmentList((prev) => [...prev, val]);
-                          setKoursNewEquipment('');
-                        }
-                      }
-                    }}
-                    placeholder="Ex: Saladier, fouet, planche à découper..."
-                    className={inputClass + ' flex-1'}
+                    value={koursNewItemName}
+                    onChange={(e) => setKoursNewItemName(e.target.value)}
+                    placeholder="Étape du cours"
+                    className={inputClass + ' sm:flex-1'}
+                  />
+                  <input
+                    type="text"
+                    value={koursNewItemDesc}
+                    onChange={(e) => setKoursNewItemDesc(e.target.value)}
+                    placeholder="Description (optionnel)"
+                    className={inputClass + ' sm:flex-1'}
                   />
                   <button
                     type="button"
-                    onClick={() => {
-                      const val = koursNewEquipment.trim();
-                      if (val && !koursEquipmentList.includes(val)) {
-                        setKoursEquipmentList((prev) => [...prev, val]);
-                        setKoursNewEquipment('');
-                      }
-                    }}
-                    disabled={!koursNewEquipment.trim()}
-                    className="h-[48px] px-5 flex items-center gap-2 bg-[#c1a0fd] hover:bg-[#b090ed] text-white text-[13px] font-semibold rounded-[12px] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                    onClick={addKoursItem}
+                    disabled={!koursNewItemName.trim()}
+                    className="h-[48px] px-5 flex items-center justify-center gap-2 bg-[#c1a0fd] hover:bg-[#b090ed] text-white text-[13px] font-semibold rounded-[12px] transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
                   >
                     <Plus size={16} />
                     Ajouter
@@ -664,17 +671,6 @@ export default function EditMenuPage() {
                 />
               </div>
 
-              {/* Ingredients checkbox */}
-              <label className="flex items-center gap-3 cursor-pointer mb-8">
-                <input
-                  type="checkbox"
-                  checked={kookIngredientsIncluded}
-                  onChange={(e) => setKookIngredientsIncluded(e.target.checked)}
-                  className="w-5 h-5 rounded-[4px] border-[#e0e2ef] text-[#c1a0fd] focus:ring-[#c1a0fd]/20 cursor-pointer"
-                />
-                <span className="text-[14px] text-[#111125] font-medium">Ingrédients inclus</span>
-              </label>
-
               {/* Menu Items - KOOK */}
               <div className="border-t border-[#e0e2ef] pt-6">
                 <h4 className="text-[15px] font-semibold text-[#111125] mb-4">Menu proposé</h4>
@@ -733,165 +729,174 @@ export default function EditMenuPage() {
             </div>
           )}
 
-          {/* ── Common Sections (shown when any type selected) ── */}
+          {/* ── Informations communes ── */}
           {serviceTypes.length > 0 && (
-            <>
-              {/* Photos */}
-              <div className="bg-white rounded-[16px] p-6 md:p-8 shadow-sm mb-8">
-                <h3 className="text-[24px] font-semibold text-[#111125] tracking-[-0.48px] mb-2">Photos</h3>
-                <p className="text-[13px] text-[#111125]/50 mb-6">
-                  Ajoutez jusqu'à 4 photos pour illustrer votre service.
-                </p>
+            <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm mb-8">
+              <h3 className="text-[22px] font-bold text-[#111125] tracking-[-0.44px] mb-6">
+                Informations communes
+              </h3>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {photos.map((photo, idx) => (
-                    <div key={idx} className="relative aspect-square rounded-[12px] overflow-hidden group">
-                      <img src={photo} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => removePhoto(idx)}
-                        className="absolute top-2 right-2 w-8 h-8 bg-black/50 hover:bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
-                      >
-                        <Trash2 size={14} />
+              {/* Photos */}
+              <p className="text-[14px] font-bold text-[#303044] mb-3">Photos</p>
+              <div className="flex flex-wrap gap-3 mb-2">
+                {photos.map((photo, idx) => (
+                  <div key={idx} className="relative w-[160px] h-[160px] rounded-[12px] overflow-hidden group shrink-0">
+                    <img src={photo} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removePhoto(idx)}
+                      className="absolute top-2 right-2 w-7 h-7 bg-black/50 hover:bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                ))}
+                {photos.length < 8 && (
+                  <label className="w-[160px] h-[160px] border-2 border-dashed border-[#e0e2ef] hover:border-[#c1a0fd] rounded-[12px] flex flex-col items-center justify-center cursor-pointer transition-colors group shrink-0">
+                    <Upload size={24} className="text-[#303044]/30 group-hover:text-[#c1a0fd] transition-colors mb-2" />
+                    <span className="text-[13px] text-[#303044]/40 group-hover:text-[#c1a0fd] font-medium transition-colors">Ajouter</span>
+                    <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
+                  </label>
+                )}
+              </div>
+              <p className="text-[13px] text-[#303044]/40 mb-6">Ajoutez jusqu'à 8 photos de votre service</p>
+
+              <div className="border-t border-[#f0f0f5] mb-6" />
+
+              {/* Ingrédients */}
+              <p className="text-[14px] font-bold text-[#303044] mb-1">Ingrédients</p>
+              <p className="text-[12px] text-[#828294] mb-3">Fournis par le client — pour des raisons de sécurité alimentaire</p>
+              {ingredientsList.length > 0 && (
+                <div className="space-y-2 mb-3">
+                  {ingredientsList.map((ing, idx) => (
+                    <div key={idx} className="flex items-center justify-between gap-3 bg-[#f3ecff] rounded-[12px] px-4 py-2.5">
+                      <span className="text-[13px] font-semibold text-[#111125] flex-1 min-w-0 truncate">{ing.name}</span>
+                      <span className="text-[13px] text-[#c1a0fd] shrink-0">{ing.quantity} {ing.unit}</span>
+                      <button type="button" onClick={() => setIngredientsList((prev) => prev.filter((_, i) => i !== idx))} className="shrink-0 w-6 h-6 flex items-center justify-center text-[#303044]/30 hover:text-red-500 transition-colors cursor-pointer">
+                        <X size={14} />
                       </button>
                     </div>
                   ))}
-
-                  {photos.length < 4 && (
-                    <label className="aspect-square border-2 border-dashed border-[#e0e2ef] hover:border-[#c1a0fd] rounded-[12px] flex flex-col items-center justify-center cursor-pointer transition-colors group">
-                      <Upload size={24} className="text-[#111125]/20 group-hover:text-[#c1a0fd] transition-colors mb-2" />
-                      <span className="text-[12px] text-[#111125]/30 group-hover:text-[#c1a0fd] font-medium transition-colors">
-                        Ajouter
-                      </span>
-                      <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
-                    </label>
-                  )}
                 </div>
-              </div>
-
-              {/* Specialties */}
-              <div className="bg-white rounded-[16px] p-6 md:p-8 shadow-sm mb-8">
-                <h3 className="text-[24px] font-semibold text-[#111125] tracking-[-0.48px] mb-2">Spécialités</h3>
-                <p className="text-[13px] text-[#111125]/50 mb-4">
-                  Ajoutez des tags pour décrire votre cuisine.
-                </p>
-
-                {specialties.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {specialties.map((s) => (
-                      <span
-                        key={s}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#c1a0fd]/10 text-[#c1a0fd] text-[13px] font-medium rounded-[8px]"
-                      >
-                        {s}
-                        <button
-                          type="button"
-                          onClick={() => removeSpecialty(s)}
-                          className="hover:text-red-500 transition-colors"
-                        >
-                          <X size={14} />
-                        </button>
-                      </span>
-                    ))}
+              )}
+              <div className="border-2 border-dashed border-[#e0e2ef] rounded-[16px] p-4 mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-[1fr_100px_120px_48px] gap-2">
+                  <input type="text" value={newIngName} onChange={(e) => setNewIngName(e.target.value)} placeholder="Nom (ex: Farine)" className={inputClass} />
+                  <input type="text" value={newIngQty} onChange={(e) => setNewIngQty(e.target.value)} placeholder="Qté" className={inputClass} />
+                  <div className="relative">
+                    <select value={newIngUnit} onChange={(e) => setNewIngUnit(e.target.value)} className={inputClass + ' appearance-none cursor-pointer pr-8'}>
+                      <option value="g">g</option>
+                      <option value="kg">kg</option>
+                      <option value="mL">mL</option>
+                      <option value="L">L</option>
+                      <option value="pcs">pcs</option>
+                      <option value="cs">cs</option>
+                      <option value="cc">cc</option>
+                      <option value="pincée">pincée</option>
+                      <option value="tranche(s)">tranche(s)</option>
+                      <option value="unité(s)">unité(s)</option>
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#303044" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </div>
                   </div>
-                )}
-
-                <div className="flex gap-3">
-                  <input
-                    type="text"
-                    value={newSpecialty}
-                    onChange={(e) => setNewSpecialty(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        addSpecialty();
-                      }
-                    }}
-                    placeholder="ex: Méditerranéen, Provençal..."
-                    className={inputClass + ' flex-1'}
-                  />
-                  <button
-                    type="button"
-                    onClick={addSpecialty}
-                    disabled={!newSpecialty.trim()}
-                    className="h-[48px] px-5 flex items-center gap-2 bg-[#c1a0fd] hover:bg-[#b090ed] text-white text-[13px] font-semibold rounded-[12px] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    <Plus size={16} />
-                    Ajouter
+                  <button type="button" onClick={() => { const name = newIngName.trim(); const qty = newIngQty.trim(); if (!name || !qty) return; setIngredientsList((prev) => [...prev, { name, quantity: qty, unit: newIngUnit }]); setNewIngName(''); setNewIngQty(''); setNewIngUnit('g'); }} disabled={!newIngName.trim() || !newIngQty.trim()} className="w-full sm:w-[48px] h-[48px] flex items-center justify-center bg-[#c1a0fd] hover:bg-[#b090ed] text-white rounded-[12px] transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer">
+                    <Plus size={20} />
                   </button>
                 </div>
               </div>
 
-              {/* Allergens */}
-              <div className="bg-white rounded-[16px] p-6 md:p-8 shadow-sm mb-8">
-                <h3 className="text-[24px] font-semibold text-[#111125] tracking-[-0.48px] mb-2">Allergènes</h3>
-                <p className="text-[13px] text-[#111125]/50 mb-6">
-                  Cochez les allergènes pouvant être présents dans vos préparations.
-                </p>
+              <div className="border-t border-[#f0f0f5] mb-6" />
 
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {ALL_ALLERGENS.map((a) => (
-                    <label
-                      key={a}
-                      className={`flex items-center gap-3 p-3 rounded-[12px] cursor-pointer transition-all ${
-                        allergens.includes(a)
-                          ? 'bg-[#c1a0fd]/10 border border-[#c1a0fd]/30'
-                          : 'bg-[#f2f4fc] border border-transparent hover:border-[#e0e2ef]'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={allergens.includes(a)}
-                        onChange={() => toggleAllergen(a)}
-                        className="w-4 h-4 rounded-[4px] border-[#e0e2ef] text-[#c1a0fd] focus:ring-[#c1a0fd]/20 cursor-pointer"
-                      />
-                      <span className="text-[13px] font-medium text-[#111125]">{a}</span>
-                    </label>
+              {/* Matériel kooker */}
+              <p className="text-[14px] font-bold text-[#303044] mb-1">Matériel fourni par le kooker</p>
+              <p className="text-[12px] text-[#828294] mb-3">Ustensiles et équipements que vous apportez</p>
+              {equipmentKooker.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {equipmentKooker.map((item) => (
+                    <span key={item} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] text-[#c1a0fd] text-[13px] font-semibold rounded-[8px]">
+                      {item}
+                      <button type="button" onClick={() => setEquipmentKooker((prev) => prev.filter((x) => x !== item))} className="hover:text-red-500 transition-colors cursor-pointer"><X size={12} /></button>
+                    </span>
                   ))}
                 </div>
+              )}
+              <div className="flex gap-2 mb-6">
+                <input type="text" value={newEquipmentKooker} onChange={(e) => setNewEquipmentKooker(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); const val = newEquipmentKooker.trim(); if (val && !equipmentKooker.includes(val)) { setEquipmentKooker((prev) => [...prev, val]); setNewEquipmentKooker(''); } } }} placeholder="Ex: Couteau de chef, balance..." className={inputClass + ' flex-1'} />
+                <button type="button" onClick={() => { const val = newEquipmentKooker.trim(); if (val && !equipmentKooker.includes(val)) { setEquipmentKooker((prev) => [...prev, val]); setNewEquipmentKooker(''); } }} disabled={!newEquipmentKooker.trim()} className="w-[48px] h-[48px] flex items-center justify-center bg-[#c1a0fd] hover:bg-[#b090ed] text-white rounded-[12px] transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0 cursor-pointer"><Plus size={20} /></button>
               </div>
 
-              {/* Dietary */}
-              <div className="bg-white rounded-[16px] p-6 md:p-8 shadow-sm mb-8">
-                <h3 className="text-[24px] font-semibold text-[#111125] tracking-[-0.48px] mb-2">Régimes alimentaires</h3>
-                <p className="text-[13px] text-[#111125]/50 mb-4">
-                  Indiquez si votre service est adapté à ces régimes.
-                </p>
-
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <label
-                    className={`flex items-center gap-3 p-4 rounded-[12px] cursor-pointer transition-all flex-1 ${
-                      isVegetarian
-                        ? 'bg-green-50 border border-green-200'
-                        : 'bg-[#f2f4fc] border border-transparent hover:border-[#e0e2ef]'
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={isVegetarian}
-                      onChange={(e) => setIsVegetarian(e.target.checked)}
-                      className="w-5 h-5 rounded-[4px] border-[#e0e2ef] text-green-500 focus:ring-green-200 cursor-pointer"
-                    />
-                    <span className="text-[14px] font-medium text-[#111125]">Végétarien</span>
-                  </label>
-                  <label
-                    className={`flex items-center gap-3 p-4 rounded-[12px] cursor-pointer transition-all flex-1 ${
-                      isVegan
-                        ? 'bg-green-50 border border-green-200'
-                        : 'bg-[#f2f4fc] border border-transparent hover:border-[#e0e2ef]'
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={isVegan}
-                      onChange={(e) => setIsVegan(e.target.checked)}
-                      className="w-5 h-5 rounded-[4px] border-[#e0e2ef] text-green-500 focus:ring-green-200 cursor-pointer"
-                    />
-                    <span className="text-[14px] font-medium text-[#111125]">Vegan</span>
-                  </label>
+              {/* Matériel client */}
+              <p className="text-[14px] font-bold text-[#303044] mb-1">Matériel à fournir par le client</p>
+              <p className="text-[12px] text-[#828294] mb-3">Ustensiles et équipements que le client doit avoir</p>
+              {equipmentClient.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {equipmentClient.map((item) => (
+                    <span key={item} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f2f4fc] text-[#303044] text-[13px] font-semibold rounded-[8px]">
+                      {item}
+                      <button type="button" onClick={() => setEquipmentClient((prev) => prev.filter((x) => x !== item))} className="hover:text-red-500 transition-colors cursor-pointer"><X size={12} /></button>
+                    </span>
+                  ))}
                 </div>
+              )}
+              <div className="flex gap-2 mb-6">
+                <input type="text" value={newEquipmentClient} onChange={(e) => setNewEquipmentClient(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); const val = newEquipmentClient.trim(); if (val && !equipmentClient.includes(val)) { setEquipmentClient((prev) => [...prev, val]); setNewEquipmentClient(''); } } }} placeholder="Ex: Saladier, fouet, planche..." className={inputClass + ' flex-1'} />
+                <button type="button" onClick={() => { const val = newEquipmentClient.trim(); if (val && !equipmentClient.includes(val)) { setEquipmentClient((prev) => [...prev, val]); setNewEquipmentClient(''); } }} disabled={!newEquipmentClient.trim()} className="w-[48px] h-[48px] flex items-center justify-center bg-[#c1a0fd] hover:bg-[#b090ed] text-white rounded-[12px] transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0 cursor-pointer"><Plus size={20} /></button>
               </div>
-            </>
+
+              <div className="border-t border-[#f0f0f5] mb-6" />
+
+              {/* Spécialités */}
+              <p className="text-[14px] font-bold text-[#303044] mb-3">Spécialités</p>
+              {specialties.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {specialties.map((s) => (
+                    <span key={s} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] text-[#c1a0fd] text-[13px] font-semibold rounded-[8px]">
+                      {s}
+                      <button type="button" onClick={() => removeSpecialty(s)} className="hover:text-red-500 transition-colors cursor-pointer"><X size={12} /></button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-2 mb-6">
+                <input type="text" value={newSpecialty} onChange={(e) => setNewSpecialty(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addSpecialty(); } }} placeholder="Ex: Italien, Végétarien, Bio..." className={inputClass + ' flex-1'} />
+                <button type="button" onClick={addSpecialty} disabled={!newSpecialty.trim()} className="w-[48px] h-[48px] flex items-center justify-center bg-[#c1a0fd] hover:bg-[#b090ed] text-white rounded-[12px] transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0 cursor-pointer"><Plus size={20} /></button>
+              </div>
+
+              <div className="border-t border-[#f0f0f5] mb-6" />
+
+              {/* Allergènes */}
+              <p className="text-[14px] font-bold text-[#303044] mb-4">Allergènes présents</p>
+              <div className="grid grid-cols-3 gap-x-6 gap-y-3 mb-6">
+                {ALL_ALLERGENS.map((a) => (
+                  <label key={a} className="flex items-center gap-2.5 cursor-pointer" onClick={() => toggleAllergen(a)}>
+                    <div className={`w-4 h-4 rounded-[3px] border-2 flex items-center justify-center shrink-0 transition-all ${allergens.includes(a) ? 'bg-[#c1a0fd] border-[#c1a0fd]' : 'bg-white border-[#c0c0cc]'}`}>
+                      {allergens.includes(a) && <svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3L3.5 5.5L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                    </div>
+                    <span className="text-[14px] text-[#303044]">{a}</span>
+                  </label>
+                ))}
+              </div>
+
+              <div className="border-t border-[#f0f0f5] mb-5" />
+
+              {/* Régimes */}
+              <p className="text-[14px] font-bold text-[#303044] mb-4">Régimes alimentaires</p>
+              <div className="flex flex-col gap-3">
+                <label className="flex items-center gap-2.5 cursor-pointer" onClick={() => setIsVegetarian(!isVegetarian)}>
+                  <div className={`w-4 h-4 rounded-[3px] border-2 flex items-center justify-center shrink-0 transition-all ${isVegetarian ? 'bg-[#c1a0fd] border-[#c1a0fd]' : 'bg-white border-[#c0c0cc]'}`}>
+                    {isVegetarian && <svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3L3.5 5.5L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                  </div>
+                  <span className="text-[14px] text-[#303044]">Végétarien</span>
+                </label>
+                <label className="flex items-center gap-2.5 cursor-pointer" onClick={() => setIsVegan(!isVegan)}>
+                  <div className={`w-4 h-4 rounded-[3px] border-2 flex items-center justify-center shrink-0 transition-all ${isVegan ? 'bg-[#c1a0fd] border-[#c1a0fd]' : 'bg-white border-[#c0c0cc]'}`}>
+                    {isVegan && <svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3L3.5 5.5L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                  </div>
+                  <span className="text-[14px] text-[#303044]">Vegan</span>
+                </label>
+              </div>
+            </div>
           )}
         </div>
 

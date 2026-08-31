@@ -26,11 +26,8 @@ interface MenuItem {
 // ────────────────────────── Allergens List ──────────────────────────
 
 const ALL_ALLERGENS = [
-  'Gluten', 'Crustacés', 'Œufs',
-  'Poisson', 'Arachides', 'Soja',
-  'Lait', 'Fruits à coque', 'Céleri',
-  'Moutarde', 'Sésame', 'Sulfites',
-  'Lupin', 'Mollusques',
+  'Gluten', 'Lactose', 'Arachide',
+  'Fruits à coques', 'Œuf', 'Autres / Je ne sais pas',
 ];
 
 // ────────────────────────── Component ──────────────────────────
@@ -961,7 +958,7 @@ export default function CreateMenuPage() {
 
                 {/* Allergènes */}
                 <p className="text-[14px] font-bold text-[#303044] mb-4">Allergènes présents</p>
-                <div className="grid grid-cols-3 gap-x-6 gap-y-3 mb-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 mb-4">
                   {ALL_ALLERGENS.map((a) => (
                     <label key={a} className="flex items-center gap-2.5 cursor-pointer" onClick={() => toggleAllergen(a)}>
                       <div className={`w-4 h-4 rounded-[3px] border-2 flex items-center justify-center shrink-0 transition-all ${allergens.includes(a) ? 'bg-[#c1a0fd] border-[#c1a0fd]' : 'bg-white border-[#c0c0cc]'}`}>
@@ -971,6 +968,9 @@ export default function CreateMenuPage() {
                     </label>
                   ))}
                 </div>
+                <p className="text-[11px] text-[#828294] leading-relaxed mb-6">
+                  ⚠️ La gestion des allergènes relève de la responsabilité du client. Le kooker s'engage à indiquer les informations dont il dispose, mais ne peut être tenu responsable en cas de réaction allergique.
+                </p>
 
                 <div className="border-t border-[#f0f0f5] mb-5" />
 

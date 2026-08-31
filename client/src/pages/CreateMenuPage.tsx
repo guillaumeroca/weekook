@@ -726,13 +726,15 @@ export default function CreateMenuPage() {
           {/* ── Common Sections ── */}
           {serviceTypes.length > 0 && (
             <>
-              {/* Photos */}
+              {/* ── Informations communes ── */}
               <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm mb-6">
                 <h3 className="text-[22px] font-bold text-[#111125] tracking-[-0.44px] mb-6">
-                  Photos
+                  Informations communes
                 </h3>
 
-                <div className="flex flex-wrap gap-3">
+                {/* Photos */}
+                <p className="text-[14px] font-bold text-[#303044] mb-3">Photos</p>
+                <div className="flex flex-wrap gap-3 mb-2">
                   {photos.map((photo, idx) => (
                     <div key={idx} className="relative w-[160px] h-[160px] rounded-[12px] overflow-hidden group shrink-0">
                       <img src={photo} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
@@ -756,17 +758,11 @@ export default function CreateMenuPage() {
                     </label>
                   )}
                 </div>
-
-                <p className="text-[13px] text-[#303044]/40 mt-4">
+                <p className="text-[13px] text-[#303044]/40 mb-6">
                   Ajoutez jusqu'à 8 photos de votre service
                 </p>
-              </div>
 
-              {/* ── Informations communes ── */}
-              <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm mb-6">
-                <h3 className="text-[22px] font-bold text-[#111125] tracking-[-0.44px] mb-6">
-                  Informations communes
-                </h3>
+                <div className="border-t border-[#f0f0f5] mb-6" />
 
                 {/* Ingrédients inclus */}
                 <p className="text-[14px] font-bold text-[#303044] mb-3">Ingrédients</p>

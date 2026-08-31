@@ -53,8 +53,6 @@ export default function CreateMenuPage() {
   const [koursDuration, setKoursDuration] = useState('');
   const [koursMaxParticipants, setKoursMaxParticipants] = useState('');
   const [koursDifficulty, setKoursDifficulty] = useState('Débutant');
-  const [koursEquipmentList, setKoursEquipmentList] = useState<string[]>([]);
-  const [koursNewEquipment, setKoursNewEquipment] = useState('');
   const [koursMenuItems, setKoursMenuItems] = useState<MenuItem[]>([]);
   const [koursNewItemName, setKoursNewItemName] = useState('');
   const [koursNewItemDesc, setKoursNewItemDesc] = useState('');
@@ -67,12 +65,14 @@ export default function CreateMenuPage() {
   const [kookMinConvives, setKookMinConvives] = useState('');
   const [kookMaxParticipants, setKookMaxParticipants] = useState('');
   const [kookPrepTime, setKookPrepTime] = useState('');
-  const [kookIngredientsIncluded, setKookIngredientsIncluded] = useState(false);
   const [kookMenuItems, setKookMenuItems] = useState<MenuItem[]>([]);
   const [kookNewItemName, setKookNewItemName] = useState('');
   const [kookNewItemDesc, setKookNewItemDesc] = useState('');
 
-  // Common fields
+  // Champs partagés COURS + KOOK
+  const [ingredientsIncluded, setIngredientsIncluded] = useState(false);
+  const [equipmentList, setEquipmentList] = useState<string[]>([]);
+  const [newEquipment, setNewEquipment] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
   const [specialties, setSpecialties] = useState<string[]>([]);
   const [newSpecialty, setNewSpecialty] = useState('');
@@ -209,11 +209,11 @@ export default function CreateMenuPage() {
           allergens: allergens,
           specialty: specialties.length > 0 ? specialties : undefined,
           prepTimeMinutes: !isKours && kookPrepTime ? parseInt(kookPrepTime) : undefined,
-          ingredientsIncluded: !isKours ? kookIngredientsIncluded : undefined,
+          ingredientsIncluded: ingredientsIncluded,
           equipmentProvided: undefined,
           koursDifficulty: isKours ? koursDifficulty : undefined,
           koursLocation: isKours ? 'Chez le client' : undefined,
-          constraints: isKours && koursEquipmentList.length > 0 ? koursEquipmentList : undefined,
+          constraints: equipmentList.length > 0 ? equipmentList : undefined,
           menuItems: (isKours ? koursMenuItems : kookMenuItems).map((item, idx) => ({
             category: 'Plat',
             name: item.name,
@@ -478,66 +478,61 @@ export default function CreateMenuPage() {
                   </div>
                 </div>
 
-                {/* Matériel et ustensiles à fournir par le client */}
+                {/* Programme du cours */}
                 <div>
-                  <label className={labelClass}>
-                    Matériel et ustensiles nécessaires (à fournir par le client)
-                  </label>
+                  <h4 className="text-[15px] font-semibold text-[#111125] mb-3">Programme du cours</h4>
 
-                  {koursEquipmentList.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      {koursEquipmentList.map((item) => (
-                        <span
-                          key={item}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] text-[#c1a0fd] text-[13px] font-semibold rounded-[8px]"
-                        >
-                          {item}
+                  {koursMenuItems.length > 0 && (
+                    <div className="space-y-2 mb-4">
+                      {koursMenuItems.map((item, idx) => (
+                        <div key={idx} className="flex items-start justify-between gap-3 bg-[#f3ecff] rounded-[12px] p-4">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[14px] font-semibold text-[#111125]">{item.name}</p>
+                            {item.description && (
+                              <p className="text-[13px] text-[#303044]/50 mt-0.5">{item.description}</p>
+                            )}
+                          </div>
                           <button
                             type="button"
-                            onClick={() => setKoursEquipmentList((prev) => prev.filter((x) => x !== item))}
-                            className="hover:text-red-500 transition-colors cursor-pointer"
+                            onClick={() => removeKoursItem(idx)}
+                            className="shrink-0 w-8 h-8 flex items-center justify-center rounded-[8px] hover:bg-red-50 text-[#303044]/30 hover:text-red-500 transition-all cursor-pointer"
                           >
-                            <X size={12} />
+                            <X size={16} />
                           </button>
-                        </span>
+                        </div>
                       ))}
                     </div>
                   )}
 
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={koursNewEquipment}
-                      onChange={(e) => setKoursNewEquipment(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          const val = koursNewEquipment.trim();
-                          if (val && !koursEquipmentList.includes(val)) {
-                            setKoursEquipmentList((prev) => [...prev, val]);
-                            setKoursNewEquipment('');
-                          }
-                        }
-                      }}
-                      placeholder="Ex: Saladier, fouet, planche à découper..."
-                      className={inputClass + ' flex-1'}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const val = koursNewEquipment.trim();
-                        if (val && !koursEquipmentList.includes(val)) {
-                          setKoursEquipmentList((prev) => [...prev, val]);
-                          setKoursNewEquipment('');
-                        }
-                      }}
-                      disabled={!koursNewEquipment.trim()}
-                      className="w-[48px] h-[48px] flex items-center justify-center bg-[#c1a0fd] hover:bg-[#b090ed] text-white rounded-[12px] transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0 cursor-pointer"
-                    >
-                      <Plus size={20} />
-                    </button>
+                  <div className="border-2 border-dashed border-[#e0e2ef] rounded-[16px] p-4">
+                    <div className="flex flex-col gap-3">
+                      <input
+                        type="text"
+                        value={koursNewItemName}
+                        onChange={(e) => setKoursNewItemName(e.target.value)}
+                        placeholder="Ex: Étape 1 — Préparation de la pâte"
+                        className={inputClass}
+                      />
+                      <input
+                        type="text"
+                        value={koursNewItemDesc}
+                        onChange={(e) => setKoursNewItemDesc(e.target.value)}
+                        placeholder="Description (optionnel)"
+                        className={inputClass}
+                      />
+                      <button
+                        type="button"
+                        onClick={addKoursItem}
+                        disabled={!koursNewItemName.trim()}
+                        className="h-[48px] flex items-center justify-center gap-2 bg-white border-2 border-[#c1a0fd] text-[#c1a0fd] text-[14px] font-semibold rounded-[12px] transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#f3ecff] cursor-pointer"
+                      >
+                        <Plus size={16} />
+                        Ajouter une étape
+                      </button>
+                    </div>
                   </div>
                 </div>
+
               </div>
 
             </>
@@ -671,30 +666,6 @@ export default function CreateMenuPage() {
                 />
               </div>
 
-              {/* Ingrédients checkbox */}
-              <label className="flex items-center gap-3 cursor-pointer mb-6">
-                <div
-                  onClick={() => setKookIngredientsIncluded(!kookIngredientsIncluded)}
-                  className={`w-5 h-5 rounded-[4px] border-2 flex items-center justify-center cursor-pointer transition-all shrink-0 ${
-                    kookIngredientsIncluded
-                      ? 'bg-[#c1a0fd] border-[#c1a0fd]'
-                      : 'bg-white border-[#c0c0cc]'
-                  }`}
-                >
-                  {kookIngredientsIncluded && (
-                    <svg width="12" height="9" viewBox="0 0 12 9" fill="none">
-                      <path d="M1 4L4.5 7.5L11 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  )}
-                </div>
-                <span
-                  className="text-[14px] text-[#303044] font-medium cursor-pointer"
-                  onClick={() => setKookIngredientsIncluded(!kookIngredientsIncluded)}
-                >
-                  Ingrédients inclus dans le prix
-                </span>
-              </label>
-
               {/* Menu proposé */}
               <div>
                 <h4 className="text-[15px] font-semibold text-[#111125] mb-3">Menu proposé</h4>
@@ -791,131 +762,123 @@ export default function CreateMenuPage() {
                 </p>
               </div>
 
-              {/* Spécialités */}
+              {/* ── Informations communes ── */}
               <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm mb-6">
-                <h3 className="text-[22px] font-bold text-[#111125] tracking-[-0.44px] mb-5">
-                  Spécialités
+                <h3 className="text-[22px] font-bold text-[#111125] tracking-[-0.44px] mb-6">
+                  Informations communes
                 </h3>
 
-                {specialties.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {specialties.map((s) => (
-                      <span
-                        key={s}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] text-[#c1a0fd] text-[13px] font-semibold rounded-[8px]"
-                      >
-                        {s}
-                        <button
-                          type="button"
-                          onClick={() => removeSpecialty(s)}
-                          className="hover:text-red-500 transition-colors cursor-pointer"
-                        >
+                {/* Ingrédients inclus */}
+                <p className="text-[14px] font-bold text-[#303044] mb-3">Ingrédients</p>
+                <label className="flex items-center gap-3 cursor-pointer mb-6" onClick={() => setIngredientsIncluded(!ingredientsIncluded)}>
+                  <div className={`w-5 h-5 rounded-[4px] border-2 flex items-center justify-center shrink-0 transition-all ${ingredientsIncluded ? 'bg-[#c1a0fd] border-[#c1a0fd]' : 'bg-white border-[#c0c0cc]'}`}>
+                    {ingredientsIncluded && (
+                      <svg width="12" height="9" viewBox="0 0 12 9" fill="none">
+                        <path d="M1 4L4.5 7.5L11 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                  </div>
+                  <span className="text-[14px] text-[#303044] font-medium">Ingrédients inclus dans le prix</span>
+                </label>
+
+                <div className="border-t border-[#f0f0f5] mb-6" />
+
+                {/* Matériel */}
+                <p className="text-[14px] font-bold text-[#303044] mb-3">Matériel et ustensiles nécessaires (à fournir par le client)</p>
+                {equipmentList.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {equipmentList.map((item) => (
+                      <span key={item} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] text-[#c1a0fd] text-[13px] font-semibold rounded-[8px]">
+                        {item}
+                        <button type="button" onClick={() => setEquipmentList((prev) => prev.filter((x) => x !== item))} className="hover:text-red-500 transition-colors cursor-pointer">
                           <X size={12} />
                         </button>
                       </span>
                     ))}
                   </div>
                 )}
-
-                <div className="flex gap-2">
+                <div className="flex gap-2 mb-6">
                   <input
                     type="text"
-                    value={newSpecialty}
-                    onChange={(e) => setNewSpecialty(e.target.value)}
+                    value={newEquipment}
+                    onChange={(e) => setNewEquipment(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
-                        addSpecialty();
+                        const val = newEquipment.trim();
+                        if (val && !equipmentList.includes(val)) { setEquipmentList((prev) => [...prev, val]); setNewEquipment(''); }
                       }
                     }}
-                    placeholder="Ex: Italien, Végétarien, Bio..."
+                    placeholder="Ex: Saladier, fouet, planche à découper..."
                     className={inputClass + ' flex-1'}
                   />
                   <button
                     type="button"
-                    onClick={addSpecialty}
-                    disabled={!newSpecialty.trim()}
+                    onClick={() => { const val = newEquipment.trim(); if (val && !equipmentList.includes(val)) { setEquipmentList((prev) => [...prev, val]); setNewEquipment(''); } }}
+                    disabled={!newEquipment.trim()}
                     className="w-[48px] h-[48px] flex items-center justify-center bg-[#c1a0fd] hover:bg-[#b090ed] text-white rounded-[12px] transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0 cursor-pointer"
                   >
                     <Plus size={20} />
                   </button>
                 </div>
-              </div>
 
-              {/* Allergènes et régimes alimentaires */}
-              <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm mb-6">
-                <h3 className="text-[22px] font-bold text-[#111125] tracking-[-0.44px] mb-6">
-                  Allergènes et régimes alimentaires
-                </h3>
+                <div className="border-t border-[#f0f0f5] mb-6" />
 
-                {/* Allergènes présents */}
+                {/* Spécialités */}
+                <p className="text-[14px] font-bold text-[#303044] mb-3">Spécialités</p>
+                {specialties.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {specialties.map((s) => (
+                      <span key={s} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] text-[#c1a0fd] text-[13px] font-semibold rounded-[8px]">
+                        {s}
+                        <button type="button" onClick={() => removeSpecialty(s)} className="hover:text-red-500 transition-colors cursor-pointer"><X size={12} /></button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2 mb-6">
+                  <input
+                    type="text"
+                    value={newSpecialty}
+                    onChange={(e) => setNewSpecialty(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addSpecialty(); } }}
+                    placeholder="Ex: Italien, Végétarien, Bio..."
+                    className={inputClass + ' flex-1'}
+                  />
+                  <button type="button" onClick={addSpecialty} disabled={!newSpecialty.trim()} className="w-[48px] h-[48px] flex items-center justify-center bg-[#c1a0fd] hover:bg-[#b090ed] text-white rounded-[12px] transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0 cursor-pointer">
+                    <Plus size={20} />
+                  </button>
+                </div>
+
+                <div className="border-t border-[#f0f0f5] mb-6" />
+
+                {/* Allergènes */}
                 <p className="text-[14px] font-bold text-[#303044] mb-4">Allergènes présents</p>
                 <div className="grid grid-cols-3 gap-x-6 gap-y-3 mb-6">
                   {ALL_ALLERGENS.map((a) => (
-                    <label
-                      key={a}
-                      className="flex items-center gap-2.5 cursor-pointer"
-                      onClick={() => toggleAllergen(a)}
-                    >
-                      <div
-                        className={`w-4 h-4 rounded-[3px] border-2 flex items-center justify-center shrink-0 transition-all ${
-                          allergens.includes(a)
-                            ? 'bg-[#c1a0fd] border-[#c1a0fd]'
-                            : 'bg-white border-[#c0c0cc]'
-                        }`}
-                      >
-                        {allergens.includes(a) && (
-                          <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
-                            <path d="M1 3L3.5 5.5L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
-                        )}
+                    <label key={a} className="flex items-center gap-2.5 cursor-pointer" onClick={() => toggleAllergen(a)}>
+                      <div className={`w-4 h-4 rounded-[3px] border-2 flex items-center justify-center shrink-0 transition-all ${allergens.includes(a) ? 'bg-[#c1a0fd] border-[#c1a0fd]' : 'bg-white border-[#c0c0cc]'}`}>
+                        {allergens.includes(a) && <svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3L3.5 5.5L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                       </div>
                       <span className="text-[14px] text-[#303044]">{a}</span>
                     </label>
                   ))}
                 </div>
 
-                {/* Divider */}
                 <div className="border-t border-[#f0f0f5] mb-5" />
 
-                {/* Régimes alimentaires */}
+                {/* Régimes */}
                 <p className="text-[14px] font-bold text-[#303044] mb-4">Régimes alimentaires</p>
                 <div className="flex flex-col gap-3">
-                  <label
-                    className="flex items-center gap-2.5 cursor-pointer"
-                    onClick={() => setIsVegetarian(!isVegetarian)}
-                  >
-                    <div
-                      className={`w-4 h-4 rounded-[3px] border-2 flex items-center justify-center shrink-0 transition-all ${
-                        isVegetarian
-                          ? 'bg-[#c1a0fd] border-[#c1a0fd]'
-                          : 'bg-white border-[#c0c0cc]'
-                      }`}
-                    >
-                      {isVegetarian && (
-                        <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
-                          <path d="M1 3L3.5 5.5L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      )}
+                  <label className="flex items-center gap-2.5 cursor-pointer" onClick={() => setIsVegetarian(!isVegetarian)}>
+                    <div className={`w-4 h-4 rounded-[3px] border-2 flex items-center justify-center shrink-0 transition-all ${isVegetarian ? 'bg-[#c1a0fd] border-[#c1a0fd]' : 'bg-white border-[#c0c0cc]'}`}>
+                      {isVegetarian && <svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3L3.5 5.5L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                     </div>
                     <span className="text-[14px] text-[#303044]">Végétarien</span>
                   </label>
-                  <label
-                    className="flex items-center gap-2.5 cursor-pointer"
-                    onClick={() => setIsVegan(!isVegan)}
-                  >
-                    <div
-                      className={`w-4 h-4 rounded-[3px] border-2 flex items-center justify-center shrink-0 transition-all ${
-                        isVegan
-                          ? 'bg-[#c1a0fd] border-[#c1a0fd]'
-                          : 'bg-white border-[#c0c0cc]'
-                      }`}
-                    >
-                      {isVegan && (
-                        <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
-                          <path d="M1 3L3.5 5.5L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      )}
+                  <label className="flex items-center gap-2.5 cursor-pointer" onClick={() => setIsVegan(!isVegan)}>
+                    <div className={`w-4 h-4 rounded-[3px] border-2 flex items-center justify-center shrink-0 transition-all ${isVegan ? 'bg-[#c1a0fd] border-[#c1a0fd]' : 'bg-white border-[#c0c0cc]'}`}>
+                      {isVegan && <svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3L3.5 5.5L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                     </div>
                     <span className="text-[14px] text-[#303044]">Vegan</span>
                   </label>

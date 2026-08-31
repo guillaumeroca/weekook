@@ -7,7 +7,22 @@ import path from 'path';
 
 const router = Router();
 
-// All admin routes require authentication + admin role
+// ── Public: taux de commission (accessible sans auth pour les formulaires) ─────
+router.get('/config/public', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const keys = ['commissionKours', 'commissionKook'];
+    const configs = await prisma.config.findMany({ where: { key: { in: keys } } });
+    const result: Record<string, number> = { commissionKours: 20, commissionKook: 20 };
+    for (const c of configs) {
+      try { result[c.key] = Number(JSON.parse(c.value)); } catch { /* ignore */ }
+    }
+    res.json({ success: true, data: result });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// All admin routes below require authentication + admin role
 router.use(authenticate, requireAdmin);
 
 // ── Stats ─────────────────────────────────────────────────────────────────────

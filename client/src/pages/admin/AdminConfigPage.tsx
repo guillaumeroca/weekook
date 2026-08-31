@@ -7,7 +7,8 @@ interface ConfigData {
   cities?: string[];
   allergens?: string[];
   serviceTypes?: string[];
-  platformCommission?: number;
+  commissionKours?: number;
+  commissionKook?: number;
   [key: string]: string[] | number | undefined;
 }
 
@@ -102,7 +103,13 @@ function ConfigList({
   );
 }
 
-function CommissionEditor({ value, onSave }: { value: number; onSave: (val: number) => Promise<void> }) {
+function CommissionEditor({ label, description, configKey, value, onSave }: {
+  label: string;
+  description: string;
+  configKey: string;
+  value: number;
+  onSave: (key: string, val: number) => Promise<void>;
+}) {
   const [rate, setRate] = useState(value);
   const [saving, setSaving] = useState(false);
   const dirty = rate !== value;
@@ -111,14 +118,14 @@ function CommissionEditor({ value, onSave }: { value: number; onSave: (val: numb
 
   const save = async () => {
     setSaving(true);
-    await onSave(Math.max(0, Math.min(100, rate)));
+    await onSave(configKey, Math.max(0, Math.min(100, rate)));
     setSaving(false);
   };
 
   return (
     <div className="bg-white rounded-[20px] p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="font-semibold text-[#111125]">Commission plateforme</h2>
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="font-semibold text-[#111125]">{label}</h2>
         {dirty && (
           <button
             onClick={save}
@@ -129,7 +136,7 @@ function CommissionEditor({ value, onSave }: { value: number; onSave: (val: numb
           </button>
         )}
       </div>
-      <p className="text-sm text-gray-500 mb-4">Pourcentage prélevé sur chaque paiement avant transfert au kooker.</p>
+      <p className="text-sm text-gray-500 mb-4">{description}</p>
       <div className="flex items-center gap-3">
         <input
           type="number"
@@ -141,6 +148,7 @@ function CommissionEditor({ value, onSave }: { value: number; onSave: (val: numb
           className="w-24 px-3 py-2 border border-gray-200 rounded-[12px] text-sm text-center focus:outline-none focus:border-[#c1a0fd]"
         />
         <span className="text-sm text-gray-500 font-medium">%</span>
+        <span className="text-xs text-gray-400">→ Kooker reçoit {100 - rate}% du prix brut</span>
       </div>
     </div>
   );
@@ -148,7 +156,8 @@ function CommissionEditor({ value, onSave }: { value: number; onSave: (val: numb
 
 export default function AdminConfigPage() {
   const [config, setConfig] = useState<ConfigData>({});
-  const [commission, setCommission] = useState<number>(20);
+  const [commissionKours, setCommissionKours] = useState<number>(20);
+  const [commissionKook, setCommissionKook] = useState<number>(20);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => { document.title = 'Admin — Configuration | Weekook'; }, []);
@@ -157,24 +166,22 @@ export default function AdminConfigPage() {
     api.get<ConfigData>('/admin/config').then(res => {
       if (res.success && res.data) {
         setConfig(res.data);
-        if (typeof res.data.platformCommission === 'number') {
-          setCommission(res.data.platformCommission);
-        }
+        if (typeof res.data.commissionKours === 'number') setCommissionKours(res.data.commissionKours);
+        if (typeof res.data.commissionKook === 'number') setCommissionKook(res.data.commissionKook);
       }
     }).finally(() => setLoading(false));
   }, []);
 
   const handleSave = async (key: string, values: string[]) => {
     const res = await api.put(`/admin/config/${key}`, { value: values });
-    if (res.success && res.data) {
-      setConfig(prev => ({ ...prev, [key]: values }));
-    }
+    if (res.success && res.data) setConfig(prev => ({ ...prev, [key]: values }));
   };
 
-  const handleCommissionSave = async (val: number) => {
-    const res = await api.put('/admin/config/platformCommission', { value: val });
+  const handleCommissionSave = async (key: string, val: number) => {
+    const res = await api.put(`/admin/config/${key}`, { value: val });
     if (res.success) {
-      setCommission(val);
+      if (key === 'commissionKours') setCommissionKours(val);
+      if (key === 'commissionKook') setCommissionKook(val);
     }
   };
 
@@ -184,14 +191,27 @@ export default function AdminConfigPage() {
     <div>
       <h1 className="text-2xl font-bold text-[#111125] mb-2">Configuration</h1>
       <p className="text-sm text-gray-500 mb-6">
-        Modifiez les listes de valeurs utilisées dans l'application. Les changements sont appliqués immédiatement.
+        Modifiez les paramètres et listes de valeurs utilisées dans l'application.
       </p>
 
       {loading ? (
         <div className="text-gray-400 text-sm">Chargement...</div>
       ) : (
         <div className="space-y-4">
-          <CommissionEditor value={commission} onSave={handleCommissionSave} />
+          <CommissionEditor
+            label="Commission KOURS"
+            description="Pourcentage prélevé sur les prestations de type COURS de cuisine."
+            configKey="commissionKours"
+            value={commissionKours}
+            onSave={handleCommissionSave}
+          />
+          <CommissionEditor
+            label="Commission KOOK"
+            description="Pourcentage prélevé sur les prestations de type KOOK (repas à domicile)."
+            configKey="commissionKook"
+            value={commissionKook}
+            onSave={handleCommissionSave}
+          />
           {configKeys.map(key => (
             <ConfigList
               key={key}

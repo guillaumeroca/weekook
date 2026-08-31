@@ -42,12 +42,15 @@ export default function CreateMenuPage() {
   // Service type selection
   const [serviceTypes, setServiceTypes] = useState<string[]>([]);
 
+  // Commission rates (chargées depuis l'API admin)
+  const [commissionKours, setCommissionKours] = useState(20);
+
   // COURS fields
   const [koursTitle, setKoursTitle] = useState('');
   const [koursDescription, setKoursDescription] = useState('');
-  const [koursPrice, setKoursPrice] = useState('');
-  const [koursExtraGuestPrice, setKoursExtraGuestPrice] = useState('');
-  const [koursDuration, setKoursDuration] = useState('');
+  const [koursPrice, setKoursPrice] = useState('50');
+  const [koursExtraGuestPrice, setKoursExtraGuestPrice] = useState('10');
+  const [koursDuration, setKoursDuration] = useState('120');
   const [koursMaxParticipants, setKoursMaxParticipants] = useState('');
   const [koursDifficulty, setKoursDifficulty] = useState('Débutant');
   const [koursEquipmentList, setKoursEquipmentList] = useState<string[]>([]);
@@ -81,6 +84,12 @@ export default function CreateMenuPage() {
 
   useEffect(() => {
     document.title = 'Créer une offre - Weekook';
+    // Charger les taux de commission
+    api.get<{ commissionKours: number; commissionKook: number }>('/admin/config/public').then(res => {
+      if (res.success && res.data) {
+        setCommissionKours(res.data.commissionKours ?? 20);
+      }
+    }).catch(() => {});
   }, []);
 
   // ────────────────────────── Type Toggle ──────────────────────────
@@ -388,6 +397,34 @@ export default function CreateMenuPage() {
                   </div>
                 </div>
 
+                {/* Encart commission */}
+                {koursPrice && !isNaN(parseFloat(koursPrice)) && parseFloat(koursPrice) > 0 && (
+                  <div className="bg-[#f3ecff] border border-[#c1a0fd]/30 rounded-[12px] px-4 py-4 mb-5">
+                    <p className="text-[13px] font-semibold text-[#303044] mb-2">
+                      Simulation de revenus — commission Weekook {commissionKours}%
+                    </p>
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-[13px] text-[#5c5c6f]">
+                        <span>Prix du cours (payé par le client)</span>
+                        <span className="font-semibold text-[#111125]">{parseFloat(koursPrice).toFixed(2).replace('.', ',')} €</span>
+                      </div>
+                      <div className="flex justify-between text-[13px] text-[#5c5c6f]">
+                        <span>Commission Weekook ({commissionKours}%)</span>
+                        <span className="text-red-500">− {(parseFloat(koursPrice) * commissionKours / 100).toFixed(2).replace('.', ',')} €</span>
+                      </div>
+                      <div className="border-t border-[#c1a0fd]/20 pt-1.5 flex justify-between text-[14px] font-bold text-[#111125]">
+                        <span>Vous recevez</span>
+                        <span className="text-[#c1a0fd]">{(parseFloat(koursPrice) * (1 - commissionKours / 100)).toFixed(2).replace('.', ',')} €</span>
+                      </div>
+                    </div>
+                    {koursExtraGuestPrice && !isNaN(parseFloat(koursExtraGuestPrice)) && parseFloat(koursExtraGuestPrice) > 0 && (
+                      <p className="text-[11px] text-[#828294] mt-2">
+                        Par élève sup. : {parseFloat(koursExtraGuestPrice).toFixed(2).replace('.', ',')} € brut → {(parseFloat(koursExtraGuestPrice) * (1 - commissionKours / 100)).toFixed(2).replace('.', ',')} € nets
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 {/* Durée */}
                 <div className="mb-5">
                   <label className={labelClass}>
@@ -398,7 +435,7 @@ export default function CreateMenuPage() {
                     min="0"
                     value={koursDuration}
                     onChange={(e) => setKoursDuration(e.target.value)}
-                    placeholder="180"
+                    placeholder="120"
                     className={inputClass}
                   />
                 </div>

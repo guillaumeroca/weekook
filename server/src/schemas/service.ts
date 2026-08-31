@@ -6,6 +6,12 @@ const menuItemSchema = z.object({
   description: z.string().optional(),
 });
 
+const ingredientItemSchema = z.object({
+  name: z.string(),
+  quantity: z.string(),
+  unit: z.string(),
+});
+
 export const createServiceSchema = z.object({
   title: z.string().min(1, 'Le titre est requis'),
   description: z.string().optional(),
@@ -20,6 +26,8 @@ export const createServiceSchema = z.object({
   prepTimeMinutes: z.number().optional(),
   ingredientsIncluded: z.boolean().optional(),
   equipmentProvided: z.boolean().optional(),
+  ingredientsList: z.array(ingredientItemSchema).optional(),
+  equipmentKooker: z.array(z.string()).optional(),
   extraGuestPriceInCents: z.number().min(0).optional(),
   koursDifficulty: z.string().optional(),
   koursLocation: z.string().optional(),
@@ -42,6 +50,8 @@ export const updateServiceSchema = z.object({
   prepTimeMinutes: z.number().optional(),
   ingredientsIncluded: z.boolean().optional(),
   equipmentProvided: z.boolean().optional(),
+  ingredientsList: z.array(ingredientItemSchema).optional(),
+  equipmentKooker: z.array(z.string()).optional(),
   extraGuestPriceInCents: z.number().min(0).optional(),
   koursDifficulty: z.string().optional(),
   koursLocation: z.string().optional(),

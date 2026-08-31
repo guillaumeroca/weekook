@@ -69,10 +69,19 @@ export default function CreateMenuPage() {
   const [kookNewItemName, setKookNewItemName] = useState('');
   const [kookNewItemDesc, setKookNewItemDesc] = useState('');
 
-  // Champs partagés COURS + KOOK
-  const [ingredientsIncluded, setIngredientsIncluded] = useState(false);
-  const [equipmentList, setEquipmentList] = useState<string[]>([]);
-  const [newEquipment, setNewEquipment] = useState('');
+  // Champs partagés COURS + KOOK — Ingrédients
+  const [ingredientsList, setIngredientsList] = useState<{ name: string; quantity: string; unit: string }[]>([]);
+  const [newIngName, setNewIngName] = useState('');
+  const [newIngQty, setNewIngQty] = useState('');
+  const [newIngUnit, setNewIngUnit] = useState('g');
+
+  // Matériel fourni par le kooker
+  const [equipmentKooker, setEquipmentKooker] = useState<string[]>([]);
+  const [newEquipmentKooker, setNewEquipmentKooker] = useState('');
+
+  // Matériel à fournir par le client
+  const [equipmentClient, setEquipmentClient] = useState<string[]>([]);
+  const [newEquipmentClient, setNewEquipmentClient] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
   const [specialties, setSpecialties] = useState<string[]>([]);
   const [newSpecialty, setNewSpecialty] = useState('');
@@ -209,11 +218,11 @@ export default function CreateMenuPage() {
           allergens: allergens,
           specialty: specialties.length > 0 ? specialties : undefined,
           prepTimeMinutes: !isKours && kookPrepTime ? parseInt(kookPrepTime) : undefined,
-          ingredientsIncluded: ingredientsIncluded,
-          equipmentProvided: undefined,
+          ingredientsList: ingredientsList.length > 0 ? ingredientsList : undefined,
+          equipmentKooker: equipmentKooker.length > 0 ? equipmentKooker : undefined,
+          constraints: equipmentClient.length > 0 ? equipmentClient : undefined,
           koursDifficulty: isKours ? koursDifficulty : undefined,
           koursLocation: isKours ? 'Chez le client' : undefined,
-          constraints: equipmentList.length > 0 ? equipmentList : undefined,
           menuItems: (isKours ? koursMenuItems : kookMenuItems).map((item, idx) => ({
             category: 'Plat',
             name: item.name,
@@ -764,31 +773,95 @@ export default function CreateMenuPage() {
 
                 <div className="border-t border-[#f0f0f5] mb-6" />
 
-                {/* Ingrédients inclus */}
-                <p className="text-[14px] font-bold text-[#303044] mb-3">Ingrédients</p>
-                <label className="flex items-center gap-3 cursor-pointer mb-6" onClick={() => setIngredientsIncluded(!ingredientsIncluded)}>
-                  <div className={`w-5 h-5 rounded-[4px] border-2 flex items-center justify-center shrink-0 transition-all ${ingredientsIncluded ? 'bg-[#c1a0fd] border-[#c1a0fd]' : 'bg-white border-[#c0c0cc]'}`}>
-                    {ingredientsIncluded && (
-                      <svg width="12" height="9" viewBox="0 0 12 9" fill="none">
-                        <path d="M1 4L4.5 7.5L11 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    )}
+                {/* Ingrédients (toujours fournis par le client) */}
+                <p className="text-[14px] font-bold text-[#303044] mb-1">Ingrédients</p>
+                <p className="text-[12px] text-[#828294] mb-3">Fournis par le client — pour des raisons de sécurité alimentaire</p>
+
+                {ingredientsList.length > 0 && (
+                  <div className="space-y-2 mb-3">
+                    {ingredientsList.map((ing, idx) => (
+                      <div key={idx} className="flex items-center justify-between gap-3 bg-[#f3ecff] rounded-[12px] px-4 py-2.5">
+                        <span className="text-[13px] font-semibold text-[#111125] flex-1 min-w-0 truncate">{ing.name}</span>
+                        <span className="text-[13px] text-[#c1a0fd] shrink-0">{ing.quantity} {ing.unit}</span>
+                        <button
+                          type="button"
+                          onClick={() => setIngredientsList((prev) => prev.filter((_, i) => i !== idx))}
+                          className="shrink-0 w-6 h-6 flex items-center justify-center text-[#303044]/30 hover:text-red-500 transition-colors cursor-pointer"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                  <span className="text-[14px] text-[#303044] font-medium">Ingrédients inclus dans le prix</span>
-                </label>
+                )}
+
+                <div className="border-2 border-dashed border-[#e0e2ef] rounded-[16px] p-4 mb-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_100px_120px_48px] gap-2">
+                    <input
+                      type="text"
+                      value={newIngName}
+                      onChange={(e) => setNewIngName(e.target.value)}
+                      placeholder="Nom (ex: Farine)"
+                      className={inputClass}
+                    />
+                    <input
+                      type="text"
+                      value={newIngQty}
+                      onChange={(e) => setNewIngQty(e.target.value)}
+                      placeholder="Qté"
+                      className={inputClass}
+                    />
+                    <div className="relative">
+                      <select
+                        value={newIngUnit}
+                        onChange={(e) => setNewIngUnit(e.target.value)}
+                        className={inputClass + ' appearance-none cursor-pointer pr-8'}
+                      >
+                        <option value="g">g</option>
+                        <option value="kg">kg</option>
+                        <option value="mL">mL</option>
+                        <option value="L">L</option>
+                        <option value="pcs">pcs</option>
+                        <option value="cs">cs</option>
+                        <option value="cc">cc</option>
+                        <option value="pincée">pincée</option>
+                        <option value="tranche(s)">tranche(s)</option>
+                        <option value="unité(s)">unité(s)</option>
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#303044" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const name = newIngName.trim();
+                        const qty = newIngQty.trim();
+                        if (!name || !qty) return;
+                        setIngredientsList((prev) => [...prev, { name, quantity: qty, unit: newIngUnit }]);
+                        setNewIngName('');
+                        setNewIngQty('');
+                        setNewIngUnit('g');
+                      }}
+                      disabled={!newIngName.trim() || !newIngQty.trim()}
+                      className="w-full sm:w-[48px] h-[48px] flex items-center justify-center bg-[#c1a0fd] hover:bg-[#b090ed] text-white rounded-[12px] transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                    >
+                      <Plus size={20} />
+                    </button>
+                  </div>
+                </div>
 
                 <div className="border-t border-[#f0f0f5] mb-6" />
 
-                {/* Matériel */}
-                <p className="text-[14px] font-bold text-[#303044] mb-3">Matériel et ustensiles nécessaires (à fournir par le client)</p>
-                {equipmentList.length > 0 && (
+                {/* Matériel fourni par le kooker */}
+                <p className="text-[14px] font-bold text-[#303044] mb-1">Matériel fourni par le kooker</p>
+                <p className="text-[12px] text-[#828294] mb-3">Ustensiles et équipements que vous apportez</p>
+                {equipmentKooker.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-3">
-                    {equipmentList.map((item) => (
+                    {equipmentKooker.map((item) => (
                       <span key={item} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] text-[#c1a0fd] text-[13px] font-semibold rounded-[8px]">
                         {item}
-                        <button type="button" onClick={() => setEquipmentList((prev) => prev.filter((x) => x !== item))} className="hover:text-red-500 transition-colors cursor-pointer">
-                          <X size={12} />
-                        </button>
+                        <button type="button" onClick={() => setEquipmentKooker((prev) => prev.filter((x) => x !== item))} className="hover:text-red-500 transition-colors cursor-pointer"><X size={12} /></button>
                       </span>
                     ))}
                   </div>
@@ -796,13 +869,51 @@ export default function CreateMenuPage() {
                 <div className="flex gap-2 mb-6">
                   <input
                     type="text"
-                    value={newEquipment}
-                    onChange={(e) => setNewEquipment(e.target.value)}
+                    value={newEquipmentKooker}
+                    onChange={(e) => setNewEquipmentKooker(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
-                        const val = newEquipment.trim();
-                        if (val && !equipmentList.includes(val)) { setEquipmentList((prev) => [...prev, val]); setNewEquipment(''); }
+                        const val = newEquipmentKooker.trim();
+                        if (val && !equipmentKooker.includes(val)) { setEquipmentKooker((prev) => [...prev, val]); setNewEquipmentKooker(''); }
+                      }
+                    }}
+                    placeholder="Ex: Couteau de chef, balance de cuisine..."
+                    className={inputClass + ' flex-1'}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => { const val = newEquipmentKooker.trim(); if (val && !equipmentKooker.includes(val)) { setEquipmentKooker((prev) => [...prev, val]); setNewEquipmentKooker(''); } }}
+                    disabled={!newEquipmentKooker.trim()}
+                    className="w-[48px] h-[48px] flex items-center justify-center bg-[#c1a0fd] hover:bg-[#b090ed] text-white rounded-[12px] transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0 cursor-pointer"
+                  >
+                    <Plus size={20} />
+                  </button>
+                </div>
+
+                {/* Matériel à fournir par le client */}
+                <p className="text-[14px] font-bold text-[#303044] mb-1">Matériel à fournir par le client</p>
+                <p className="text-[12px] text-[#828294] mb-3">Ustensiles et équipements que le client doit avoir</p>
+                {equipmentClient.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {equipmentClient.map((item) => (
+                      <span key={item} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f2f4fc] text-[#303044] text-[13px] font-semibold rounded-[8px]">
+                        {item}
+                        <button type="button" onClick={() => setEquipmentClient((prev) => prev.filter((x) => x !== item))} className="hover:text-red-500 transition-colors cursor-pointer"><X size={12} /></button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2 mb-6">
+                  <input
+                    type="text"
+                    value={newEquipmentClient}
+                    onChange={(e) => setNewEquipmentClient(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const val = newEquipmentClient.trim();
+                        if (val && !equipmentClient.includes(val)) { setEquipmentClient((prev) => [...prev, val]); setNewEquipmentClient(''); }
                       }
                     }}
                     placeholder="Ex: Saladier, fouet, planche à découper..."
@@ -810,8 +921,8 @@ export default function CreateMenuPage() {
                   />
                   <button
                     type="button"
-                    onClick={() => { const val = newEquipment.trim(); if (val && !equipmentList.includes(val)) { setEquipmentList((prev) => [...prev, val]); setNewEquipment(''); } }}
-                    disabled={!newEquipment.trim()}
+                    onClick={() => { const val = newEquipmentClient.trim(); if (val && !equipmentClient.includes(val)) { setEquipmentClient((prev) => [...prev, val]); setNewEquipmentClient(''); } }}
+                    disabled={!newEquipmentClient.trim()}
                     className="w-[48px] h-[48px] flex items-center justify-center bg-[#c1a0fd] hover:bg-[#b090ed] text-white rounded-[12px] transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0 cursor-pointer"
                   >
                     <Plus size={20} />

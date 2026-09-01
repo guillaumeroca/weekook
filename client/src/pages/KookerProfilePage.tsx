@@ -29,8 +29,9 @@ interface Service {
   id: number;
   title: string;
   description: string;
-  price: number;       // in euros (converted from centimes)
-  duration: number;    // in minutes
+  price: number;            // in euros (converted from centimes)
+  extraGuestPrice: number | null; // price per extra guest in euros (KOOK)
+  duration: number;         // in minutes
   types: string[];
   specialties: string[];
   allergens: string[];
@@ -129,6 +130,7 @@ function mapApiToProfile(data: any): KookerProfile {
         title: s.title || '',
         description: s.description || '',
         price: (s.priceInCents || 0) / 100,
+        extraGuestPrice: s.extraGuestPriceInCents != null ? s.extraGuestPriceInCents / 100 : null,
         duration: s.durationMinutes || 0,
         types: safeJsonParse<string[]>(s.type, []),
         specialties: safeJsonParse<string[]>(s.specialty, []),
@@ -797,9 +799,24 @@ export default function KookerProfilePage() {
 
                             {/* Price + Actions */}
                             <div className="flex items-center justify-between mt-auto gap-2 pt-1">
-                              <span className="text-[14px] md:text-[15px] font-semibold text-[#111125]">
-                                À partir de {service.price}€
-                              </span>
+                              <div>
+                                {service.types.includes('KOOK') ? (
+                                  <div>
+                                    <span className="text-[14px] md:text-[15px] font-semibold text-[#111125]">
+                                      Forfait {service.price}€
+                                    </span>
+                                    {service.extraGuestPrice != null && (
+                                      <span className="text-[12px] text-[#6b7280] ml-1">
+                                        + {service.extraGuestPrice}€/pers. supp.
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-[14px] md:text-[15px] font-semibold text-[#111125]">
+                                    À partir de {service.price}€
+                                  </span>
+                                )}
+                              </div>
                               <div className="flex items-center gap-2">
                                 <button
                                   onClick={() => { if (!user) { navigate(`/connexion?redirect=/kooker/${id}&action=contact`); return; } navigate(`/messagerie?to=${profile.userId}&service=${service.id}`); }}

@@ -9,6 +9,7 @@ interface ConfigData {
   serviceTypes?: string[];
   commissionKours?: number;
   commissionKook?: number;
+  kookBaseGuests?: number;
   [key: string]: string[] | number | undefined;
 }
 
@@ -154,10 +155,61 @@ function CommissionEditor({ label, description, configKey, value, onSave }: {
   );
 }
 
+function NumberEditor({ label, description, configKey, value, min, onSave }: {
+  label: string;
+  description: string;
+  configKey: string;
+  value: number;
+  min?: number;
+  onSave: (key: string, val: number) => Promise<void>;
+}) {
+  const [val, setVal] = useState(value);
+  const [saving, setSaving] = useState(false);
+  const dirty = val !== value;
+
+  useEffect(() => { setVal(value); }, [value]);
+
+  const save = async () => {
+    setSaving(true);
+    await onSave(configKey, Math.max(min ?? 1, Math.round(val)));
+    setSaving(false);
+  };
+
+  return (
+    <div className="bg-white rounded-[20px] p-6">
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="font-semibold text-[#111125]">{label}</h2>
+        {dirty && (
+          <button
+            onClick={save}
+            disabled={saving}
+            className="px-4 py-1.5 bg-[#c1a0fd] text-white rounded-[12px] text-sm font-medium hover:bg-[#b090ed] disabled:opacity-50"
+          >
+            {saving ? 'Sauvegarde...' : 'Sauvegarder'}
+          </button>
+        )}
+      </div>
+      <p className="text-sm text-gray-500 mb-4">{description}</p>
+      <div className="flex items-center gap-3">
+        <input
+          type="number"
+          min={min ?? 1}
+          step={1}
+          value={val}
+          onChange={e => setVal(Math.max(min ?? 1, Math.round(Number(e.target.value))))}
+          className="w-24 px-3 py-2 border border-gray-200 rounded-[12px] text-sm text-center focus:outline-none focus:border-[#c1a0fd]"
+        />
+        <span className="text-sm text-gray-500 font-medium">personnes</span>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminConfigPage() {
   const [config, setConfig] = useState<ConfigData>({});
   const [commissionKours, setCommissionKours] = useState<number>(20);
   const [commissionKook, setCommissionKook] = useState<number>(20);
+  const [kookBaseGuests, setKookBaseGuests] = useState<number>(6);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => { document.title = 'Admin — Configuration | Weekook'; }, []);
@@ -168,6 +220,7 @@ export default function AdminConfigPage() {
         setConfig(res.data);
         if (typeof res.data.commissionKours === 'number') setCommissionKours(res.data.commissionKours);
         if (typeof res.data.commissionKook === 'number') setCommissionKook(res.data.commissionKook);
+        if (typeof res.data.kookBaseGuests === 'number') setKookBaseGuests(res.data.kookBaseGuests);
       }
     }).finally(() => setLoading(false));
   }, []);
@@ -177,11 +230,12 @@ export default function AdminConfigPage() {
     if (res.success && res.data) setConfig(prev => ({ ...prev, [key]: values }));
   };
 
-  const handleCommissionSave = async (key: string, val: number) => {
+  const handleNumberSave = async (key: string, val: number) => {
     const res = await api.put(`/admin/config/${key}`, { value: val });
     if (res.success) {
       if (key === 'commissionKours') setCommissionKours(val);
       if (key === 'commissionKook') setCommissionKook(val);
+      if (key === 'kookBaseGuests') setKookBaseGuests(val);
     }
   };
 
@@ -203,14 +257,22 @@ export default function AdminConfigPage() {
             description="Pourcentage prélevé sur les prestations de type COURS de cuisine."
             configKey="commissionKours"
             value={commissionKours}
-            onSave={handleCommissionSave}
+            onSave={handleNumberSave}
           />
           <CommissionEditor
             label="Commission KOOK"
             description="Pourcentage prélevé sur les prestations de type KOOK (repas à domicile)."
             configKey="commissionKook"
             value={commissionKook}
-            onSave={handleCommissionSave}
+            onSave={handleNumberSave}
+          />
+          <NumberEditor
+            label="Forfait de base KOOK (nombre de convives)"
+            description="Nombre de personnes inclus dans le forfait de base pour une prestation KOOK. Le client paie ce forfait même pour moins de personnes."
+            configKey="kookBaseGuests"
+            value={kookBaseGuests}
+            min={1}
+            onSave={handleNumberSave}
           />
           {configKeys.map(key => (
             <ConfigList

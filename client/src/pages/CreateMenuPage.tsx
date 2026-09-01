@@ -39,8 +39,9 @@ export default function CreateMenuPage() {
   // Service type selection
   const [serviceTypes, setServiceTypes] = useState<string[]>([]);
 
-  // Commission rates + spécialités (chargées depuis l'API admin)
+  // Commission rates + spécialités + config KOOK (chargées depuis l'API admin)
   const [commissionKours, setCommissionKours] = useState(20);
+  const [kookBaseGuests, setKookBaseGuests] = useState(6);
   const [availableSpecialties, setAvailableSpecialties] = useState<string[]>([]);
 
   // COURS fields
@@ -59,13 +60,9 @@ export default function CreateMenuPage() {
   const [kookTitle, setKookTitle] = useState('');
   const [kookDescription, setKookDescription] = useState('');
   const [kookPrice, setKookPrice] = useState('');
+  const [kookExtraGuestPrice, setKookExtraGuestPrice] = useState('');
   const [kookDuration, setKookDuration] = useState('');
-  const [kookMinConvives, setKookMinConvives] = useState('');
   const [kookMaxParticipants, setKookMaxParticipants] = useState('');
-  const [kookPrepTime, setKookPrepTime] = useState('');
-  const [kookMenuItems, setKookMenuItems] = useState<MenuItem[]>([]);
-  const [kookNewItemName, setKookNewItemName] = useState('');
-  const [kookNewItemDesc, setKookNewItemDesc] = useState('');
 
   // Champs partagés COURS + KOOK — Ingrédients
   const [ingredientsList, setIngredientsList] = useState<{ name: string; quantity: string; unit: string }[]>([]);
@@ -93,9 +90,10 @@ export default function CreateMenuPage() {
   useEffect(() => {
     document.title = 'Créer une offre - Weekook';
     // Charger la config publique (commissions + spécialités)
-    api.get<{ commissionKours: number; commissionKook: number; specialties: string[] }>('/admin/config/public').then(res => {
+    api.get<{ commissionKours: number; commissionKook: number; specialties: string[]; kookBaseGuests: number }>('/admin/config/public').then(res => {
       if (res.success && res.data) {
         setCommissionKours(res.data.commissionKours ?? 20);
+        if (typeof res.data.kookBaseGuests === 'number') setKookBaseGuests(res.data.kookBaseGuests);
         if (Array.isArray(res.data.specialties)) setAvailableSpecialties(res.data.specialties);
       }
     }).catch(() => {});
@@ -136,17 +134,6 @@ export default function CreateMenuPage() {
 
   const removeKoursItem = (idx: number) => {
     setKoursMenuItems((prev) => prev.filter((_, i) => i !== idx));
-  };
-
-  const addKookItem = () => {
-    if (!kookNewItemName.trim()) return;
-    setKookMenuItems((prev) => [...prev, { name: kookNewItemName.trim(), description: kookNewItemDesc.trim() }]);
-    setKookNewItemName('');
-    setKookNewItemDesc('');
-  };
-
-  const removeKookItem = (idx: number) => {
-    setKookMenuItems((prev) => prev.filter((_, i) => i !== idx));
   };
 
   // ────────────────────────── Specialties ──────────────────────────
@@ -212,26 +199,24 @@ export default function CreateMenuPage() {
           description: isKours ? koursDescription : kookDescription,
           type: [type],
           priceInCents: Math.round(parseFloat(isKours ? koursPrice : kookPrice) * 100),
-          extraGuestPriceInCents: isKours ? Math.round(parseFloat(koursExtraGuestPrice) * 100) : undefined,
+          extraGuestPriceInCents: isKours
+            ? Math.round(parseFloat(koursExtraGuestPrice) * 100)
+            : (kookExtraGuestPrice ? Math.round(parseFloat(kookExtraGuestPrice) * 100) : undefined),
           durationMinutes: parseInt(isKours ? koursDuration : kookDuration),
-          minGuests: isKours
-            ? undefined
-            : (kookMinConvives ? parseInt(kookMinConvives) : undefined),
           maxGuests: parseInt(isKours ? koursMaxParticipants : kookMaxParticipants),
           allergens: allergens,
           specialty: specialties.length > 0 ? specialties : undefined,
-          prepTimeMinutes: !isKours && kookPrepTime ? parseInt(kookPrepTime) : undefined,
           ingredientsList: ingredientsList.length > 0 ? ingredientsList : undefined,
           equipmentKooker: equipmentKooker.length > 0 ? equipmentKooker : undefined,
           constraints: equipmentClient.length > 0 ? equipmentClient : undefined,
           koursDifficulty: isKours ? koursDifficulty : undefined,
           koursLocation: isKours ? 'Chez le client' : undefined,
-          menuItems: (isKours ? koursMenuItems : kookMenuItems).map((item, idx) => ({
+          menuItems: isKours ? koursMenuItems.map((item, idx) => ({
             category: 'Plat',
             name: item.name,
             description: item.description,
             sortOrder: idx + 1,
-          })),
+          })) : [],
           images: photos,
         };
         await api.post('/services', data);
@@ -602,11 +587,18 @@ export default function CreateMenuPage() {
                 />
               </div>
 
-              {/* Prix + Durée */}
+              {/* Forfait prix */}
+              <div className="bg-[#f3ecff] rounded-[12px] px-4 py-3 mb-5 flex items-start gap-2">
+                <span className="text-[16px] shrink-0 mt-0.5">💡</span>
+                <p className="text-[13px] text-[#5c5c6f]">
+                  Le KOOK fonctionne avec un <strong>forfait de base pour {kookBaseGuests} personnes</strong>. Si le client vient à moins, il paie quand même le forfait. Vous pouvez ajouter un prix par convive supplémentaire.
+                </p>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
                 <div>
                   <label className={labelClass}>
-                    Prix par personne (€) <span className="text-[#c1a0fd]">*</span>
+                    Prix forfait {kookBaseGuests} personnes (€) <span className="text-[#c1a0fd]">*</span>
                   </label>
                   <input
                     type="number"
@@ -614,10 +606,28 @@ export default function CreateMenuPage() {
                     min="0"
                     value={kookPrice}
                     onChange={(e) => setKookPrice(e.target.value)}
-                    placeholder="30.00"
+                    placeholder="180.00"
                     className={inputClass}
                   />
                 </div>
+                <div>
+                  <label className={labelClass}>
+                    Prix par convive supplémentaire (€)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={kookExtraGuestPrice}
+                    onChange={(e) => setKookExtraGuestPrice(e.target.value)}
+                    placeholder="25.00"
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+
+              {/* Durée + Max convives */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
                 <div>
                   <label className={labelClass}>
                     Durée totale (minutes) <span className="text-[#c1a0fd]">*</span>
@@ -627,24 +637,7 @@ export default function CreateMenuPage() {
                     min="0"
                     value={kookDuration}
                     onChange={(e) => setKookDuration(e.target.value)}
-                    placeholder="90"
-                    className={inputClass}
-                  />
-                </div>
-              </div>
-
-              {/* Min / Max convives */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
-                <div>
-                  <label className={labelClass}>
-                    Min convives <span className="text-[#c1a0fd]">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={kookMinConvives}
-                    onChange={(e) => setKookMinConvives(e.target.value)}
-                    placeholder="2"
+                    placeholder="180"
                     className={inputClass}
                   />
                 </div>
@@ -660,76 +653,6 @@ export default function CreateMenuPage() {
                     placeholder="12"
                     className={inputClass}
                   />
-                </div>
-              </div>
-
-              {/* Temps de préparation */}
-              <div className="mb-5">
-                <label className={labelClass}>
-                  Temps de préparation estimé (minutes)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={kookPrepTime}
-                  onChange={(e) => setKookPrepTime(e.target.value)}
-                  placeholder="60"
-                  className={inputClass}
-                />
-              </div>
-
-              {/* Menu proposé */}
-              <div>
-                <h4 className="text-[15px] font-semibold text-[#111125] mb-3">Menu proposé</h4>
-
-                {kookMenuItems.length > 0 && (
-                  <div className="space-y-2 mb-4">
-                    {kookMenuItems.map((item, idx) => (
-                      <div key={idx} className="flex items-start justify-between gap-3 bg-[#f3ecff] rounded-[12px] p-4">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[14px] font-semibold text-[#111125]">{item.name}</p>
-                          {item.description && (
-                            <p className="text-[13px] text-[#303044]/50 mt-0.5">{item.description}</p>
-                          )}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => removeKookItem(idx)}
-                          className="shrink-0 w-8 h-8 flex items-center justify-center rounded-[8px] hover:bg-red-50 text-[#303044]/30 hover:text-red-500 transition-all cursor-pointer"
-                        >
-                          <X size={16} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <div className="border-2 border-dashed border-[#e0e2ef] rounded-[16px] p-4">
-                  <div className="flex flex-col gap-3">
-                    <input
-                      type="text"
-                      value={kookNewItemName}
-                      onChange={(e) => setKookNewItemName(e.target.value)}
-                      placeholder="Ex: Entrée"
-                      className={inputClass}
-                    />
-                    <input
-                      type="text"
-                      value={kookNewItemDesc}
-                      onChange={(e) => setKookNewItemDesc(e.target.value)}
-                      placeholder="Description (optionnel)"
-                      className={inputClass}
-                    />
-                    <button
-                      type="button"
-                      onClick={addKookItem}
-                      disabled={!kookNewItemName.trim()}
-                      className="h-[48px] flex items-center justify-center gap-2 bg-white border-2 border-[#c1a0fd] text-[#c1a0fd] text-[14px] font-semibold rounded-[12px] transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#f3ecff] cursor-pointer"
-                    >
-                      <Plus size={16} />
-                      Ajouter un plat
-                    </button>
-                  </div>
                 </div>
               </div>
             </div>

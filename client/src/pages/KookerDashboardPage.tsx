@@ -48,6 +48,7 @@ interface Service {
   type: string | string[];
   allergens?: unknown;
   priceInCents: number;
+  extraGuestPriceInCents?: number | null;
   durationMinutes: number;
   maxGuests: number;
   active: boolean;
@@ -1140,9 +1141,24 @@ const KookerDashboardPage = () => {
                               {typeLabel && (
                                 <span className="text-[11px] text-[#c1a0fd] bg-[#c1a0fd]/10 px-2 py-0.5 rounded-[6px] font-medium">{typeLabel}</span>
                               )}
-                              <p className="text-[14px] font-semibold text-[#111125] mt-2">
-                                À partir de {Math.round(service.priceInCents / 100)}€
-                              </p>
+                              <div className="mt-2">
+                                {isKook ? (
+                                  <>
+                                    <p className="text-[14px] font-semibold text-[#111125]">
+                                      Forfait {Math.round(service.priceInCents / 100)}€
+                                    </p>
+                                    {service.extraGuestPriceInCents != null && service.extraGuestPriceInCents > 0 && (
+                                      <p className="text-[11px] text-[#6b7280]">
+                                        + {Math.round(service.extraGuestPriceInCents / 100)}€/pers. supp.
+                                      </p>
+                                    )}
+                                  </>
+                                ) : (
+                                  <p className="text-[14px] font-semibold text-[#111125]">
+                                    À partir de {Math.round(service.priceInCents / 100)}€
+                                  </p>
+                                )}
+                              </div>
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0">
                               <button
@@ -1190,7 +1206,7 @@ const KookerDashboardPage = () => {
                                   <p className="text-[13px] font-semibold text-[#111125]">{service.durationMinutes} min</p>
                                 </div>
                                 <div>
-                                  <p className="text-[11px] text-[#111125]/40 font-medium mb-0.5">Convives max</p>
+                                  <p className="text-[11px] text-[#111125]/40 font-medium mb-0.5">{isKours ? 'Participants max' : 'Convives max'}</p>
                                   <p className="text-[13px] font-semibold text-[#111125]">{service.maxGuests} pers.</p>
                                 </div>
                               </div>

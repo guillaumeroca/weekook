@@ -41,6 +41,7 @@ export default function CreateMenuPage() {
 
   // Commission rates + spécialités + config KOOK (chargées depuis l'API admin)
   const [commissionKours, setCommissionKours] = useState(20);
+  const [commissionKook, setCommissionKook] = useState(20);
   const [kookBaseGuests, setKookBaseGuests] = useState(6);
   const [availableSpecialties, setAvailableSpecialties] = useState<string[]>([]);
 
@@ -93,6 +94,7 @@ export default function CreateMenuPage() {
     api.get<{ commissionKours: number; commissionKook: number; specialties: string[]; kookBaseGuests: number }>('/admin/config/public').then(res => {
       if (res.success && res.data) {
         setCommissionKours(res.data.commissionKours ?? 20);
+        setCommissionKook(res.data.commissionKook ?? 20);
         if (typeof res.data.kookBaseGuests === 'number') setKookBaseGuests(res.data.kookBaseGuests);
         if (Array.isArray(res.data.specialties)) setAvailableSpecialties(res.data.specialties);
       }
@@ -655,6 +657,34 @@ export default function CreateMenuPage() {
                   />
                 </div>
               </div>
+
+              {/* Simulation de revenus KOOK */}
+              {kookPrice && !isNaN(parseFloat(kookPrice)) && parseFloat(kookPrice) > 0 && (
+                <div className="bg-[#f2f4fc] border border-[#e0e2ef] rounded-[12px] p-4 mt-2">
+                  <p className="text-[12px] font-semibold text-[#303044]/60 mb-3 uppercase tracking-wide">
+                    Simulation de revenus — commission Weekook {commissionKook}%
+                  </p>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-[13px] text-[#303044]">
+                      <span>Forfait {kookBaseGuests} pers. (brut)</span>
+                      <span>{parseFloat(kookPrice).toFixed(2).replace('.', ',')} €</span>
+                    </div>
+                    <div className="flex justify-between text-[13px] text-[#303044]">
+                      <span>Commission Weekook ({commissionKook}%)</span>
+                      <span className="text-red-500">− {(parseFloat(kookPrice) * commissionKook / 100).toFixed(2).replace('.', ',')} €</span>
+                    </div>
+                    <div className="flex justify-between text-[13px] font-semibold border-t border-[#e0e2ef] pt-2">
+                      <span>Vous recevez</span>
+                      <span className="text-[#c1a0fd]">{(parseFloat(kookPrice) * (1 - commissionKook / 100)).toFixed(2).replace('.', ',')} €</span>
+                    </div>
+                    {kookExtraGuestPrice && !isNaN(parseFloat(kookExtraGuestPrice)) && parseFloat(kookExtraGuestPrice) > 0 && (
+                      <p className="text-[12px] text-[#303044]/50 pt-1">
+                        Par convive supp. : {parseFloat(kookExtraGuestPrice).toFixed(2).replace('.', ',')} € brut → {(parseFloat(kookExtraGuestPrice) * (1 - commissionKook / 100)).toFixed(2).replace('.', ',')} € nets
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

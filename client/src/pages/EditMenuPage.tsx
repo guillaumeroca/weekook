@@ -38,6 +38,7 @@ export default function EditMenuPage() {
   const { id } = useParams();
 
   const [isLoading, setIsLoading] = useState(true);
+  const [availableSpecialties, setAvailableSpecialties] = useState<string[]>([]);
   usePageTiming('Modifier une offre', !isLoading);
 
   // Service type selection
@@ -96,6 +97,12 @@ export default function EditMenuPage() {
 
   useEffect(() => {
     document.title = 'Modifier une offre - Weekook';
+
+    api.get<{ commissionKours: number; commissionKook: number; specialties: string[] }>('/admin/config/public').then(res => {
+      if (res.success && res.data && Array.isArray(res.data.specialties)) {
+        setAvailableSpecialties(res.data.specialties);
+      }
+    }).catch(() => {});
 
     const loadService = async () => {
       try {
@@ -859,20 +866,26 @@ export default function EditMenuPage() {
 
               {/* Spécialités */}
               <p className="text-[14px] font-bold text-[#303044] mb-3">Spécialités</p>
-              {specialties.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {specialties.map((s) => (
-                    <span key={s} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3ecff] text-[#c1a0fd] text-[13px] font-semibold rounded-[8px]">
+              {availableSpecialties.length > 0 ? (
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {availableSpecialties.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setSpecialties((prev) => prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s])}
+                      className={`px-3 py-1.5 text-[13px] font-semibold rounded-[8px] transition-all cursor-pointer border ${
+                        specialties.includes(s)
+                          ? 'bg-[#c1a0fd] border-[#c1a0fd] text-white'
+                          : 'bg-white border-[#e0e2ef] text-[#303044] hover:border-[#c1a0fd] hover:text-[#c1a0fd]'
+                      }`}
+                    >
                       {s}
-                      <button type="button" onClick={() => removeSpecialty(s)} className="hover:text-red-500 transition-colors cursor-pointer"><X size={12} /></button>
-                    </span>
+                    </button>
                   ))}
                 </div>
+              ) : (
+                <p className="text-[13px] text-[#828294] mb-6">Aucune spécialité configurée — ajoutez-en depuis la page Admin.</p>
               )}
-              <div className="flex gap-2 mb-6">
-                <input type="text" value={newSpecialty} onChange={(e) => setNewSpecialty(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addSpecialty(); } }} placeholder="Ex: Italien, Végétarien, Bio..." className={inputClass + ' flex-1'} />
-                <button type="button" onClick={addSpecialty} disabled={!newSpecialty.trim()} className="w-[48px] h-[48px] flex items-center justify-center bg-[#c1a0fd] hover:bg-[#b090ed] text-white rounded-[12px] transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0 cursor-pointer"><Plus size={20} /></button>
-              </div>
 
               <div className="border-t border-[#f0f0f5] mb-6" />
 
@@ -902,12 +915,6 @@ export default function EditMenuPage() {
                     {isVegetarian && <svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3L3.5 5.5L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                   </div>
                   <span className="text-[14px] text-[#303044]">Végétarien</span>
-                </label>
-                <label className="flex items-center gap-2.5 cursor-pointer" onClick={() => setIsVegan(!isVegan)}>
-                  <div className={`w-4 h-4 rounded-[3px] border-2 flex items-center justify-center shrink-0 transition-all ${isVegan ? 'bg-[#c1a0fd] border-[#c1a0fd]' : 'bg-white border-[#c0c0cc]'}`}>
-                    {isVegan && <svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3L3.5 5.5L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                  </div>
-                  <span className="text-[14px] text-[#303044]">Vegan</span>
                 </label>
               </div>
             </div>

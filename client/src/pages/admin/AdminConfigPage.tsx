@@ -7,6 +7,7 @@ interface ConfigData {
   cities?: string[];
   allergens?: string[];
   serviceTypes?: string[];
+  units?: string[];
   commissionKours?: number;
   commissionKook?: number;
   kookBaseGuests?: number;
@@ -18,6 +19,7 @@ const CONFIG_LABELS: Record<string, string> = {
   cities: 'Villes disponibles',
   allergens: 'Allergènes',
   serviceTypes: 'Types de service',
+  units: 'Unités de mesure (ingrédients)',
 };
 
 function ConfigList({
@@ -239,7 +241,7 @@ export default function AdminConfigPage() {
     }
   };
 
-  const configKeys = ['specialties', 'cities', 'allergens', 'serviceTypes'];
+  const configKeys = ['specialties', 'cities', 'allergens', 'serviceTypes', 'units'];
 
   return (
     <div>

@@ -10,9 +10,9 @@ const router = Router();
 // ── Public: taux de commission (accessible sans auth pour les formulaires) ─────
 router.get('/config/public', async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    const keys = ['commissionKours', 'commissionKook', 'specialties', 'kookBaseGuests'];
+    const keys = ['commissionKours', 'commissionKook', 'specialties', 'kookBaseGuests', 'units'];
     const configs = await prisma.config.findMany({ where: { key: { in: keys } } });
-    const result: Record<string, unknown> = { commissionKours: 20, commissionKook: 20, specialties: [], kookBaseGuests: 6 };
+    const result: Record<string, unknown> = { commissionKours: 20, commissionKook: 20, specialties: [], kookBaseGuests: 6, units: [] };
     for (const c of configs) {
       try { result[c.key] = JSON.parse(c.value); } catch { /* ignore */ }
     }

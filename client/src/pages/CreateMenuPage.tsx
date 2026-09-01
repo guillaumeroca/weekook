@@ -44,6 +44,7 @@ export default function CreateMenuPage() {
   const [commissionKook, setCommissionKook] = useState(20);
   const [kookBaseGuests, setKookBaseGuests] = useState(6);
   const [availableSpecialties, setAvailableSpecialties] = useState<string[]>([]);
+  const [availableUnits, setAvailableUnits] = useState<string[]>(['g', 'kg', 'mL', 'L', 'pcs', 'cs', 'cc', 'pincée', 'tranche(s)', 'unité(s)']);
 
   // COURS fields
   const [koursTitle, setKoursTitle] = useState('');
@@ -91,12 +92,13 @@ export default function CreateMenuPage() {
   useEffect(() => {
     document.title = 'Créer une offre - Weekook';
     // Charger la config publique (commissions + spécialités)
-    api.get<{ commissionKours: number; commissionKook: number; specialties: string[]; kookBaseGuests: number }>('/admin/config/public').then(res => {
+    api.get<{ commissionKours: number; commissionKook: number; specialties: string[]; kookBaseGuests: number; units: string[] }>('/admin/config/public').then(res => {
       if (res.success && res.data) {
         setCommissionKours(res.data.commissionKours ?? 20);
         setCommissionKook(res.data.commissionKook ?? 20);
         if (typeof res.data.kookBaseGuests === 'number') setKookBaseGuests(res.data.kookBaseGuests);
         if (Array.isArray(res.data.specialties)) setAvailableSpecialties(res.data.specialties);
+        if (Array.isArray(res.data.units) && res.data.units.length > 0) setAvailableUnits(res.data.units);
       }
     }).catch(() => {});
   }, []);
@@ -608,7 +610,7 @@ export default function CreateMenuPage() {
                     min="0"
                     value={kookPrice}
                     onChange={(e) => setKookPrice(e.target.value)}
-                    placeholder="180.00"
+                    placeholder="100.00"
                     className={inputClass}
                   />
                 </div>
@@ -622,7 +624,7 @@ export default function CreateMenuPage() {
                     min="0"
                     value={kookExtraGuestPrice}
                     onChange={(e) => setKookExtraGuestPrice(e.target.value)}
-                    placeholder="25.00"
+                    placeholder="15.00"
                     className={inputClass}
                   />
                 </div>
@@ -780,16 +782,7 @@ export default function CreateMenuPage() {
                         onChange={(e) => setNewIngUnit(e.target.value)}
                         className={inputClass + ' appearance-none cursor-pointer pr-8'}
                       >
-                        <option value="g">g</option>
-                        <option value="kg">kg</option>
-                        <option value="mL">mL</option>
-                        <option value="L">L</option>
-                        <option value="pcs">pcs</option>
-                        <option value="cs">cs</option>
-                        <option value="cc">cc</option>
-                        <option value="pincée">pincée</option>
-                        <option value="tranche(s)">tranche(s)</option>
-                        <option value="unité(s)">unité(s)</option>
+                        {availableUnits.map(u => <option key={u} value={u}>{u}</option>)}
                       </select>
                       <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
                         <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#303044" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>

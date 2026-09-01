@@ -87,6 +87,7 @@ export default function CreateMenuPage() {
   const [isVegan, setIsVegan] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
   useEffect(() => {
     document.title = 'Créer une offre - Weekook';
@@ -166,6 +167,7 @@ export default function CreateMenuPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = '';
+    setIsUploadingPhoto(true);
     try {
       const compressed = await compressImage(file);
       const formData = new FormData();
@@ -178,6 +180,8 @@ export default function CreateMenuPage() {
       }
     } catch {
       toast.error('Impossible d\'uploader la photo. Réessayez.');
+    } finally {
+      setIsUploadingPhoto(false);
     }
   };
 
@@ -754,7 +758,14 @@ export default function CreateMenuPage() {
                     </div>
                   ))}
 
-                  {photos.length < 8 && (
+                  {isUploadingPhoto && (
+                    <div className="w-[160px] h-[160px] border-2 border-[#c1a0fd]/40 bg-[#f3ecff] rounded-[12px] flex flex-col items-center justify-center shrink-0">
+                      <Loader2 size={24} className="text-[#c1a0fd] animate-spin mb-2" />
+                      <span className="text-[12px] text-[#c1a0fd] font-medium">Envoi en cours...</span>
+                    </div>
+                  )}
+
+                  {photos.length < 8 && !isUploadingPhoto && (
                     <label className="w-[160px] h-[160px] border-2 border-dashed border-[#e0e2ef] hover:border-[#c1a0fd] rounded-[12px] flex flex-col items-center justify-center cursor-pointer transition-colors group shrink-0">
                       <Upload size={24} className="text-[#303044]/30 group-hover:text-[#c1a0fd] transition-colors mb-2" />
                       <span className="text-[13px] text-[#303044]/40 group-hover:text-[#c1a0fd] font-medium transition-colors">

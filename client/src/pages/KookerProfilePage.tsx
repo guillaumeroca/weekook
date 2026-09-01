@@ -19,6 +19,12 @@ interface ServiceImage {
   alt: string;
 }
 
+interface IngredientItem {
+  name: string;
+  quantity: string;
+  unit: string;
+}
+
 interface Service {
   id: number;
   title: string;
@@ -33,8 +39,9 @@ interface Service {
   isActive: boolean;
   koursDifficulty?: string | null;
   koursLocation?: string | null;
-  equipmentProvided?: boolean;
-  equipmentList: string[];
+  ingredientsList: IngredientItem[];
+  equipmentKooker: string[];
+  equipmentClient: string[];
 }
 
 interface Review {
@@ -124,7 +131,7 @@ function mapApiToProfile(data: any): KookerProfile {
         price: (s.priceInCents || 0) / 100,
         duration: s.durationMinutes || 0,
         types: safeJsonParse<string[]>(s.type, []),
-        specialties: safeJsonParse<string[]>(s.specialties, []),
+        specialties: safeJsonParse<string[]>(s.specialty, []),
         allergens: safeJsonParse<string[]>(s.allergens, []),
         maxGuests: s.maxGuests || 0,
         images: (s.images || []).map((img: any) => ({
@@ -135,8 +142,9 @@ function mapApiToProfile(data: any): KookerProfile {
         isActive: s.active,
         koursDifficulty: s.koursDifficulty || null,
         koursLocation: s.koursLocation || null,
-        equipmentProvided: s.equipmentProvided || false,
-        equipmentList: safeJsonParse<string[]>(s.constraints, []),
+        ingredientsList: safeJsonParse<IngredientItem[]>(s.ingredientsList, []),
+        equipmentKooker: safeJsonParse<string[]>(s.equipmentKooker, []),
+        equipmentClient: safeJsonParse<string[]>(s.constraints, []),
       })),
     reviews: (data.reviewsReceived || []).map((r: any) => ({
       id: r.id,
@@ -832,12 +840,41 @@ export default function KookerProfilePage() {
                                 )}
                               </div>
                             )}
-                            {/* Matériel nécessaire */}
-                            {service.types.includes('COURS') && service.equipmentList.length > 0 && (
+                            {/* Ingrédients */}
+                            {service.ingredientsList.length > 0 && (
                               <div className="mb-4">
-                                <span className="block text-[11px] font-semibold text-[#9ca3af] uppercase mb-1.5">Matériel à prévoir</span>
+                                <span className="block text-[11px] font-semibold text-[#9ca3af] uppercase mb-1.5">Ingrédients (fournis par le client)</span>
+                                <div className="space-y-1">
+                                  {service.ingredientsList.map((ing, i) => (
+                                    <div key={i} className="flex items-center justify-between gap-3 bg-[#f8f9fc] rounded-[8px] px-3 py-1.5">
+                                      <span className="text-[12px] font-medium text-[#111125]">{ing.name}</span>
+                                      <span className="text-[12px] text-[#c1a0fd] font-semibold shrink-0">{ing.quantity} {ing.unit}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Matériel kooker */}
+                            {service.equipmentKooker.length > 0 && (
+                              <div className="mb-4">
+                                <span className="block text-[11px] font-semibold text-[#9ca3af] uppercase mb-1.5">Matériel fourni par le kooker</span>
                                 <div className="flex flex-wrap gap-1.5">
-                                  {service.equipmentList.map((item) => (
+                                  {service.equipmentKooker.map((item) => (
+                                    <span key={item} className="px-2.5 py-1 bg-[#f3ecff] text-[#7c5cbf] text-[12px] font-medium rounded-[6px]">
+                                      {item}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Matériel client */}
+                            {service.equipmentClient.length > 0 && (
+                              <div className="mb-4">
+                                <span className="block text-[11px] font-semibold text-[#9ca3af] uppercase mb-1.5">Matériel à prévoir (client)</span>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {service.equipmentClient.map((item) => (
                                     <span key={item} className="px-2.5 py-1 bg-[#fef3c7] text-[#92400e] text-[12px] font-medium rounded-[6px]">
                                       {item}
                                     </span>
@@ -855,10 +892,18 @@ export default function KookerProfilePage() {
                                 <span className="text-[14px] text-[#111125]">{service.maxGuests} pers.</span>
                               </div>
                             </div>
-                            <p className="text-[12px] text-[#9ca3af]">
-                              Type : {service.types.join(' + ')}
-                              {service.allergens.length > 0 && <> • Contraintes : {service.allergens.join(', ')}</>}
-                            </p>
+                            {service.allergens.length > 0 && (
+                              <div className="mt-3">
+                                <span className="block text-[11px] font-semibold text-[#9ca3af] uppercase mb-1.5">Allergènes présents</span>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {service.allergens.map((a) => (
+                                    <span key={a} className="px-2.5 py-1 bg-[#fff7ed] text-[#c2410c] text-[12px] font-medium rounded-[6px]">
+                                      ⚠️ {a}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>

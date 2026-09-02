@@ -6,7 +6,7 @@ import { env } from '../config/env.js';
 
 // In-memory user cache (TTL 60s) — avoids 1 DB query per authenticated request
 const AUTH_CACHE_TTL = 60_000;
-const authCache = new Map<number, { data: { userId: number; email: string; role: string; kookerProfileId: number | null }; expiresAt: number }>();
+const authCache = new Map<number, { data: { userId: number; email: string; role: string; isAdmin: boolean; kookerProfileId: number | null }; expiresAt: number }>();
 
 /** Invalidate a user's auth cache (call after role/profile changes) */
 export function invalidateAuthCache(userId: number): void {
@@ -20,6 +20,7 @@ declare global {
         userId: number;
         email: string;
         role: string;
+        isAdmin: boolean;
         kookerProfileId?: number | null;
       };
     }
@@ -65,7 +66,7 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
 
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
-      select: { id: true, email: true, role: true, kookerProfile: { select: { id: true } } },
+      select: { id: true, email: true, role: true, isAdmin: true, kookerProfile: { select: { id: true } } },
     });
 
     if (!user) {
@@ -76,6 +77,7 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
       userId: user.id,
       email: user.email,
       role: user.role,
+      isAdmin: user.isAdmin,
       kookerProfileId: user.kookerProfile?.id || null,
     };
 
@@ -101,7 +103,7 @@ export function requireKooker(req: Request, _res: Response, next: NextFunction) 
 }
 
 export function requireAdmin(req: Request, _res: Response, next: NextFunction) {
-  if (req.user?.role !== 'admin') {
+  if (!req.user?.isAdmin) {
     return next(new UnauthorizedError('Acces reserve aux administrateurs'));
   }
   next();

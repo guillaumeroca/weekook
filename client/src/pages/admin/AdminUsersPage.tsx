@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { Search, Trash2, Shield, User } from 'lucide-react';
+import { Search, Trash2, Shield } from 'lucide-react';
 
 interface AdminUser {
   id: number;
@@ -8,6 +8,7 @@ interface AdminUser {
   firstName: string;
   lastName: string;
   role: string;
+  isAdmin: boolean;
   createdAt: string;
   kookerProfile: { id: number; active: boolean; verified: boolean } | null;
 }
@@ -22,14 +23,12 @@ interface UsersResponse {
 const ROLE_LABELS: Record<string, string> = {
   user: 'Utilisateur',
   kooker: 'Kooker',
-  admin: 'Admin',
   suspended: 'Suspendu',
 };
 
 const ROLE_COLORS: Record<string, string> = {
   user: 'bg-gray-100 text-gray-600',
   kooker: 'bg-purple-100 text-[#c1a0fd]',
-  admin: 'bg-blue-100 text-blue-600',
   suspended: 'bg-red-100 text-red-500',
 };
 
@@ -62,6 +61,11 @@ export default function AdminUsersPage() {
 
   const updateRole = async (userId: number, role: string) => {
     const res = await api.put(`/admin/users/${userId}`, { role });
+    if (res.success) fetchUsers();
+  };
+
+  const toggleAdmin = async (userId: number, isAdmin: boolean) => {
+    const res = await api.put(`/admin/users/${userId}`, { isAdmin });
     if (res.success) fetchUsers();
   };
 
@@ -102,7 +106,6 @@ export default function AdminUsersPage() {
           <option value="">Tous les rôles</option>
           <option value="user">Utilisateur</option>
           <option value="kooker">Kooker</option>
-          <option value="admin">Admin</option>
           <option value="suspended">Suspendu</option>
         </select>
       </div>
@@ -120,6 +123,7 @@ export default function AdminUsersPage() {
                   <th className="text-left px-4 py-3 font-medium text-gray-500">Nom</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-500">Email</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-500">Rôle</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-500">Admin</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-500">Inscrit le</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-500">Actions</th>
                 </tr>
@@ -135,6 +139,20 @@ export default function AdminUsersPage() {
                         {ROLE_LABELS[user.role] ?? user.role}
                       </span>
                     </td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => toggleAdmin(user.id, !user.isAdmin)}
+                        title={user.isAdmin ? 'Retirer les droits admin' : 'Donner les droits admin'}
+                        className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium transition-colors ${
+                          user.isAdmin
+                            ? 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                            : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                        }`}
+                      >
+                        <Shield size={11} />
+                        {user.isAdmin ? 'Oui' : 'Non'}
+                      </button>
+                    </td>
                     <td className="px-4 py-3 text-gray-500">
                       {new Date(user.createdAt).toLocaleDateString('fr-FR')}
                     </td>
@@ -147,7 +165,6 @@ export default function AdminUsersPage() {
                         >
                           <option value="user">Utilisateur</option>
                           <option value="kooker">Kooker</option>
-                          <option value="admin">Admin</option>
                           <option value="suspended">Suspendu</option>
                         </select>
                         <button

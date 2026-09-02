@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ChefHat, Menu, X } from 'lucide-react';
+import { ChefHat, Menu, X, Settings } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotification } from '@/contexts/NotificationContext';
 
@@ -74,6 +74,19 @@ export function Navbar() {
           <div className="flex items-center gap-[16px]">
             {user ? (
               <>
+                {/* Admin link */}
+                {user.isAdmin && (
+                  <Link
+                    to="/admin"
+                    className={`flex items-center gap-1.5 font-medium text-[14px] transition-opacity hover:opacity-80 ${
+                      location.pathname.startsWith('/admin') ? 'text-[#c1a0fd]' : 'text-[#303044]'
+                    }`}
+                  >
+                    <Settings size={15} />
+                    Admin
+                  </Link>
+                )}
+
                 {/* Profile icon */}
                 <button
                   onClick={() => navigate('/tableau-de-bord')}
@@ -179,6 +192,18 @@ export function Navbar() {
             {/* Auth Actions */}
             {user ? (
               <>
+                {user.isAdmin && (
+                  <Link
+                    to="/admin"
+                    className={`p-4 rounded-lg font-medium text-[18px] transition-colors flex items-center gap-2 ${
+                      location.pathname.startsWith('/admin') ? 'bg-[#c1a0fd] text-[#111125]' : 'bg-white hover:bg-[#f3ecff] text-[#303044]'
+                    }`}
+                  >
+                    <Settings size={18} />
+                    Administration
+                  </Link>
+                )}
+
                 <button
                   onClick={() => navigate('/tableau-de-bord')}
                   className={`p-4 rounded-lg font-medium text-[18px] transition-colors text-left cursor-pointer ${

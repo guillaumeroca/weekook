@@ -38,7 +38,7 @@ function AdminProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
   if (isLoading) return <LoadingSpinner />;
   if (!user) return <Navigate to="/connexion" replace />;
-  if (user.role !== 'admin') return <Navigate to="/tableau-de-bord" replace />;
+  if (!user.isAdmin) return <Navigate to="/tableau-de-bord" replace />;
   return <>{children}</>;
 }
 

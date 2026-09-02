@@ -101,8 +101,12 @@ const CONFIG_DEFAULTS: Record<string, unknown> = {
   specialties: ['Provençale', 'Méditerranéenne', 'Pâtisserie', 'Grillades', 'Végétarien', 'Fruits de mer', 'Italienne', 'Asiatique'],
   cities: ['Marseille', 'Aix-en-Provence', 'Cassis', 'La Ciotat', 'Toulon', 'Nice', 'Arles', 'Avignon'],
   allergens: ['Gluten', 'Crustacés', 'Œufs', 'Poisson', 'Arachides', 'Soja', 'Lait', 'Fruits à coque', 'Céleri', 'Moutarde', 'Sésame', 'Sulfites', 'Lupin', 'Mollusques'],
-  serviceTypes: ['KOOK', 'COURS'],
+  serviceTypes: ['KOOK', 'KOURS'],
+  units: ['g', 'kg', 'mL', 'L', 'pièce(s)', 'unité(s)', 'c. à soupe', 'c. à café', 'pincée', 'tranche(s)', 'brin(s)', 'feuille(s)', 'gousse(s)', 'portion(s)'],
   platformCommission: 20,
+  commissionKours: 20,
+  commissionKook: 20,
+  kookBaseGuests: 6,
 };
 
 async function seedConfig() {

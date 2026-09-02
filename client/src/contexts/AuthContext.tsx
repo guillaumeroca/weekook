@@ -9,6 +9,7 @@ interface User {
   phone?: string;
   avatar?: string;
   role: string;
+  isAdmin?: boolean;
   kookerProfileId?: number | null;
 }
 

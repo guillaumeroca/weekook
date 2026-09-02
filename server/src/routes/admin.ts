@@ -83,6 +83,7 @@ router.get('/users', async (req: Request, res: Response, next: NextFunction) => 
           phone: true,
           avatar: true,
           role: true,
+          isAdmin: true,
           createdAt: true,
           kookerProfile: { select: { id: true, active: true, verified: true } },
         },
@@ -103,16 +104,17 @@ router.get('/users', async (req: Request, res: Response, next: NextFunction) => 
 router.put('/users/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = parseInt(req.params.id);
-    const { role, suspended } = req.body;
+    const { role, suspended, isAdmin } = req.body;
 
     const data: any = {};
     if (role !== undefined) data.role = role;
     if (suspended !== undefined) data.role = suspended ? 'suspended' : 'user';
+    if (isAdmin !== undefined) data.isAdmin = Boolean(isAdmin);
 
     const user = await prisma.user.update({
       where: { id },
       data,
-      select: { id: true, email: true, firstName: true, lastName: true, role: true },
+      select: { id: true, email: true, firstName: true, lastName: true, role: true, isAdmin: true },
     });
 
     res.json({ success: true, data: user });

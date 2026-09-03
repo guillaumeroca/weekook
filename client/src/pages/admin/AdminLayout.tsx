@@ -36,19 +36,9 @@ export default function AdminLayout() {
       {/* Sidebar */}
       <aside className="w-[240px] shrink-0 bg-white border-r border-gray-100 flex flex-col">
         {/* Logo */}
-        <div className="h-[64px] flex items-center justify-between px-6 border-b border-gray-100">
-          <div className="flex items-center">
-            <span className="text-[#c1a0fd] font-bold text-lg">Weekook</span>
-            <span className="ml-2 text-xs bg-[#c1a0fd]/10 text-[#c1a0fd] px-2 py-0.5 rounded-full font-medium">Admin</span>
-          </div>
-          <Link
-            to="/tableau-de-bord"
-            className="flex items-center gap-1 text-xs text-gray-400 hover:text-[#c1a0fd] transition-colors"
-            title="Retour à l'appli"
-          >
-            <ArrowLeft size={14} />
-            Appli
-          </Link>
+        <div className="h-[64px] flex items-center px-6 border-b border-gray-100">
+          <span className="text-[#c1a0fd] font-bold text-lg">Weekook</span>
+          <span className="ml-2 text-xs bg-[#c1a0fd]/10 text-[#c1a0fd] px-2 py-0.5 rounded-full font-medium">Admin</span>
         </div>
 
         {/* Nav */}
@@ -86,8 +76,20 @@ export default function AdminLayout() {
       </aside>
 
       {/* Main */}
-      <main className="flex-1 overflow-auto p-8">
-        <Outlet />
+      <main className="flex-1 overflow-auto">
+        {/* Topbar */}
+        <div className="h-[64px] bg-white border-b border-gray-100 flex items-center justify-end px-8">
+          <Link
+            to="/tableau-de-bord"
+            className="flex items-center gap-2 px-4 py-2 bg-[#c1a0fd]/10 text-[#c1a0fd] hover:bg-[#c1a0fd] hover:text-white rounded-[12px] text-sm font-medium transition-colors"
+          >
+            <ArrowLeft size={15} />
+            Retour à l'appli
+          </Link>
+        </div>
+        <div className="p-8">
+          <Outlet />
+        </div>
       </main>
     </div>
   );

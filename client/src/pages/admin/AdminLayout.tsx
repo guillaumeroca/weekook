@@ -36,9 +36,19 @@ export default function AdminLayout() {
       {/* Sidebar */}
       <aside className="w-[240px] shrink-0 bg-white border-r border-gray-100 flex flex-col">
         {/* Logo */}
-        <div className="h-[64px] flex items-center px-6 border-b border-gray-100">
-          <span className="text-[#c1a0fd] font-bold text-lg">Weekook</span>
-          <span className="ml-2 text-xs bg-[#c1a0fd]/10 text-[#c1a0fd] px-2 py-0.5 rounded-full font-medium">Admin</span>
+        <div className="h-[64px] flex items-center justify-between px-6 border-b border-gray-100">
+          <div className="flex items-center">
+            <span className="text-[#c1a0fd] font-bold text-lg">Weekook</span>
+            <span className="ml-2 text-xs bg-[#c1a0fd]/10 text-[#c1a0fd] px-2 py-0.5 rounded-full font-medium">Admin</span>
+          </div>
+          <Link
+            to="/tableau-de-bord"
+            className="flex items-center gap-1 text-xs text-gray-400 hover:text-[#c1a0fd] transition-colors"
+            title="Retour à l'appli"
+          >
+            <ArrowLeft size={14} />
+            Appli
+          </Link>
         </div>
 
         {/* Nav */}
@@ -65,13 +75,6 @@ export default function AdminLayout() {
         {/* User + Actions */}
         <div className="px-4 pb-4 border-t border-gray-100 pt-4 space-y-2">
           <div className="text-xs text-gray-500 mb-1 truncate">{user?.email}</div>
-          <Link
-            to="/tableau-de-bord"
-            className="flex items-center gap-2 text-sm text-[#c1a0fd] hover:text-[#b090ed] transition-colors w-full font-medium"
-          >
-            <ArrowLeft size={16} />
-            Retour à l'appli
-          </Link>
           <button
             onClick={handleLogout}
             className="flex items-center gap-2 text-sm text-gray-500 hover:text-red-500 transition-colors w-full"

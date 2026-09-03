@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   LayoutDashboard,
@@ -9,6 +9,7 @@ import {
   MessageSquareQuote,
   Settings,
   LogOut,
+  ArrowLeft,
 } from 'lucide-react';
 
 const navItems = [
@@ -61,9 +62,16 @@ export default function AdminLayout() {
           ))}
         </nav>
 
-        {/* User + Logout */}
-        <div className="px-4 pb-4 border-t border-gray-100 pt-4">
-          <div className="text-xs text-gray-500 mb-3 truncate">{user?.email}</div>
+        {/* User + Actions */}
+        <div className="px-4 pb-4 border-t border-gray-100 pt-4 space-y-2">
+          <div className="text-xs text-gray-500 mb-1 truncate">{user?.email}</div>
+          <Link
+            to="/tableau-de-bord"
+            className="flex items-center gap-2 text-sm text-[#c1a0fd] hover:text-[#b090ed] transition-colors w-full font-medium"
+          >
+            <ArrowLeft size={16} />
+            Retour à l'appli
+          </Link>
           <button
             onClick={handleLogout}
             className="flex items-center gap-2 text-sm text-gray-500 hover:text-red-500 transition-colors w-full"

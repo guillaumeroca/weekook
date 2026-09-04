@@ -28,7 +28,7 @@ interface MenuItem {
 
 const ALL_ALLERGENS = [
   'Gluten', 'Lactose', 'Arachide',
-  'Fruits à coques', 'Œuf', 'Autres / Je ne sais pas',
+  'Fruits à coques', 'Œuf', 'Fruits de mer', 'Autres / Je ne sais pas',
 ];
 
 // ────────────────────────── Component ──────────────────────────
@@ -89,6 +89,7 @@ export default function EditMenuPage() {
   const [allergens, setAllergens] = useState<string[]>([]);
   const [isVegetarian, setIsVegetarian] = useState(false);
   const [isVegan, setIsVegan] = useState(false);
+  const [isPorkFree, setIsPorkFree] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
@@ -463,8 +464,12 @@ export default function EditMenuPage() {
               {/* Simulation de revenus COURS */}
               {koursPrice && !isNaN(parseFloat(koursPrice)) && parseFloat(koursPrice) > 0 && (
                 <div className="bg-[#f3ecff] border border-[#c1a0fd]/30 rounded-[12px] px-4 py-4 mb-5">
-                  <p className="text-[13px] font-semibold text-[#303044] mb-2">
+                  <p className="text-[13px] font-semibold text-[#303044] mb-2 flex items-center gap-1.5">
                     Simulation de revenus — commission Weekook {commissionKours}%
+                    <span
+                      title="La commission Weekook est prélevée sur chaque réservation. Elle couvre les frais de la plateforme, le paiement sécurisé et l'assistance client."
+                      className="text-[#828294] cursor-help"
+                    >ⓘ</span>
                   </p>
                   <div className="space-y-1.5">
                     <div className="flex justify-between text-[13px] text-[#5c5c6f]">
@@ -696,8 +701,12 @@ export default function EditMenuPage() {
               {/* Simulation de revenus KOOK */}
               {kookPrice && !isNaN(parseFloat(kookPrice)) && parseFloat(kookPrice) > 0 && (
                 <div className="bg-[#f2f4fc] border border-[#e0e2ef] rounded-[12px] p-4 mt-2">
-                  <p className="text-[12px] font-semibold text-[#303044]/60 mb-3 uppercase tracking-wide">
+                  <p className="text-[12px] font-semibold text-[#303044]/60 mb-3 uppercase tracking-wide flex items-center gap-1.5">
                     Simulation de revenus — commission Weekook {commissionKook}%
+                    <span
+                      title="La commission Weekook est prélevée sur chaque réservation. Elle couvre les frais de la plateforme, le paiement sécurisé et l'assistance client."
+                      className="text-[#828294] cursor-help normal-case"
+                    >ⓘ</span>
                   </p>
                   <div className="space-y-2">
                     <div className="flex justify-between text-[13px] text-[#303044]">
@@ -727,7 +736,7 @@ export default function EditMenuPage() {
           {serviceTypes.length > 0 && (
             <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm mb-8">
               <h3 className="text-[22px] font-bold text-[#111125] tracking-[-0.44px] mb-6">
-                Informations communes
+                Général
               </h3>
 
               {/* Photos */}
@@ -873,6 +882,9 @@ export default function EditMenuPage() {
                       {allergens.includes(a) && <svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3L3.5 5.5L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                     </div>
                     <span className="text-[14px] text-[#303044]">{a}</span>
+                    {a === 'Fruits de mer' && (
+                      <span title="produits de la mer à l'exception des poissons" className="text-[#828294] cursor-help text-[12px] leading-none">ⓘ</span>
+                    )}
                   </label>
                 ))}
               </div>
@@ -890,6 +902,12 @@ export default function EditMenuPage() {
                     {isVegetarian && <svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3L3.5 5.5L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                   </div>
                   <span className="text-[14px] text-[#303044]">Végétarien</span>
+                </label>
+                <label className="flex items-center gap-2.5 cursor-pointer" onClick={() => setIsPorkFree(!isPorkFree)}>
+                  <div className={`w-4 h-4 rounded-[3px] border-2 flex items-center justify-center shrink-0 transition-all ${isPorkFree ? 'bg-[#c1a0fd] border-[#c1a0fd]' : 'bg-white border-[#c0c0cc]'}`}>
+                    {isPorkFree && <svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3L3.5 5.5L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                  </div>
+                  <span className="text-[14px] text-[#303044]">Sans porc</span>
                 </label>
               </div>
             </div>

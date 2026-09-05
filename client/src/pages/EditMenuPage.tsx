@@ -40,6 +40,8 @@ export default function EditMenuPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [availableSpecialties, setAvailableSpecialties] = useState<string[]>([]);
   const [availableUnits, setAvailableUnits] = useState<string[]>(['g', 'kg', 'mL', 'L', 'pcs', 'cs', 'cc', 'pincée', 'tranche(s)', 'unité(s)']);
+  const [tooltipFruitsDesMer, setTooltipFruitsDesMer] = useState("produits de la mer à l'exception des poissons");
+  const [tooltipCommission, setTooltipCommission] = useState("La commission Weekook est prélevée sur chaque réservation. Elle couvre les frais de la plateforme, le paiement sécurisé et l'assistance client.");
   const [commissionKours, setCommissionKours] = useState(20);
   const [commissionKook, setCommissionKook] = useState(20);
   const [kookBaseGuests, setKookBaseGuests] = useState(6);
@@ -99,13 +101,15 @@ export default function EditMenuPage() {
   useEffect(() => {
     document.title = 'Modifier une offre - Weekook';
 
-    api.get<{ commissionKours: number; commissionKook: number; specialties: string[]; kookBaseGuests: number; units: string[] }>('/admin/config/public').then(res => {
+    api.get<{ commissionKours: number; commissionKook: number; specialties: string[]; kookBaseGuests: number; units: string[]; tooltipFruitsDesMer?: string; tooltipCommission?: string }>('/admin/config/public').then(res => {
       if (res.success && res.data) {
         if (Array.isArray(res.data.specialties)) setAvailableSpecialties(res.data.specialties);
         if (typeof res.data.commissionKours === 'number') setCommissionKours(res.data.commissionKours);
         if (typeof res.data.commissionKook === 'number') setCommissionKook(res.data.commissionKook);
         if (typeof res.data.kookBaseGuests === 'number') setKookBaseGuests(res.data.kookBaseGuests);
         if (Array.isArray(res.data.units) && res.data.units.length > 0) setAvailableUnits(res.data.units);
+        if (res.data.tooltipFruitsDesMer) setTooltipFruitsDesMer(res.data.tooltipFruitsDesMer);
+        if (res.data.tooltipCommission) setTooltipCommission(res.data.tooltipCommission);
       }
     }).catch(() => {});
 
@@ -467,7 +471,7 @@ export default function EditMenuPage() {
                   <p className="text-[13px] font-semibold text-[#303044] mb-2 flex items-center gap-1.5">
                     Simulation de revenus — commission Weekook {commissionKours}%
                     <span
-                      title="La commission Weekook est prélevée sur chaque réservation. Elle couvre les frais de la plateforme, le paiement sécurisé et l'assistance client."
+                      title={tooltipCommission}
                       className="text-[#828294] cursor-help"
                     >ⓘ</span>
                   </p>
@@ -704,7 +708,7 @@ export default function EditMenuPage() {
                   <p className="text-[12px] font-semibold text-[#303044]/60 mb-3 uppercase tracking-wide flex items-center gap-1.5">
                     Simulation de revenus — commission Weekook {commissionKook}%
                     <span
-                      title="La commission Weekook est prélevée sur chaque réservation. Elle couvre les frais de la plateforme, le paiement sécurisé et l'assistance client."
+                      title={tooltipCommission}
                       className="text-[#828294] cursor-help normal-case"
                     >ⓘ</span>
                   </p>
@@ -883,7 +887,7 @@ export default function EditMenuPage() {
                     </div>
                     <span className="text-[14px] text-[#303044]">{a}</span>
                     {a === 'Fruits de mer' && (
-                      <span title="produits de la mer à l'exception des poissons" className="text-[#828294] cursor-help text-[12px] leading-none">ⓘ</span>
+                      <span title={tooltipFruitsDesMer} className="text-[#828294] cursor-help text-[12px] leading-none">ⓘ</span>
                     )}
                   </label>
                 ))}

@@ -11,7 +11,9 @@ interface ConfigData {
   commissionKours?: number;
   commissionKook?: number;
   kookBaseGuests?: number;
-  [key: string]: string[] | number | undefined;
+  tooltipFruitsDesMer?: string;
+  tooltipCommission?: string;
+  [key: string]: string[] | number | string | undefined;
 }
 
 const CONFIG_LABELS: Record<string, string> = {
@@ -157,6 +159,50 @@ function CommissionEditor({ label, description, configKey, value, onSave }: {
   );
 }
 
+function TextEditor({ label, description, configKey, value, onSave }: {
+  label: string;
+  description: string;
+  configKey: string;
+  value: string;
+  onSave: (key: string, val: string) => Promise<void>;
+}) {
+  const [text, setText] = useState(value);
+  const [saving, setSaving] = useState(false);
+  const dirty = text !== value;
+
+  useEffect(() => { setText(value); }, [value]);
+
+  const save = async () => {
+    setSaving(true);
+    await onSave(configKey, text.trim());
+    setSaving(false);
+  };
+
+  return (
+    <div className="bg-white rounded-[20px] p-6">
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="font-semibold text-[#111125]">{label}</h2>
+        {dirty && (
+          <button
+            onClick={save}
+            disabled={saving}
+            className="px-4 py-1.5 bg-[#c1a0fd] text-white rounded-[12px] text-sm font-medium hover:bg-[#b090ed] disabled:opacity-50"
+          >
+            {saving ? 'Sauvegarde...' : 'Sauvegarder'}
+          </button>
+        )}
+      </div>
+      <p className="text-sm text-gray-500 mb-4">{description}</p>
+      <textarea
+        value={text}
+        onChange={e => setText(e.target.value)}
+        rows={3}
+        className="w-full px-3 py-2 border border-gray-200 rounded-[12px] text-sm focus:outline-none focus:border-[#c1a0fd] resize-none"
+      />
+    </div>
+  );
+}
+
 function NumberEditor({ label, description, configKey, value, min, onSave }: {
   label: string;
   description: string;
@@ -212,6 +258,8 @@ export default function AdminConfigPage() {
   const [commissionKours, setCommissionKours] = useState<number>(20);
   const [commissionKook, setCommissionKook] = useState<number>(20);
   const [kookBaseGuests, setKookBaseGuests] = useState<number>(6);
+  const [tooltipFruitsDesMer, setTooltipFruitsDesMer] = useState<string>("produits de la mer à l'exception des poissons");
+  const [tooltipCommission, setTooltipCommission] = useState<string>("La commission Weekook est prélevée sur chaque réservation. Elle couvre les frais de la plateforme, le paiement sécurisé et l'assistance client.");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => { document.title = 'Admin — Configuration | Weekook'; }, []);
@@ -223,6 +271,8 @@ export default function AdminConfigPage() {
         if (typeof res.data.commissionKours === 'number') setCommissionKours(res.data.commissionKours);
         if (typeof res.data.commissionKook === 'number') setCommissionKook(res.data.commissionKook);
         if (typeof res.data.kookBaseGuests === 'number') setKookBaseGuests(res.data.kookBaseGuests);
+        if (typeof res.data.tooltipFruitsDesMer === 'string') setTooltipFruitsDesMer(res.data.tooltipFruitsDesMer);
+        if (typeof res.data.tooltipCommission === 'string') setTooltipCommission(res.data.tooltipCommission);
       }
     }).finally(() => setLoading(false));
   }, []);
@@ -238,6 +288,14 @@ export default function AdminConfigPage() {
       if (key === 'commissionKours') setCommissionKours(val);
       if (key === 'commissionKook') setCommissionKook(val);
       if (key === 'kookBaseGuests') setKookBaseGuests(val);
+    }
+  };
+
+  const handleTextSave = async (key: string, val: string) => {
+    const res = await api.put(`/admin/config/${key}`, { value: val });
+    if (res.success) {
+      if (key === 'tooltipFruitsDesMer') setTooltipFruitsDesMer(val);
+      if (key === 'tooltipCommission') setTooltipCommission(val);
     }
   };
 
@@ -275,6 +333,20 @@ export default function AdminConfigPage() {
             value={kookBaseGuests}
             min={1}
             onSave={handleNumberSave}
+          />
+          <TextEditor
+            label="Tooltip — Allergène Fruits de mer"
+            description='Texte affiché au survol du ⓘ à côté de "Fruits de mer" dans les formulaires de création/édition d'offre.'
+            configKey="tooltipFruitsDesMer"
+            value={tooltipFruitsDesMer}
+            onSave={handleTextSave}
+          />
+          <TextEditor
+            label="Tooltip — Commission Weekook"
+            description="Texte affiché au survol du ⓘ sur la simulation de revenus (KOURS et KOOK) dans les formulaires de création/édition d'offre."
+            configKey="tooltipCommission"
+            value={tooltipCommission}
+            onSave={handleTextSave}
           />
           {configKeys.map(key => (
             <ConfigList

@@ -10,9 +10,17 @@ const router = Router();
 // ── Public: taux de commission (accessible sans auth pour les formulaires) ─────
 router.get('/config/public', async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    const keys = ['commissionKours', 'commissionKook', 'specialties', 'kookBaseGuests', 'units'];
+    const keys = ['commissionKours', 'commissionKook', 'specialties', 'kookBaseGuests', 'units', 'tooltipFruitsDesMer', 'tooltipCommission'];
     const configs = await prisma.config.findMany({ where: { key: { in: keys } } });
-    const result: Record<string, unknown> = { commissionKours: 20, commissionKook: 20, specialties: [], kookBaseGuests: 6, units: [] };
+    const result: Record<string, unknown> = {
+      commissionKours: 20,
+      commissionKook: 20,
+      specialties: [],
+      kookBaseGuests: 6,
+      units: [],
+      tooltipFruitsDesMer: "produits de la mer à l'exception des poissons",
+      tooltipCommission: "La commission Weekook est prélevée sur chaque réservation. Elle couvre les frais de la plateforme, le paiement sécurisé et l'assistance client.",
+    };
     for (const c of configs) {
       try { result[c.key] = JSON.parse(c.value); } catch { /* ignore */ }
     }

@@ -336,7 +336,7 @@ export default function AdminConfigPage() {
           />
           <TextEditor
             label="Tooltip — Allergène Fruits de mer"
-            description='Texte affiché au survol du ⓘ à côté de "Fruits de mer" dans les formulaires de création/édition d'offre.'
+            description={`Texte affiché au survol du ⓘ à côté de "Fruits de mer" dans les formulaires de création/édition d'offre.`}
             configKey="tooltipFruitsDesMer"
             value={tooltipFruitsDesMer}
             onSave={handleTextSave}
